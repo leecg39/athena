@@ -84,7 +84,8 @@
 
 - [x] **21. 공개 REST API + MCP** — `/api/v1`(basics/metrics/sources/content/kb/billing/teams 전 표면, 관찰된 계약 재설계) + MCP 서버(ChatGPT/Claude 연동) + Looker Studio/Power BI 커넥터 + 레이트 리밋
   - 검증(R21): vitest 263/263(46 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/api`에서 `"Looker & Claude MCP"` API 키 발급 후 `/api/v1/validate-api-key`·`/api/v1/basics/schedules`·`POST /api/v1/kb`·`/api/v1/billing/credits`·`/api/v1/teams`·`/api/v1/connectors/looker-studio`·`/api/v1/connectors/power-bi?format=csv` 실호출 및 `psql` DB 교차 검증). 상세 `docs/review/2026-10-23-task21-review.md`
-- [ ] **22. 관측/운영** — PostHog(이벤트/세션 리플레이/서베이) + Vercel Analytics/Speed Insights + OpenTelemetry 트레이싱 + CSP 리포트 + 랜딩/이메일 템플릿
+- [x] **22. 관측/운영** — PostHog(이벤트/세션 리플레이/서베이) + Vercel Analytics/Speed Insights + OpenTelemetry 트레이싱 + CSP 리포트 + 랜딩/이메일 템플릿
+  - 검증(R22): vitest 267/267(47 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/observability`에서 PostHog 이벤트·마스킹된 세션 리플레이·서베이 제출 `9.7/10`, `/api/otel/traces` 스팬 수집 및 진단 트레이스 실행, `/api/csp-report` URI 토큰 제거 리포트 수집, `@athena/emails` 5종 템플릿 미리보기/발송, `/landing` 페이지 검증, `psql` `activity_log` 교차 검증). 상세 `docs/review/2026-10-23-task22-review.md`
 - [ ] **23. 마케팅 사이트 + 배포** — Astro 마케팅 사이트(홈/플랫폼/가격/산업/비교/케이스스터디/블로그 구조 재현, 자체 브랜딩) + Vercel 프로덕션 배포(앱/마케팅/문서/MCP 4개 프로젝트) + E2E 검증
 
 ---

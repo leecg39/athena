@@ -8,6 +8,7 @@ const SETTINGS_NAV = [
   ["security", "Security"],
   ["api", "API & Embed"],
   ["integrations", "Integrations"],
+  ["observability", "Observability"],
   ["activity", "Activity Log"],
 ] as const;
 
