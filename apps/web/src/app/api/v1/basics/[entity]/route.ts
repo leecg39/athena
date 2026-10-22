@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@athena/db";
 import { topics, competitors, personas, locations } from "@athena/db";
 import { authenticate, isResponse } from "@/lib/api-key";
+import { resolveApiWebsite } from "@/lib/api-website";
 import { and, eq, isNull } from "drizzle-orm";
 
 /**
@@ -13,8 +14,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
   const ctx = await authenticate(req);
   if (isResponse(ctx)) return ctx;
   const { entity } = await params;
-  const websiteId = req.nextUrl.searchParams.get("websiteId");
-  if (!websiteId) return NextResponse.json({ error: "websiteId required" }, { status: 400 });
+  const site = await resolveApiWebsite(ctx, req.nextUrl.searchParams.get("websiteId"));
+  if (site instanceof NextResponse) return site;
+  const websiteId = site.id;
   try {
     switch (entity) {
       case "topics":

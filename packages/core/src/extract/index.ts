@@ -135,3 +135,26 @@ export function extract(input: ExtractionInput): ExtractionResult {
     observations: observations.sort((a, b) => a.at - b.at).map(({ at: _at, ...o }) => o),
   };
 }
+
+export interface HighlightSegment {
+  text: string;
+  /** key of the entity this segment names; absent for plain text */
+  entity?: string;
+}
+
+/** Split answer text into plain and entity-mention segments (for safe React rendering). */
+export function highlightSegments(text: string, entities: { key: string; aliases: string[] }[]): HighlightSegment[] {
+  const hits = entities
+    .flatMap((e) => findMentions(text, e.aliases).map((s) => ({ ...s, key: e.key })))
+    .sort((a, b) => a.start - b.start || b.end - a.end);
+  const segments: HighlightSegment[] = [];
+  let cursor = 0;
+  for (const h of hits) {
+    if (h.start < cursor) continue; // overlapping hit already covered
+    if (h.start > cursor) segments.push({ text: text.slice(cursor, h.start) });
+    segments.push({ text: text.slice(h.start, h.end), entity: h.key });
+    cursor = h.end;
+  }
+  if (cursor < text.length) segments.push({ text: text.slice(cursor) });
+  return segments;
+}

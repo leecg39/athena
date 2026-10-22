@@ -7,36 +7,13 @@
  * Days are bucketed in the website's timezone.
  */
 import { z } from "zod";
-import { and, asc, eq, exists, gte, inArray, isNull, lt, sql, type SQL } from "drizzle-orm";
-import { type Db, responses, prompts, responseMentions, competitors, promptTagLinks } from "@athena/db";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { type Db, responses, prompts, responseMentions, competitors } from "@athena/db";
 import { requireWebsitePermission } from "../tenancy";
+import { conditions } from "./filters";
 
-export interface VisibilityFilters {
-  from: Date;
-  to: Date;
-  models?: string[];
-  topicIds?: string[];
-  personaIds?: string[];
-  locationIds?: string[];
-  tagIds?: string[];
-  promptIds?: string[];
-  promptType?: "branded" | "non_branded";
-}
-
-const uuidList = z.array(z.string().uuid()).max(200).optional();
-const filtersSchema = z
-  .object({
-    from: z.date(),
-    to: z.date(),
-    models: z.array(z.string().max(40)).max(20).optional(),
-    topicIds: uuidList,
-    personaIds: uuidList,
-    locationIds: uuidList,
-    tagIds: uuidList,
-    promptIds: uuidList,
-    promptType: z.enum(["branded", "non_branded"]).optional(),
-  })
-  .refine((f) => f.from < f.to, "from must be before to");
+export { filtersSchema, type VisibilityFilters } from "./filters";
+import { filtersSchema, type VisibilityFilters } from "./filters";
 
 export interface VisibilityTotals {
   responses: number;
@@ -93,30 +70,24 @@ export interface VisibilityMetrics {
 const pct = (n: number, d: number) => (d ? Math.round((n / d) * 1000) / 10 : 0);
 const round1 = (v: number | null | undefined) => (v === null || v === undefined || Number.isNaN(Number(v)) ? null : Math.round(Number(v) * 10) / 10);
 
-function conditions(websiteId: string, f: VisibilityFilters): SQL[] {
-  const c: SQL[] = [eq(responses.websiteId, websiteId), gte(responses.ranAt, f.from), lt(responses.ranAt, f.to), isNull(prompts.deletedAt)];
-  if (f.models?.length) c.push(inArray(responses.model, f.models));
-  if (f.topicIds?.length) c.push(inArray(prompts.topicId, f.topicIds));
-  if (f.personaIds?.length) c.push(inArray(prompts.personaId, f.personaIds));
-  if (f.locationIds?.length) c.push(inArray(prompts.locationId, f.locationIds));
-  if (f.promptIds?.length) c.push(inArray(prompts.id, f.promptIds));
-  if (f.promptType) c.push(eq(prompts.type, f.promptType));
-  if (f.tagIds?.length) {
-    c.push(
-      exists(
-        sql`select 1 from ${promptTagLinks} where ${promptTagLinks.promptId} = ${prompts.id} and ${inArray(promptTagLinks.tagId, f.tagIds)}`,
-      ),
-    );
-  }
-  return c;
-}
-
 export async function getVisibilityMetrics(
   db: Db,
   input: { actorId: string; websiteId: string; filters: VisibilityFilters },
 ): Promise<VisibilityMetrics> {
-  const f = filtersSchema.parse(input.filters);
   const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:read");
+  return visibilityForSite(db, site, input.filters);
+}
+
+/**
+ * Metrics for a website the caller has ALREADY authorised (e.g. an API key
+ * whose organization owns the site). Prefer getVisibilityMetrics for users.
+ */
+export async function visibilityForSite(
+  db: Db,
+  site: { id: string; name: string; timezone: string },
+  filters: VisibilityFilters,
+): Promise<VisibilityMetrics> {
+  const f = filtersSchema.parse(filters);
   const where = and(...conditions(site.id, f));
   const day = sql<string>`to_char((${responses.ranAt} at time zone ${site.timezone})::date, 'YYYY-MM-DD')`;
 

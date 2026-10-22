@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@athena/db";
-import { prompts, topics } from "@athena/db";
+import { prompts } from "@athena/db";
 import { authenticate, isResponse } from "@/lib/api-key";
+import { resolveApiWebsite, notYetAvailable } from "@/lib/api-website";
 import { and, eq, isNull } from "drizzle-orm";
 
 /** GET /api/v1/prompts?websiteId=… — list active prompts with topic names. */
 export async function GET(req: NextRequest) {
   const ctx = await authenticate(req);
   if (isResponse(ctx)) return ctx;
-  const websiteId = req.nextUrl.searchParams.get("websiteId");
-  if (!websiteId) return NextResponse.json({ error: "websiteId required" }, { status: 400 });
+  const site = await resolveApiWebsite(ctx, req.nextUrl.searchParams.get("websiteId"));
+  if (site instanceof NextResponse) return site;
+  const websiteId = site.id;
   try {
     const rows = await db
       .select()
@@ -25,35 +27,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await authenticate(req);
   if (isResponse(ctx)) return ctx;
-  const body = (await req.json()) as {
-    websiteId: string;
-    prompts: { text: string; topic?: string; type?: "branded" | "non_branded" }[];
-  };
-  try {
-    const created = [];
-    for (const p of body.prompts) {
-      let topicId: string | null = null;
-      if (p.topic) {
-        const [existing] = await db
-          .select()
-          .from(topics)
-          .where(and(eq(topics.websiteId, body.websiteId), eq(topics.name, p.topic)))
-          .limit(1);
-        if (existing) {
-          topicId = existing.id;
-        } else {
-          const [t] = await db.insert(topics).values({ websiteId: body.websiteId, name: p.topic }).returning();
-          topicId = t.id;
-        }
-      }
-      const [row] = await db
-        .insert(prompts)
-        .values({ websiteId: body.websiteId, text: p.text, topicId, type: p.type ?? "non_branded" })
-        .returning();
-      created.push(row);
-    }
-    return NextResponse.json({ data: created }, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
+  // writes must go through plan limits, de-duplication and the audit log (rebuilt with the v1 write API)
+  return notYetAvailable("Creating prompts via the API");
 }

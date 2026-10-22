@@ -3,7 +3,7 @@ import { createTestDb, type TestDb } from "@athena/db/testing";
 import { responses, responseMentions, competitors, runs, websites } from "@athena/db";
 import { eq } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "../tenancy";
-import { createPrompt, createTopic } from "../prompts";
+import { createPrompt, createTopic, createTag, bulkPromptAction } from "../prompts";
 import { ForbiddenError } from "../org/errors";
 import { getVisibilityMetrics, getSearchValue, compareTotals } from "./visibility";
 import { prompts } from "@athena/db";
@@ -105,6 +105,13 @@ describe("getVisibilityMetrics", () => {
     expect((await getVisibilityMetrics(t.db, { ...c, filters: { ...range, models: ["perplexity"] } })).totals.responses).toBe(2);
     expect((await getVisibilityMetrics(t.db, { ...c, filters: { ...range, topicIds: [topicA] } })).totals).toMatchObject({ responses: 2, mentionRate: 100 });
     expect((await getVisibilityMetrics(t.db, { ...c, filters: { from: D("2026-10-02"), to: D("2026-10-03") } })).totals.responses).toBe(2);
+  });
+
+  it("filters by tag (regression: EXISTS must be parenthesised)", async () => {
+    const tag = await createTag(t.db, { ...c, name: "tagged" });
+    const [p] = await t.db.select().from(prompts).where(eq(prompts.text, "prompt in topic a"));
+    await bulkPromptAction(t.db, { ...c, promptIds: [p.id], action: "tag", value: tag.id });
+    expect((await getVisibilityMetrics(t.db, { ...c, filters: { ...range, tagIds: [tag.id] } })).totals.responses).toBe(2);
   });
 
   it("buckets days in the website's timezone", async () => {

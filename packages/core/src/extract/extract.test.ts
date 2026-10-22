@@ -101,3 +101,22 @@ describe("detectShoppingCard", () => {
     expect(detectShoppingCard("The Pro plan costs $20/mo per user.")).toBeNull();
   });
 });
+
+describe("highlightSegments", () => {
+  it("splits text into plain and entity segments without overlaps", async () => {
+    const { highlightSegments } = await import("./index");
+    const segs = highlightSegments("Canvasly beats Figma; see canvasly.io and https://figma.com/x", [
+      { key: "brand", aliases: ["Canvasly", "canvasly.io"] },
+      { key: "figma", aliases: ["Figma", "figma.com"] },
+    ]);
+    expect(segs).toEqual([
+      { text: "Canvasly", entity: "brand" },
+      { text: " beats " },
+      { text: "Figma", entity: "figma" },
+      { text: "; see " },
+      { text: "canvasly.io", entity: "brand" },
+      { text: " and https://figma.com/x" },
+    ]);
+    expect(segs.map((s) => s.text).join("")).toBe("Canvasly beats Figma; see canvasly.io and https://figma.com/x");
+  });
+});

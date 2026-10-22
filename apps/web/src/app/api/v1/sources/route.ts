@@ -1,13 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { authenticate, isResponse } from "@/lib/api-key";
-import { demoSources } from "@/lib/demo";
+import { notYetAvailable } from "@/lib/api-website";
 
-/** GET /api/v1/sources?websiteId=… — cited domains with aggregate metrics. */
+/** GET /api/v1/sources — rebuilt on real citation analytics (previously returned demo data). */
 export async function GET(req: NextRequest) {
   const ctx = await authenticate(req);
   if (isResponse(ctx)) return ctx;
-  const rootDomain = req.nextUrl.searchParams.get("root_domain");
-  const all = demoSources();
-  const data = rootDomain ? all.filter((s) => s.domain === rootDomain) : all;
-  return NextResponse.json({ data });
+  return notYetAvailable("Source analytics");
 }
