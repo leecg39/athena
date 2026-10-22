@@ -1,11 +1,13 @@
 import { PageHeader } from "@/components/page-header";
 import { CompetitorHeatmap } from "@/components/competitor-heatmap";
 import { getCompetitorList, demoHeatmap, demoCompetitorSoV } from "@/lib/data";
+import { requireWorkspace } from "@/lib/workspace";
 
 export const metadata = { title: "Competitors" };
 
 export default async function CompetitorsPage() {
-  const competitors = await getCompetitorList();
+  const ws = await requireWorkspace();
+  const competitors = await getCompetitorList(ws.websiteId);
   const hm = demoHeatmap();
   return (
     <div>

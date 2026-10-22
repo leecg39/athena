@@ -1,11 +1,13 @@
 import { PageHeader } from "@/components/page-header";
 import { PromptsWorkspace } from "@/components/prompts-workspace";
 import { getPrompts } from "@/lib/data";
+import { requireWorkspace } from "@/lib/workspace";
 
 export const metadata = { title: "Prompts" };
 
 export default async function PromptsPage() {
-  const data = await getPrompts();
+  const ws = await requireWorkspace();
+  const data = await getPrompts(ws.websiteId);
   return (
     <div>
       <PageHeader

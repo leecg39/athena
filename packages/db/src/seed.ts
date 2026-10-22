@@ -113,7 +113,7 @@ async function seed() {
           mentioned,
           cited,
           position: mentioned ? 1 + ((day + model.length) % 5) : null,
-          sentiment: mentioned ? (((day % 5) === 0 ? "positive" : "neutral") as const) : "unknown",
+          sentiment: mentioned ? ((day % 5) === 0 ? "positive" : "neutral") : "unknown",
           ranAt: new Date(now - day * 86400_000),
         });
       }

@@ -1,7 +1,7 @@
 import { streamText, tool, type CoreMessage } from "ai";
 import { z } from "zod";
-import { getUser } from "@/lib/session";
-import { getWorkspace, getDashboardData, getResponses, demoSources } from "@/lib/data";
+import { requireWorkspace } from "@/lib/workspace";
+import { getDashboardData, getResponses, demoSources } from "@/lib/data";
 
 export const maxDuration = 60;
 
@@ -12,8 +12,7 @@ export const maxDuration = 60;
  * a deterministic summary built from workspace data (no key needed).
  */
 export async function POST(req: Request) {
-  const user = await getUser();
-  const ws = await getWorkspace(user?.id);
+  const ws = await requireWorkspace();
   const { messages } = (await req.json()) as { messages: CoreMessage[] };
 
   const hasKey = Boolean(process.env.OPENAI_API_KEY);
@@ -21,7 +20,7 @@ export async function POST(req: Request) {
   if (!hasKey) {
     const data = await getDashboardData();
     const encoder = new TextEncoder();
-    const summary = `Here's how ${ws.websiteName} is performing in AI search right now:
+    const summary = `Here's how ${ws.website.name} is performing in AI search right now:
 
 - **Mention rate**: ${data.summary.mentionRate}% of sampled AI responses mention your brand
 - **Citation rate**: ${data.summary.citationRate}% of responses cite your content as a source
@@ -45,7 +44,7 @@ Ask me to compare competitors, find content gaps, or recommend what to publish n
 
   const result = await streamText({
     model: (await import("@ai-sdk/openai")).createOpenAI({ apiKey: process.env.OPENAI_API_KEY })("gpt-4o"),
-    system: `You are Athena, the AI search analyst for brand "${ws.websiteName}" (${ws.websiteDomain}). Answer with the provided tools and cite concrete numbers. Be concise and actionable.`,
+    system: `You are Athena, the AI search analyst for brand "${ws.website.name}" (${ws.website.domain}). Answer with the provided tools and cite concrete numbers. Be concise and actionable.`,
     messages,
     tools: {
       getMetrics: tool({

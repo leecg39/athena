@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/lib/session";
-import { getWorkspace, getResponses } from "@/lib/data";
+import { requireWorkspace } from "@/lib/workspace";
+import { getResponses } from "@/lib/data";
 
 /** Prompt discovery: suggests prompts from site content, search data and competitor gaps. */
 export async function POST() {
-  const user = await getUser();
-  const ws = await getWorkspace(user?.id);
+  const ws = await requireWorkspace();
   const rows = await getResponses();
 
   // Derive suggestions from tracked prompt themes + generic high-intent patterns.
@@ -23,5 +22,5 @@ export async function POST() {
     .slice(0, 6)
     .map((s) => s.replace(/best best/, "best"));
 
-  return NextResponse.json({ website: ws.websiteDomain, suggestions });
+  return NextResponse.json({ website: ws.website.domain, suggestions });
 }

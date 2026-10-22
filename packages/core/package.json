@@ -8,10 +8,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./extract": "./src/extract.ts",
-    "./metrics": "./src/metrics.ts"
+    "./metrics": "./src/metrics.ts",
+    "./tenancy": "./src/tenancy/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@athena/db": "*",
@@ -20,6 +22,8 @@
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.10.0",
+    "@electric-sql/pglite": "^0.3.0",
+    "vitest": "^3.2.4"
   }
 }

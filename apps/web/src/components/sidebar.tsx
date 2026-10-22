@@ -29,50 +29,69 @@ const NAV = [
   ]},
 ];
 
+export interface SidebarSite {
+  id: string;
+  name: string;
+  domain: string;
+}
+
 export function Sidebar({
-  websiteName,
-  websiteDomain,
+  currentId,
   websites,
   credits,
   userEmail,
+  switchAction,
+  logoutAction,
 }: {
-  websiteName: string;
-  websiteDomain: string;
-  websites: { id: string; name: string }[];
+  currentId: string;
+  websites: SidebarSite[];
   credits: number;
   userEmail: string;
+  switchAction: (formData: FormData) => Promise<void>;
+  logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const current = websites.find((w) => w.id === currentId) ?? websites[0];
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-gray-100 bg-gray-50/60">
       {/* workspace switcher */}
       <div className="relative p-3">
         <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={switcherOpen}
           onClick={() => setSwitcherOpen((v) => !v)}
           className="flex w-full items-center gap-2 rounded-lg border border-gray-100 bg-white px-3 py-2 text-left hover:bg-gray-50"
         >
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-xs font-bold text-white">
-            {websiteName.slice(0, 1)}
+            {current?.name.slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-gray-900">{websiteName}</div>
-            <div className="truncate text-[11px] text-gray-400">{websiteDomain}</div>
+            <div className="truncate text-sm font-medium text-gray-900">{current?.name}</div>
+            <div className="truncate text-[11px] text-gray-400">{current?.domain}</div>
           </div>
-          <span className="text-gray-300">⌄</span>
+          <span className="text-gray-300" aria-hidden>⌄</span>
         </button>
         {switcherOpen ? (
-          <div className="absolute left-3 right-3 top-14 z-20 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+          <div role="listbox" className="absolute left-3 right-3 top-14 z-20 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
             {websites.map((w) => (
-              <Link
-                key={w.id}
-                href={`/olympus?ws=${w.id}`}
-                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setSwitcherOpen(false)}
-              >
-                {w.name}
-              </Link>
+              <form key={w.id} action={switchAction}>
+                <input type="hidden" name="websiteId" value={w.id} />
+                <input type="hidden" name="returnTo" value={pathname} />
+                <button
+                  type="submit"
+                  role="option"
+                  aria-selected={w.id === currentId}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50 ${
+                    w.id === currentId ? "font-medium text-brand-600" : "text-gray-700"
+                  }`}
+                >
+                  <span className="truncate">{w.name}</span>
+                  {w.id === currentId ? <span aria-hidden>✓</span> : null}
+                </button>
+              </form>
             ))}
             <Link href="/onboarding" className="block border-t border-gray-50 px-3 py-2 text-sm text-brand-600 hover:bg-gray-50" onClick={() => setSwitcherOpen(false)}>
               + Add website
@@ -125,9 +144,11 @@ export function Sidebar({
             </span>
             Settings
           </Link>
-          <Link href="/organization" className="rounded-lg px-2 py-1.5 text-sm text-gray-400 hover:bg-gray-100" title="Organization">
-            ⚙
-          </Link>
+          <form action={logoutAction}>
+            <button type="submit" className="rounded-lg px-2 py-1.5 text-xs text-gray-400 hover:bg-gray-100" title={`Sign out ${userEmail}`}>
+              Sign out
+            </button>
+          </form>
         </div>
       </div>
     </aside>

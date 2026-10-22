@@ -4,7 +4,7 @@
  * real data bindings and still renders in keyless/local environments.
  */
 import { db } from "@athena/db";
-import { websites, websiteMembers, prompts, topics, competitors } from "@athena/db";
+import { prompts, topics, competitors } from "@athena/db";
 import { and, eq, isNull, desc } from "drizzle-orm";
 import {
   demoResponses,
@@ -25,88 +25,25 @@ import {
 
 export { demoAds, demoShopping, demoInsights, demoHeatmap, demoSources, demoCompetitorSoV, demoActivity, demoOutreach };
 
-export interface WorkspaceContext {
-  organizationId: string;
-  websiteId: string;
-  websiteName: string;
-  websiteDomain: string;
-  userName: string;
-  userEmail: string;
-}
-
-const fallbackCtx: WorkspaceContext = {
-  organizationId: "00000000-0000-0000-0000-000000000000",
-  websiteId: "00000000-0000-0000-0000-000000000001",
-  websiteName: "Canvasly",
-  websiteDomain: "canvasly.io",
-  userName: "Demo",
-  userEmail: "demo@example.com",
-};
-
-/** Resolve the active workspace (org + website) for the signed-in user. */
-export async function getWorkspace(userId?: string): Promise<WorkspaceContext> {
-  if (userId) {
-    try {
-      const [row] = await db
-        .select({ w: websites })
-        .from(websiteMembers)
-        .innerJoin(websites, eq(websiteMembers.websiteId, websites.id))
-        .where(and(eq(websiteMembers.userId, userId), isNull(websites.deletedAt)))
-        .limit(1);
-      if (row?.w) {
-        return {
-          organizationId: row.w.organizationId,
-          websiteId: row.w.id,
-          websiteName: row.w.name,
-          websiteDomain: row.w.domain,
-          userName: "",
-          userEmail: "",
-        };
-      }
-    } catch {
-      // DB unavailable — demo context
-    }
-  }
-  return fallbackCtx;
-}
-
-export async function getPrompts(): Promise<{
+/** Prompts + topics of one website (tenant-scoped; empty when none exist). */
+export async function getPrompts(websiteId: string): Promise<{
   prompts: { id: string; text: string; topic: string; type: string; status: string }[];
   topics: { id: string; name: string }[];
 }> {
-  try {
-    const rows = await db
-      .select({ id: prompts.id, text: prompts.text, type: prompts.type, status: prompts.status, topic: topics.name })
-      .from(prompts)
-      .leftJoin(topics, eq(prompts.topicId, topics.id))
-      .orderBy(desc(prompts.createdAt))
-      .limit(200);
-    if (rows.length) {
-      return {
-        prompts: rows.map((r) => ({
-          id: r.id,
-          text: r.text,
-          topic: r.topic ?? "Uncategorized",
-          type: r.type,
-          status: r.status,
-        })),
-        topics: await db.select({ id: topics.id, name: topics.name }).from(topics).limit(50),
-      };
-    }
-  } catch {
-    // fallback
-  }
-  const demo = demoResponses(12);
-  const topicNames = ["Brand Content-Automation", "Design Software Comparisons", "Color Theory"];
+  const rows = await db
+    .select({ id: prompts.id, text: prompts.text, type: prompts.type, status: prompts.status, topic: topics.name })
+    .from(prompts)
+    .leftJoin(topics, eq(prompts.topicId, topics.id))
+    .where(and(eq(prompts.websiteId, websiteId), isNull(prompts.deletedAt)))
+    .orderBy(desc(prompts.createdAt))
+    .limit(500);
+  const topicRows = await db
+    .select({ id: topics.id, name: topics.name })
+    .from(topics)
+    .where(and(eq(topics.websiteId, websiteId), isNull(topics.deletedAt)));
   return {
-    prompts: demo.map((d, i) => ({
-      id: d.id,
-      text: d.prompt,
-      topic: topicNames[i % 3],
-      type: d.promptType.toLowerCase(),
-      status: "active",
-    })),
-    topics: topicNames.map((name, i) => ({ id: `t${i}`, name })),
+    prompts: rows.map((r) => ({ id: r.id, text: r.text, topic: r.topic ?? "Uncategorized", type: r.type, status: r.status })),
+    topics: topicRows,
   };
 }
 
@@ -150,16 +87,11 @@ export async function getDashboardData(): Promise<{
   };
 }
 
-export async function getCompetitorList(): Promise<{ id: string; domain: string; name: string }[]> {
-  try {
-    const rows = await db.select().from(competitors).limit(50);
-    if (rows.length) return rows.map((r) => ({ id: r.id, domain: r.domain, name: r.name }));
-  } catch {
-    // fallback
-  }
-  return [
-    { id: "c1", domain: "figma.com", name: "Figma" },
-    { id: "c2", domain: "adobe.com", name: "Adobe Express" },
-    { id: "c3", domain: "canva.com", name: "Canva" },
-  ];
+/** Competitors tracked for one website (tenant-scoped). */
+export async function getCompetitorList(websiteId: string): Promise<{ id: string; domain: string; name: string }[]> {
+  const rows = await db
+    .select()
+    .from(competitors)
+    .where(and(eq(competitors.websiteId, websiteId), isNull(competitors.deletedAt)));
+  return rows.map((r) => ({ id: r.id, domain: r.domain, name: r.name }));
 }
