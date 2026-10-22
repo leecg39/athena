@@ -77,7 +77,8 @@
 
 - [x] **19. Pitch Workspace + Groups** — 사이트 URL 기반 피치 리포트 생성 위저드 + 공개 공유 뷰 + 콘텐츠 리라이트 피치 + 사용량 관리 + Group Dashboard/Group Billing(그룹 집계 대시보드 + 공유 크레딧)
   - 검증(R19): vitest 259/259(44 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/pitches` 3단계 피치 위저드·`Vercel Enterprise` AEO 콘텐츠 리라이트 피치 생성·월간 쿼터 `1/3` 반영·`/report/content/cpitch_...` Before/After 및 `FAQPage` JSON-LD 공개 공유 뷰·`/group/[id]` 그룹 집계 대시보드 및 그룹 공유 크레딧 100 할당 `250→350`, SQL 교차 검증). 상세 `docs/review/2026-10-23-task19-review.md`
-- [ ] **20. Stripe 과금** — Free/Starter($295)/Enterprise 플랜 + 크레딧 시스템(조직/웹사이트/그룹 잔액 + 원장) + 추가 크레딧/API 애드온 과금 + 인보이스
+- [x] **20. Stripe 과금** — Free/Starter($295)/Enterprise 플랜 + 크레딧 시스템(조직/웹사이트/그룹 잔액 + 원장) + 추가 크레딧/API 애드온 과금 + 인보이스
+  - 검증(R20): vitest 261/261(45 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/billing`에서 `Starter($295/mo)` 플랜 업그레이드·`Canvasly` 웹사이트 전용 풀 `150` 크레딧 이관·`API/MCP Add-on($99/mo)` 활성화·`+1,000` 크레딧 팩(`$79`) 구매로 조직/웹사이트/그룹 합산 `6,952` 크레딧 반영·`/api/billing/invoices/.../pdf` `%PDF-1.4` 인보이스 영수증 다운로드, SQL 교차 검증). 상세 `docs/review/2026-10-23-task20-review.md`
 
 ## Phase 7 — API & 운영 & 배포
 

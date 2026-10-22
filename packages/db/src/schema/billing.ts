@@ -1,7 +1,7 @@
 /* Billing: credits */
-import { pgTable, uuid, text, timestamp, integer, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { planEnum, subStatusEnum, ts } from "./enums";
-import { groups, organizations, users, websites } from "./tenancy";
+import { groups, organizations, websites } from "./tenancy";
 import { runs } from "./responses";
 
 export const creditBalances = pgTable(
@@ -38,30 +38,44 @@ export const creditLedger = pgTable(
   (t) => [index("credit_ledger_org_time_idx").on(t.organizationId, t.createdAt)],
 );
 
-export const subscriptions = pgTable("subscriptions", {
-  id: uuid().primaryKey().defaultRandom(),
-  organizationId: uuid()
-    .notNull()
-    .references(() => organizations.id),
-  websiteId: uuid().references(() => websites.id),
-  plan: planEnum().notNull().default("free"),
-  status: subStatusEnum().notNull().default("active"),
-  stripeSubscriptionId: text(),
-  stripeCustomerId: text(),
-  monthlyCredits: integer().notNull().default(300),
-  currentPeriodEnd: timestamp({ withTimezone: true }),
-  createdAt: ts().notNull(),
-});
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    websiteId: uuid().references(() => websites.id),
+    plan: planEnum().notNull().default("free"),
+    status: subStatusEnum().notNull().default("active"),
+    billingInterval: text().notNull().default("monthly"), // monthly | annual
+    addons: jsonb().$type<string[]>().notNull().default([]),
+    stripeSubscriptionId: text(),
+    stripeCustomerId: text(),
+    monthlyCredits: integer().notNull().default(300),
+    currentPeriodEnd: timestamp({ withTimezone: true }),
+    createdAt: ts().notNull(),
+  },
+  (t) => [index("subscriptions_org_idx").on(t.organizationId, t.createdAt)],
+);
 
-export const invoices = pgTable("invoices", {
-  id: uuid().primaryKey().defaultRandom(),
-  organizationId: uuid()
-    .notNull()
-    .references(() => organizations.id),
-  stripeInvoiceId: text(),
-  amountCents: integer().notNull().default(0),
-  currency: text().notNull().default("usd"),
-  status: text().notNull().default("paid"),
-  pdfUrl: text(),
-  issuedAt: timestamp({ withTimezone: true }),
-});
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    stripeInvoiceId: text(),
+    description: text(),
+    amountCents: integer().notNull().default(0),
+    currency: text().notNull().default("usd"),
+    status: text().notNull().default("paid"),
+    pdfUrl: text(),
+    issuedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index("invoices_org_idx").on(t.organizationId, t.issuedAt),
+    uniqueIndex("invoices_stripe_id_idx").on(t.stripeInvoiceId),
+  ],
+);
