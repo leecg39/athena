@@ -79,17 +79,42 @@ export const adsImpressions = pgTable(
   (t) => [index("ads_ws_surface_seen_idx").on(t.websiteId, t.surface, t.seenAt)],
 );
 
-export const siteHealthPages = pgTable("site_health_pages", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  url: text().notNull(),
-  title: text(),
-  statusCode: integer(),
-  aiAccessible: boolean().default(true),
-  inSitemap: boolean().default(true),
-  keywords: jsonb().$type<{ keyword: string; position: number }[]>().default([]),
-  lastCheckedAt: timestamp({ withTimezone: true }),
-  createdAt: ts().notNull(),
-});
+export interface SiteHealthPageMeta {
+  property?: string;
+  robotsBots?: {
+    bot: string;
+    owner: string;
+    purpose: string;
+    status: "allowed" | "blocked";
+    rule: string;
+  }[];
+  llmsTxtPresent?: boolean;
+  schemaMarkup?: string[];
+  stagingStatusCode?: number;
+  stagingAiAccessible?: boolean;
+  stagingDiffSummary?: string;
+  optimizationStatus?: "healthy" | "needs_edit" | "staged" | "verified_live";
+  optimizationRecommendation?: string;
+  verifiedAt?: string | null;
+  verificationHash?: string | null;
+}
+
+export const siteHealthPages = pgTable(
+  "site_health_pages",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    url: text().notNull(),
+    title: text(),
+    statusCode: integer(),
+    aiAccessible: boolean().default(true),
+    inSitemap: boolean().default(true),
+    keywords: jsonb().$type<{ keyword: string; position: number; volume?: number; change?: number }[]>().default([]),
+    meta: jsonb().$type<SiteHealthPageMeta>().default({}),
+    lastCheckedAt: timestamp({ withTimezone: true }),
+    createdAt: ts().notNull(),
+  },
+  (t) => [index("site_health_ws_idx").on(t.websiteId, t.aiAccessible, t.inSitemap)],
+);

@@ -1,0 +1,2 @@
+ALTER TABLE "site_health_pages" ADD COLUMN "meta" jsonb DEFAULT '{}'::jsonb;--> statement-breakpoint
+CREATE INDEX "site_health_ws_idx" ON "site_health_pages" USING btree ("website_id","ai_accessible","in_sitemap");

@@ -21,6 +21,7 @@ import { generateInsights } from "@athena/core/insights";
 import { runOracleScan } from "@athena/core/knowledge";
 import { discoverOutreachOpportunities } from "@athena/core/outreach";
 import { syncShoppingInsights, captureSponsoredAds } from "@athena/core/commerce";
+import { runSiteHealthCrawl } from "@athena/core/site-health";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
 
 /** Upper bound on stored answer text (providers occasionally return huge payloads). */
@@ -224,6 +225,7 @@ export async function executeRun(db: Db, runId: string, opts: ExecuteOptions): P
       await discoverOutreachOpportunities(db, { websiteId: site.id });
       await syncShoppingInsights(db, { websiteId: site.id });
       await captureSponsoredAds(db, { websiteId: site.id });
+      await runSiteHealthCrawl(db, { websiteId: site.id });
     } catch (err) {
       console.warn("[insights/oracle] post-run refresh failed", site.id, err instanceof Error ? err.message : err);
     }

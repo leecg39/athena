@@ -336,8 +336,8 @@ describe("knowledge base & oracle", () => {
 
     // Resolution workflow: open -> resolving -> resolved / dismissed
     const list1 = await listOracleFindings(t.db, c);
-    const f1 = list1.rows[0]!;
-    const f2 = list1.rows[1]!;
+    const f1 = list1.rows.find((r) => r.type === "confirmed_inaccuracy") ?? list1.rows[0]!;
+    const f2 = list1.rows.find((r) => r.type === "model_disagreement" && r.id !== f1.id) ?? list1.rows[1]!;
 
     const resolving = await updateOracleFindingStatus(t.db, { ...c, findingId: f1.id, status: "resolving" });
     expect(resolving.status).toBe("resolving");
