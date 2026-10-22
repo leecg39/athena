@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestDb, type TestDb } from "@athena/db/testing";
 import { activityLog } from "@athena/db";
-import { ensureUserWithOrg, createWebsite, listWebsitesForUser, getWebsiteForUser } from "../tenancy/index.js";
+import { ensureUserWithOrg, createWebsite, listWebsitesForUser, getWebsiteForUser } from "../tenancy/index";
 import {
   can,
   permissionsFor,
@@ -26,7 +26,7 @@ import {
   createGroup,
   setWebsiteGroup,
   addGroupMember,
-} from "./index.js";
+} from "./index";
 
 let t: TestDb;
 beforeAll(async () => {

@@ -10,7 +10,9 @@
     "./extract": "./src/extract.ts",
     "./metrics": "./src/metrics.ts",
     "./tenancy": "./src/tenancy/index.ts",
-    "./org": "./src/org/index.ts"
+    "./org": "./src/org/index.ts",
+    "./onboarding": "./src/onboarding/index.ts",
+    "./integrations": "./src/integrations/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

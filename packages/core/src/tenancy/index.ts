@@ -16,7 +16,8 @@ import {
   creditLedger,
   subscriptions,
 } from "@athena/db";
-import { ORG_WIDE_ROLES } from "../org/rbac";
+import { ORG_WIDE_ROLES, type Permission } from "../org/rbac";
+import { DomainError, ForbiddenError } from "../org/errors";
 import { requirePermission } from "../org/access";
 import { logActivity } from "../org/activity";
 
@@ -39,11 +40,16 @@ export function slugify(input: string): string {
 export function normalizeDomain(input: string): string {
   const trimmed = input.trim();
   const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  let host = "";
   try {
-    return new URL(withScheme).hostname.toLowerCase().replace(/^www\./, "");
+    host = new URL(withScheme).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
-    throw new Error(`Invalid domain: ${input}`);
+    host = "";
   }
+  if (!/^(?=.{3,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host)) {
+    throw new DomainError(`Invalid domain: ${input.slice(0, 100)}`);
+  }
+  return host;
 }
 
 const userInput = z.object({
@@ -175,6 +181,11 @@ export async function createWebsite(db: Db, input: z.input<typeof websiteInput>)
   const data = websiteInput.parse(input);
   const domain = normalizeDomain(data.domain);
   await requirePermission(db, data.userId, data.organizationId, "websites:write");
+  const [dup] = await db
+    .select({ id: websites.id })
+    .from(websites)
+    .where(and(eq(websites.organizationId, data.organizationId), eq(websites.domain, domain), isNull(websites.deletedAt)));
+  if (dup) throw new DomainError(`${domain} is already tracked in this organization`);
   return db.transaction(async (tx) => {
     const [site] = await tx
       .insert(websites)
@@ -205,4 +216,20 @@ export async function getPrimaryOrganizationId(db: Db, userId: string): Promise<
     .orderBy(orgMembers.createdAt)
     .limit(1);
   return row?.id ?? null;
+}
+
+/**
+ * The website if the user can access it AND holds `permission` in its
+ * organization; otherwise ForbiddenError (no distinction, to avoid leaking existence).
+ */
+export async function requireWebsitePermission(
+  db: Db,
+  userId: string,
+  websiteId: string,
+  permission: Permission,
+): Promise<WebsiteRow> {
+  const site = await getWebsiteForUser(db, userId, websiteId);
+  if (!site) throw new ForbiddenError();
+  await requirePermission(db, userId, site.organizationId, permission);
+  return site;
 }

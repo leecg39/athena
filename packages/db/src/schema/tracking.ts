@@ -1,4 +1,5 @@
 /* Tracking: topics / prompts / personas / locations / competitors */
+import { sql } from "drizzle-orm";
 import { pgTable, uuid, text, timestamp, integer, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { deletedAt, promptStatusEnum, promptTypeEnum, scheduleKindEnum, ts } from "./enums";
 import { websites } from "./tenancy";
@@ -39,7 +40,8 @@ export const prompts = pgTable(
       .notNull()
       .references(() => websites.id),
     topicId: uuid().references(() => topics.id),
-    personaId: uuid(),
+    personaId: uuid().references(() => personas.id),
+    locationId: uuid().references(() => locations.id),
     text: text().notNull(),
     type: promptTypeEnum().notNull().default("non_branded"),
     status: promptStatusEnum().notNull().default("active"),
@@ -48,7 +50,10 @@ export const prompts = pgTable(
     createdAt: ts().notNull(),
     deletedAt: deletedAt(),
   },
-  (t) => [index("prompts_ws_status_idx").on(t.websiteId, t.status)],
+  (t) => [
+    index("prompts_ws_status_idx").on(t.websiteId, t.status),
+    uniqueIndex("prompts_ws_text_live_idx").on(t.websiteId, sql`lower(${t.text})`).where(sql`${t.deletedAt} is null`),
+  ],
 );
 
 export const promptTags = pgTable(
@@ -77,35 +82,47 @@ export const promptTagLinks = pgTable(
   (t) => [primaryKey({ columns: [t.promptId, t.tagId] })],
 );
 
-export const personas = pgTable("personas", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  name: text().notNull(),
-  description: text(),
-  createdAt: ts().notNull(),
-  deletedAt: deletedAt(),
-});
+export const personas = pgTable(
+  "personas",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    name: text().notNull(),
+    description: text(),
+    createdAt: ts().notNull(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [uniqueIndex("personas_ws_name_live_idx").on(t.websiteId, sql`lower(${t.name})`).where(sql`${t.deletedAt} is null`)],
+);
 
-export const locations = pgTable("locations", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  name: text().notNull(),
-  country: text().notNull().default("US"),
-  createdAt: ts().notNull(),
-  deletedAt: deletedAt(),
-});
+export const locations = pgTable(
+  "locations",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    name: text().notNull(),
+    country: text().notNull().default("US"),
+    createdAt: ts().notNull(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [uniqueIndex("locations_ws_name_live_idx").on(t.websiteId, sql`lower(${t.name})`).where(sql`${t.deletedAt} is null`)],
+);
 
-export const competitors = pgTable("competitors", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  domain: text().notNull(),
-  name: text().notNull(),
-  createdAt: ts().notNull(),
-  deletedAt: deletedAt(),
-});
+export const competitors = pgTable(
+  "competitors",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    domain: text().notNull(),
+    name: text().notNull(),
+    createdAt: ts().notNull(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [uniqueIndex("competitors_ws_domain_live_idx").on(t.websiteId, t.domain).where(sql`${t.deletedAt} is null`)],
+);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useState, type ReactNode } from "react";
 import type { ActionState } from "@/lib/action-state";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -8,6 +8,7 @@ type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
 /**
  * Form bound to a server action with inline success/error feedback.
  * One-time secrets (API keys, invite links) are shown with a copy button.
+ * Field values are preserved when the action reports an error.
  */
 export function ActionForm({
   action,
@@ -34,10 +35,17 @@ export function ActionForm({
         : "btn-primary";
   return (
     <form
-      action={formAction}
       className={className}
       onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
+        // Submit via a transition instead of the `action` prop: React resets
+        // uncontrolled fields after an action completes, which would wipe the
+        // user's input whenever the server returns a validation error.
+        e.preventDefault();
+        if (confirm && !window.confirm(confirm)) return;
+        const fd = new FormData(e.currentTarget);
+        const submitter = (e.nativeEvent as SubmitEvent).submitter;
+        if (submitter instanceof HTMLButtonElement && submitter.name) fd.set(submitter.name, submitter.value);
+        startTransition(() => formAction(fd));
       }}
     >
       {children}

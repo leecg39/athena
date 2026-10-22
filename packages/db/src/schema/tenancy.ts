@@ -83,6 +83,38 @@ export const groupMembers = pgTable(
   (t) => [primaryKey({ columns: [t.groupId, t.userId] })],
 );
 
+export interface AiAccessSnapshot {
+  bot: string;
+  owner: string;
+  status: "allowed" | "blocked" | "unknown";
+  detail: string;
+}
+
+export interface SuggestionCache<T> {
+  provider: string;
+  generatedAt: string;
+  data: T;
+}
+
+/** Canonical brand profile (crawled + user-edited) and cached AI suggestions. */
+export interface WebsiteProfile {
+  description?: string;
+  products?: string[];
+  audiences?: string[];
+  differentiators?: string[];
+  headlines?: string[];
+  productHints?: string[];
+  language?: string;
+  crawledAt?: string;
+  aiAccess?: AiAccessSnapshot[];
+  sitemapUrlCount?: number;
+  suggestions?: {
+    competitors?: SuggestionCache<{ name: string; domain: string }[]>;
+    prompts?: SuggestionCache<{ name: string; prompts: string[] }[]>;
+    personas?: SuggestionCache<{ name: string; description: string }[]>;
+  };
+}
+
 /** A tracked brand/website — the workspace unit. */
 export const websites = pgTable(
   "websites",
@@ -97,17 +129,13 @@ export const websites = pgTable(
     brandVoice: text(),
     brandTraits: jsonb().$type<string[]>().default([]),
     /** canonical brand profile for tracking + generation */
-    profile: jsonb()
-      .$type<{
-        description?: string;
-        products?: string[];
-        audiences?: string[];
-        differentiators?: string[];
-      }>()
-      .default({}),
+    profile: jsonb().$type<WebsiteProfile>().default({}),
     llmsTxtEnabled: boolean().notNull().default(false),
     timezone: text().notNull().default("UTC"),
     country: text().notNull().default("US"),
+    /** last completed onboarding step (wizard resume point) */
+    onboardingStep: integer().notNull().default(0),
+    onboardedAt: timestamp({ withTimezone: true }),
     createdAt: ts().notNull(),
     deletedAt: deletedAt(),
   },

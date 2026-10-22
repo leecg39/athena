@@ -1,0 +1,23 @@
+/**
+ * Small in-memory sliding-window limiters for expensive user actions
+ * (per server instance; a shared store is needed for multi-instance limits).
+ */
+export function createLimiter(max: number, windowMs: number, maxKeys = 10_000) {
+  const hits = new Map<string, number[]>();
+  return (key: string, now = Date.now()): { ok: boolean; retryAfterMs: number } => {
+    const recent = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
+    if (recent.length >= max) {
+      hits.set(key, recent);
+      return { ok: false, retryAfterMs: windowMs - (now - recent[0]) };
+    }
+    if (!hits.has(key) && hits.size >= maxKeys) {
+      const oldest = hits.keys().next().value;
+      if (oldest !== undefined) hits.delete(oldest);
+    }
+    hits.set(key, [...recent, now]);
+    return { ok: true, retryAfterMs: 0 };
+  };
+}
+
+/** Website analysis (crawl) during onboarding: 10 per user per 10 minutes. */
+export const crawlLimiter = createLimiter(10, 10 * 60_000);

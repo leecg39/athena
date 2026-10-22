@@ -7,18 +7,23 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./collector": "./src/collector.ts"
+    "./collector": "./src/collector.ts",
+    "./assist": "./src/assist/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@athena/core": "*",
     "@athena/db": "*",
-    "drizzle-orm": "^0.45.4"
+    "drizzle-orm": "^0.45.4",
+    "@anthropic-ai/sdk": "^1.1.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.10.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestDb, type TestDb } from "@athena/db/testing";
 import { creditBalances, orgMembers, websites } from "@athena/db";
+import { DomainError } from "../org/errors";
 import { eq } from "drizzle-orm";
 import {
   ensureUserWithOrg,
@@ -69,6 +70,13 @@ describe("websites access", () => {
     expect((await getWebsiteForUser(t.db, carol.user.id, site.id))?.id).toBe(site.id);
     expect(await getWebsiteForUser(t.db, dave.user.id, site.id)).toBeNull();
     expect(await getWebsiteForUser(t.db, carol.user.id, "not-a-uuid")).toBeNull();
+  });
+
+  it("rejects duplicate domains in the same organization and invalid domains with a domain error", async () => {
+    const owner = await ensureUserWithOrg(t.db, { email: "dup@example.com" });
+    await createWebsite(t.db, { organizationId: owner.organizationId, userId: owner.user.id, domain: "dup.io", name: "Dup" });
+    await expect(createWebsite(t.db, { organizationId: owner.organizationId, userId: owner.user.id, domain: "https://www.DUP.io/", name: "Dup 2" })).rejects.toThrow(/already tracked/i);
+    await expect(createWebsite(t.db, { organizationId: owner.organizationId, userId: owner.user.id, domain: "http://", name: "Bad" })).rejects.toBeInstanceOf(DomainError);
   });
 
   it("hides soft-deleted websites", async () => {

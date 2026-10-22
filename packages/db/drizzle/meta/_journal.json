@@ -15,6 +15,20 @@
       "when": 1792666397833,
       "tag": "0001_org_rbac",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792667963865,
+      "tag": "0002_onboarding",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792668397161,
+      "tag": "0003_integrations",
+      "breakpoints": true
     }
   ]
 }

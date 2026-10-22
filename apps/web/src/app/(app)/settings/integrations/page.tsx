@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db, publishTargets, scheduledReports, apiKeys } from "@athena/db";
+import { getIntegration } from "@athena/core/integrations";
+import { gscConfigured } from "@/lib/integrations";
 import { SettingsShell } from "@/components/settings-shell";
 import { getSettingsContext } from "@/lib/settings-context";
 
@@ -28,7 +30,8 @@ const CMS_LABEL: Record<(typeof CMS)[number], string> = {
 
 export default async function IntegrationsSettingsPage() {
   const s = await getSettingsContext();
-  const [targets, [slack], [keys]] = await Promise.all([
+  const [gsc, targets, [slack], [keys]] = await Promise.all([
+    getIntegration(db, s.websiteId, "gsc"),
     db.select({ provider: publishTargets.provider }).from(publishTargets).where(eq(publishTargets.websiteId, s.websiteId)),
     db
       .select({ n: sql<number>`count(*)::int` })
@@ -47,7 +50,12 @@ export default async function IntegrationsSettingsPage() {
       title: "Measure",
       hint: "Traffic and search performance",
       items: [
-        { name: "Google Search Console", connected: false, note: "OAuth connection not configured" },
+        {
+          name: "Google Search Console",
+          connected: gsc?.status === "connected",
+          href: gscConfigured() ? `/api/integrations/gsc/connect?websiteId=${s.websiteId}` : undefined,
+          note: gsc?.status === "connected" ? gsc.externalAccount ?? undefined : gscConfigured() ? undefined : "Google OAuth is not configured on this server",
+        },
         { name: "Google Analytics 4", connected: false, note: "OAuth connection not configured" },
       ],
     },

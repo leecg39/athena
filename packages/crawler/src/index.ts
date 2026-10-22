@@ -1,159 +1,132 @@
 /**
- * Site crawler: brand profile suggestion (title/meta/h1 extraction),
- * sitemap discovery, AI-crawler accessibility checks against robots.txt.
- * Identifies as the product crawler ("AthenumBot/1.0").
+ * Site crawler: brand profile suggestion, AI-crawler access checks against
+ * robots.txt, and sitemap discovery. All network access goes through the
+ * SSRF-safe fetcher in ./net.
  */
+import { safeFetch, BlockedUrlError, type SafeResponse } from "./net";
+import { parseRobots, evaluateRobots, type ParsedRobots } from "./robots";
+import { extractBrand, domainOf, type BrandSuggestion } from "./brand";
 
-export const CRAWLER_UA = "AthenumBot/1.0 (+https://example.com/bot)";
+export { safeFetch, createSafeFetcher, isPublicAddress, BlockedUrlError, CRAWLER_UA } from "./net";
+export { parseRobots, evaluateRobots } from "./robots";
+export { extractBrand, domainOf, type BrandSuggestion } from "./brand";
 
-export interface BrandSuggestion {
-  domain: string;
-  name: string;
-  description?: string;
-  headlines: string[];
-  productHints: string[];
-  language?: string;
-}
+/** AI crawlers / user agents that decide whether AI search can read a site. */
+export const AI_BOTS = [
+  { token: "OAI-SearchBot", owner: "OpenAI", purpose: "ChatGPT search index" },
+  { token: "ChatGPT-User", owner: "OpenAI", purpose: "ChatGPT live browsing" },
+  { token: "GPTBot", owner: "OpenAI", purpose: "Model training" },
+  { token: "Claude-SearchBot", owner: "Anthropic", purpose: "Claude search index" },
+  { token: "Claude-User", owner: "Anthropic", purpose: "Claude live browsing" },
+  { token: "ClaudeBot", owner: "Anthropic", purpose: "Model training" },
+  { token: "PerplexityBot", owner: "Perplexity", purpose: "Perplexity search index" },
+  { token: "Perplexity-User", owner: "Perplexity", purpose: "Perplexity live browsing" },
+  { token: "Google-Extended", owner: "Google", purpose: "Gemini grounding / training" },
+  { token: "Applebot-Extended", owner: "Apple", purpose: "Apple Intelligence training" },
+  { token: "meta-externalagent", owner: "Meta", purpose: "Meta AI" },
+  { token: "Bytespider", owner: "ByteDance", purpose: "Model training" },
+  { token: "CCBot", owner: "Common Crawl", purpose: "Open web corpus" },
+] as const;
+
+export type AiAccessStatus = "allowed" | "blocked" | "unknown";
 
 export interface AiAccessReport {
   bot: string;
-  allowed: boolean;
+  owner: string;
+  purpose: string;
+  status: AiAccessStatus;
   detail: string;
 }
 
 export interface CrawlResult {
+  url: string;
   suggestion: BrandSuggestion;
   aiAccess: AiAccessReport[];
   sitemapUrls: string[];
-  statusCode?: number;
+  robotsStatus: "found" | "missing" | "error";
 }
 
-function originOf(input: string): { origin: string; host: string } {
-  const withScheme = /^https?:\/\//.test(input) ? input : `https://${input}`;
-  const u = new URL(withScheme);
-  return { origin: u.origin, host: u.hostname.replace(/^www\./, "") };
+/** "example.com" / "https://example.com/x" → "https://example.com/" origin URL. */
+export function homepageUrl(input: string): string {
+  const trimmed = input.trim();
+  const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+  return `${url.protocol}//${url.host}/`;
 }
 
-async function fetchText(url: string, timeoutMs = 10_000): Promise<{ status: number; body: string }> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+async function tryFetch(url: string, opts?: Parameters<typeof safeFetch>[1]): Promise<SafeResponse | null> {
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": CRAWLER_UA },
-      signal: ctrl.signal,
-      redirect: "follow",
-    });
-    const body = await res.text();
-    return { status: res.status, body };
-  } finally {
-    clearTimeout(t);
+    return await safeFetch(url, opts);
+  } catch (err) {
+    if (err instanceof BlockedUrlError) throw err; // policy violations surface to the caller
+    return null;
   }
 }
 
-export function parseRobots(body: string, bot: string): { allowed: boolean; detail: string } {
-  const lines = body.split(/\r?\n/).map((l) => l.trim());
-  let applies = false;
-  const disallow: string[] = [];
-  const allow: string[] = [];
-  let sawAnyGroup = false;
-  for (const line of lines) {
-    if (/^user-agent:/i.test(line)) {
-      const agent = line.split(":")[1]?.trim().toLowerCase() ?? "";
-      applies = agent === "*" || agent === bot.toLowerCase() || bot.toLowerCase().includes(agent) && agent.length > 2;
-      sawAnyGroup = true;
-    } else if (applies && /^disallow:/i.test(line)) {
-      const v = line.slice(line.indexOf(":") + 1).trim();
-      if (v) disallow.push(v);
-    } else if (applies && /^allow:/i.test(line)) {
-      const v = line.slice(line.indexOf(":") + 1).trim();
-      if (v) allow.push(v);
-    } else if (/^sitemap:/i.test(line)) {
-      // ignore for per-bot check
+export async function fetchRobots(origin: string): Promise<{ status: CrawlResult["robotsStatus"]; parsed: ParsedRobots | null }> {
+  const res = await tryFetch(new URL("/robots.txt", origin).toString(), { maxBytes: 500_000, accept: "text/plain,*/*;q=0.5" });
+  if (!res || res.status >= 500) return { status: "error", parsed: null };
+  if (res.status >= 400) return { status: "missing", parsed: null }; // RFC 9309: 4xx → no restrictions
+  return { status: "found", parsed: parseRobots(res.body) };
+}
+
+export function aiAccessFrom(robots: { status: CrawlResult["robotsStatus"]; parsed: ParsedRobots | null }): AiAccessReport[] {
+  return AI_BOTS.map((b) => {
+    if (robots.status === "error") {
+      return { bot: b.token, owner: b.owner, purpose: b.purpose, status: "unknown", detail: "robots.txt could not be fetched" };
     }
-  }
-  if (!sawAnyGroup) return { allowed: true, detail: "no robots.txt groups found" };
-  const blockedRoot = disallow.includes("/");
-  return {
-    allowed: !blockedRoot || allow.includes("/"),
-    detail: blockedRoot ? "disallow /" : `rules: ${disallow.length} disallow`,
-  };
-}
-
-export const AI_BOTS = [
-  "OAI-SearchBot",
-  "GPTBot",
-  "ChatGPT-User",
-  "ClaudeBot",
-  "Claude-Web",
-  "PerplexityBot",
-  "Google-Extended",
-  "Applebot-Extended",
-  "cc-bots: Bytespider",
-] as const;
-
-export async function checkAiAccess(site: string): Promise<AiAccessReport[]> {
-  const { origin } = originOf(site);
-  let body = "";
-  try {
-    const res = await fetchText(`${origin}/robots.txt`);
-    body = res.body;
-  } catch {
-    return AI_BOTS.map((bot) => ({ bot, allowed: true, detail: "robots.txt unreachable (allowed by default)" }));
-  }
-  return AI_BOTS.map((bot) => {
-    const r = parseRobots(body, bot);
-    return { bot, allowed: r.allowed, detail: r.detail };
+    if (!robots.parsed) {
+      return { bot: b.token, owner: b.owner, purpose: b.purpose, status: "allowed", detail: "no robots.txt" };
+    }
+    const v = evaluateRobots(robots.parsed, b.token, "/");
+    return {
+      bot: b.token,
+      owner: b.owner,
+      purpose: b.purpose,
+      status: v.allowed ? "allowed" : "blocked",
+      detail: v.rule ? `${v.rule.allow ? "Allow" : "Disallow"}: ${v.rule.pattern} (group ${v.matchedGroup})` : `no matching rule${v.matchedGroup ? ` (group ${v.matchedGroup})` : ""}`,
+    };
   });
 }
 
-export async function suggestBrand(site: string): Promise<BrandSuggestion> {
-  const { host } = originOf(site);
-  const fallback: BrandSuggestion = {
-    domain: host,
-    name: host.split(".")[0].replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    headlines: [],
-    productHints: [],
-  };
-  try {
-    const { status, body } = await fetchText(site);
-    if (status >= 400) return fallback;
-    const title = body.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
-    const desc =
-      body.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
-      body.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i)?.[1];
-    const headlines = [...body.matchAll(/<h1[^>]*>([^<]{3,120})<\/h1>/gi)].map((m) => m[1].trim()).slice(0, 5);
-    const h2s = [...body.matchAll(/<h2[^>]*>([^<]{3,120})<\/h2>/gi)].map((m) => m[1].trim()).slice(0, 10);
-    const ogSiteName = body.match(/property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i)?.[1];
-    const name = ogSiteName ?? (title ? title.split(/[|\u2013\u2014-]/)[0].trim() : fallback.name);
-    return {
-      domain: host,
-      name: name || fallback.name,
-      description: desc?.slice(0, 300),
-      headlines: headlines.length ? headlines : h2s,
-      productHints: h2s,
-      language: body.match(/<html[^>]+lang=["']([^"']+)["']/i)?.[1],
-    };
-  } catch {
-    return fallback;
+export async function fetchSitemap(origin: string, hints: string[] = [], limit = 200, maxRequests = 4): Promise<string[]> {
+  const candidates = hints.length ? hints : [new URL("/sitemap.xml", origin).toString()];
+  const urls: string[] = [];
+  const seenIndexes = new Set<string>();
+  const queue = candidates.slice(0, 3);
+  while (queue.length && urls.length < limit && seenIndexes.size < maxRequests) {
+    const next = queue.shift()!;
+    if (seenIndexes.has(next)) continue;
+    seenIndexes.add(next);
+    let res: SafeResponse | null = null;
+    try {
+      res = await tryFetch(next, { maxBytes: 2_000_000, accept: "application/xml,text/xml,*/*;q=0.5" });
+    } catch {
+      res = null; // a blocked sitemap hint is skipped, not fatal
+    }
+    if (!res || res.status >= 400) continue;
+    const locs = [...res.body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1]);
+    if (/<sitemapindex/i.test(res.body)) queue.push(...locs.slice(0, 3));
+    else urls.push(...locs);
   }
+  return [...new Set(urls)].slice(0, limit);
 }
 
-export async function fetchSitemap(site: string, limit = 100): Promise<string[]> {
-  const { origin } = originOf(site);
-  try {
-    const { body } = await fetchText(`${origin}/sitemap.xml`);
-    const urls = [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1]);
-    return urls.slice(0, limit);
-  } catch {
-    return [];
-  }
-}
-
+/** Crawl a site's homepage, robots.txt and sitemap. Throws BlockedUrlError for disallowed targets. */
 export async function crawlSite(site: string): Promise<CrawlResult> {
-  const [suggestion, aiAccess, sitemapUrls] = await Promise.all([
-    suggestBrand(site),
-    checkAiAccess(site),
-    fetchSitemap(site),
-  ]);
-  return { suggestion, aiAccess, sitemapUrls };
+  const start = homepageUrl(site);
+  const home = await tryFetch(start);
+  const finalUrl = home?.url ?? start;
+  const origin = new URL(finalUrl).origin;
+  const suggestion =
+    home && home.status < 400 && /html/i.test(home.contentType || "text/html")
+      ? extractBrand(home.body, finalUrl)
+      : extractBrand("", finalUrl);
+  const robots = await fetchRobots(origin);
+  const sitemapUrls = await fetchSitemap(origin, robots.parsed?.sitemaps ?? []);
+  return { url: finalUrl, suggestion: { ...suggestion, domain: domainOf(finalUrl) }, aiAccess: aiAccessFrom(robots), sitemapUrls, robotsStatus: robots.status };
+}
+
+/** Kept for callers that only need the AI access report. */
+export async function checkAiAccess(site: string): Promise<AiAccessReport[]> {
+  return aiAccessFrom(await fetchRobots(new URL(homepageUrl(site)).origin));
 }
