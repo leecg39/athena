@@ -71,6 +71,13 @@
       "when": 1792697178867,
       "tag": "0009_insights_index",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792698277071,
+      "tag": "0010_kb_oracle_indexes",
+      "breakpoints": true
     }
   ]
 }

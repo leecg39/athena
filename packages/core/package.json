@@ -18,7 +18,8 @@
     "./sources": "./src/sources/index.ts",
     "./competitors": "./src/competitors/index.ts",
     "./assistant": "./src/assistant/index.ts",
-    "./insights": "./src/insights/index.ts"
+    "./insights": "./src/insights/index.ts",
+    "./knowledge": "./src/knowledge/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

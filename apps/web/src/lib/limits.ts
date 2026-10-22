@@ -36,3 +36,9 @@ export const threadLimiter = createLimiter(30, 10 * 60_000);
 
 /** On-demand AI insights generation: 20 per user per 10 minutes. */
 export const insightsLimiter = createLimiter(20, 10 * 60_000);
+
+/** Knowledge Base mutations & extractions: 40 per user per 10 minutes. */
+export const kbLimiter = createLimiter(40, 10 * 60_000);
+
+/** Oracle inaccuracy scans: 20 per user per 10 minutes. */
+export const oracleLimiter = createLimiter(20, 10 * 60_000);

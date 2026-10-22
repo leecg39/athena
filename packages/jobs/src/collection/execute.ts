@@ -18,6 +18,7 @@ import { extract } from "@athena/core/extract";
 import { citationRow } from "@athena/core/sources";
 import { refundCredits } from "@athena/core/billing";
 import { generateInsights } from "@athena/core/insights";
+import { runOracleScan } from "@athena/core/knowledge";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
 
 /** Upper bound on stored answer text (providers occasionally return huge payloads). */
@@ -217,8 +218,9 @@ export async function executeRun(db: Db, runId: string, opts: ExecuteOptions): P
   if (done && after?.state === "completed" && processed > 0) {
     try {
       await generateInsights(db, { websiteId: site.id });
+      await runOracleScan(db, { websiteId: site.id });
     } catch (err) {
-      console.warn("[insights] post-run refresh failed", site.id, err instanceof Error ? err.message : err);
+      console.warn("[insights/oracle] post-run refresh failed", site.id, err instanceof Error ? err.message : err);
     }
   }
   return { processed, done };

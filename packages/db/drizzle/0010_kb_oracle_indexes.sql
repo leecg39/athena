@@ -1,0 +1,2 @@
+CREATE INDEX "kb_pillars_website_idx" ON "kb_pillars" USING btree ("website_id");--> statement-breakpoint
+CREATE INDEX "oracle_findings_ws_status_idx" ON "oracle_findings" USING btree ("website_id","status","created_at");
