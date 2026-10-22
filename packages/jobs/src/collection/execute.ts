@@ -14,7 +14,8 @@ import {
   responseCitations,
   attributeObservations,
 } from "@athena/db";
-import { extract, domainOf } from "@athena/core/extract";
+import { extract } from "@athena/core/extract";
+import { citationRow } from "@athena/core/sources";
 import { refundCredits } from "@athena/core/billing";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
 
@@ -77,12 +78,9 @@ async function persist(db: Db, ctx: RunContext, item: ItemRow, answer: Collected
   });
   // provider-reported sources first (in order), then links found in the text
   const seen = new Set<string>();
-  const citations = [
-    ...answer.citations.map((c) => ({ url: c.url, domain: c.domain ?? domainOf(c.url) })),
-    ...ex.citations.map((c) => ({ url: c.url, domain: c.domain })),
-  ]
+  const citations = [...answer.citations.map((c) => ({ url: c.url, domain: c.domain })), ...ex.citations.map((c) => ({ url: c.url, domain: undefined }))]
     .filter((c) => (seen.has(c.url) ? false : (seen.add(c.url), true)))
-    .map((c, rank) => ({ ...c, rank, isBrand: c.domain === ctx.site.domain || c.domain.endsWith(`.${ctx.site.domain}`) }));
+    .map((c, rank) => ({ ...citationRow(c.url, ctx.site.domain, c.domain), rank }));
 
   await db.transaction(async (tx) => {
     const [saved] = await tx
@@ -110,7 +108,7 @@ async function persist(db: Db, ctx: RunContext, item: ItemRow, answer: Collected
       );
     }
     if (citations.length) {
-      await tx.insert(responseCitations).values(citations.map((c) => ({ responseId: saved.id, url: c.url, domain: c.domain, rank: c.rank, isBrand: c.isBrand })));
+      await tx.insert(responseCitations).values(citations.map((c) => ({ responseId: saved.id, ...c })));
     }
     const attrIds = new Map(ctx.attrs.map((a) => [a.name, a.id]));
     const obs = ex.observations.filter((o) => attrIds.has(o.attribute));

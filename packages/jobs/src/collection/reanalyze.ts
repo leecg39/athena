@@ -6,6 +6,7 @@
 import { and, eq, gte, isNull, inArray, type SQL } from "drizzle-orm";
 import { type Db, responses, responseMentions, responseCitations, attributeObservations, websites, competitors, attributes } from "@athena/db";
 import { extract, isBrandDomain } from "@athena/core/extract";
+import { normalizeUrl, rootDomainOf } from "@athena/core/sources";
 
 export async function reanalyzeResponses(db: Db, input: { websiteId: string; since?: Date; batchSize?: number }): Promise<number> {
   const [site] = await db.select().from(websites).where(eq(websites.id, input.websiteId));
@@ -55,4 +56,26 @@ export async function reanalyzeResponses(db: Db, input: { websiteId: string; sin
     });
   }
   return rows.length;
+}
+
+/** Fill root_domain / normalized_url for citations stored before those columns existed. */
+export async function backfillCitationColumns(db: Db, batchSize = 500): Promise<number> {
+  let updated = 0;
+  for (;;) {
+    const rows = await db
+      .select({ id: responseCitations.id, url: responseCitations.url, domain: responseCitations.domain })
+      .from(responseCitations)
+      .where(isNull(responseCitations.rootDomain))
+      .limit(batchSize);
+    if (!rows.length) return updated;
+    await db.transaction(async (tx) => {
+      for (const r of rows) {
+        await tx
+          .update(responseCitations)
+          .set({ rootDomain: rootDomainOf(r.domain), normalizedUrl: normalizeUrl(r.url) })
+          .where(eq(responseCitations.id, r.id));
+      }
+    });
+    updated += rows.length;
+  }
 }

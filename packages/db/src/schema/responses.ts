@@ -100,11 +100,20 @@ export const responseCitations = pgTable(
       .references(() => responses.id),
     url: text().notNull(),
     domain: text().notNull(),
+    /** registrable domain (public-suffix aware), e.g. blog.canva.com → canva.com */
+    rootDomain: text(),
+    /** URL without tracking params/fragment/trailing slash, for page-level grouping */
+    normalizedUrl: text(),
     /** order of the citation within the answer */
     rank: integer().notNull().default(0),
     isBrand: boolean().notNull().default(false),
   },
-  (t) => [index("citations_resp_idx").on(t.responseId), index("citations_domain_idx").on(t.domain)],
+  (t) => [
+    index("citations_resp_idx").on(t.responseId),
+    index("citations_domain_idx").on(t.domain),
+    index("citations_root_idx").on(t.rootDomain),
+    index("citations_norm_url_idx").on(t.normalizedUrl),
+  ],
 );
 
 /** Direction-neutral brand-perception attributes ("easy to use", "expensive"...). */
@@ -181,4 +190,20 @@ export const runItems = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("run_items_unique_idx").on(t.runId, t.promptId, t.model), index("run_items_run_status_idx").on(t.runId, t.status)],
+);
+
+/** Per-website source-type overrides: a host ("reddit.com") or a URL prefix ("reddit.com/user/brand"). */
+export const sourceOverrides = pgTable(
+  "source_overrides",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    pattern: text().notNull(),
+    /** owned | competitor | partner | third_party */
+    type: text().notNull(),
+    createdAt: ts().notNull(),
+  },
+  (t) => [uniqueIndex("source_overrides_ws_pattern_idx").on(t.websiteId, t.pattern)],
 );
