@@ -7,6 +7,7 @@ import { and, eq, gte, isNull, inArray, type SQL } from "drizzle-orm";
 import { type Db, responses, responseMentions, responseCitations, attributeObservations, websites, competitors, attributes } from "@athena/db";
 import { extract, isBrandDomain, lockExtractedData } from "@athena/core/extract";
 import { normalizeUrl, rootDomainOf } from "@athena/core/sources";
+import { generateInsights } from "@athena/core/insights";
 
 interface SiteContext {
   site: typeof websites.$inferSelect;
@@ -84,6 +85,13 @@ export async function reanalyzeResponses(db: Db, input: { websiteId: string; sin
   const size = input.batchSize ?? 50;
   for (let i = 0; i < rows.length; i += size) {
     await reanalyzeBatch(db, input.websiteId, rows.slice(i, i + size).map((r) => r.id));
+  }
+  if (rows.length > 0) {
+    try {
+      await generateInsights(db, { websiteId: input.websiteId });
+    } catch (err) {
+      console.warn("[insights] post-reanalyze refresh failed", input.websiteId, err instanceof Error ? err.message : err);
+    }
   }
   return rows.length;
 }

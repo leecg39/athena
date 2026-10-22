@@ -9,12 +9,11 @@ import {
   demoCompetitorSoV,
   demoAds,
   demoShopping,
-  demoInsights,
   demoActivity,
   demoOutreach,
 } from "./demo";
 
-export { demoAds, demoShopping, demoInsights, demoCompetitorSoV, demoActivity, demoOutreach };
+export { demoAds, demoShopping, demoCompetitorSoV, demoActivity, demoOutreach };
 
 /** Competitors tracked for one website (tenant-scoped). */
 export async function getCompetitorList(websiteId: string): Promise<{ id: string; domain: string; name: string }[]> {

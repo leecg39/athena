@@ -17,6 +17,7 @@ import {
 import { extract } from "@athena/core/extract";
 import { citationRow } from "@athena/core/sources";
 import { refundCredits } from "@athena/core/billing";
+import { generateInsights } from "@athena/core/insights";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
 
 /** Upper bound on stored answer text (providers occasionally return huge payloads). */
@@ -212,7 +213,15 @@ export async function executeRun(db: Db, runId: string, opts: ExecuteOptions): P
   }
   await finalizeRun(db, runId);
   const [after] = await db.select({ state: runs.state }).from(runs).where(eq(runs.id, runId));
-  return { processed, done: after?.state !== "running" };
+  const done = after?.state !== "running";
+  if (done && after?.state === "completed" && processed > 0) {
+    try {
+      await generateInsights(db, { websiteId: site.id });
+    } catch (err) {
+      console.warn("[insights] post-run refresh failed", site.id, err instanceof Error ? err.message : err);
+    }
+  }
+  return { processed, done };
 }
 
 export interface RunProgress {

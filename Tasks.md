@@ -52,7 +52,8 @@
   - 검증(R10): vitest 186/186 · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(비교표·히트맵·7일 범위 SQL 교차 검증, 추가/이름 변경/삭제/발견·AI 제안 Track → 백그라운드 재분석 반영) · 실 Postgres red-green(재분석 잠금, 삭제 교착). 상세 `docs/review/2026-10-23-task10-review.md`
 - [x] **11. Ask Athena** — 홈 화면(인사 헤딩 + 컴포저 + 추천 칩 4종) + 풀스크린 채팅(자사 데이터 툴콜: 메트릭 조회/응답 검색/콘텐츠 추천) + 파일 업로드 + 커넥터 컨텍스트
   - 검증(R11): vitest 226/226(38 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(홈→파일 검증·첨부→추천 칩→풀스크린 채팅 4종 도구 호출·Markdown 표/링크·제목 수정·삭제, SQL 교차 검증). M3 충족(Sources/경쟁사/Ask Athena). 상세 `docs/review/2026-10-23-task11-review.md`
-- [ ] **12. Insights 엔진** — 주기적 AI 인사이트 생성(기회 경보, 콘텐츠 갭, 경쟁사 변화) + 활성/해결/버림 상태 관리 화면
+- [x] **12. Insights 엔진** — 주기적 AI 인사이트 생성(기회 경보, 콘텐츠 갭, 경쟁사 변화) + 활성/해결/버림 상태 관리 화면
+  - 검증(R12): vitest 243/243(39 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(자동 인사이트 생성 11건·상태 탭 Active/Resolved/Discarded/All·카테고리 필터·Refresh 멱등성·Reopen·Ask Athena 연동, SQL 교차 검증). 상세 `docs/review/2026-10-23-task12-review.md`
 
 ## Phase 4 — 지식 & 콘텐츠 & 액션
 

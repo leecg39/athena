@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestDb, type TestDb } from "@athena/db/testing";
-import { runs, runItems, responses, responseCitations, responseMentions, competitors, creditBalances, creditLedger, organizations, prompts, promptSchedules } from "@athena/db";
+import { runs, runItems, responses, responseCitations, responseMentions, competitors, creditBalances, creditLedger, organizations, prompts, promptSchedules, insights } from "@athena/db";
 import { and, eq } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "@athena/core/tenancy";
 import { createPrompt } from "@athena/core/prompts";
 import { saveMonitoringSchedule } from "@athena/core/onboarding";
 import { DomainError } from "@athena/core/org";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
-import { planRun, executeRun, getRunProgress, dueSchedules, requeueStale, stalledRuns, cancelRun, reanalyzeResponses } from "./index";
+import { planRun, executeRun, getRunProgress, dueSchedules, requeueStale, stalledRuns, cancelRun, reanalyzeResponses, generateAllInsights } from "./index";
 import { createLocation, updatePrompt } from "@athena/core/prompts";
 
 let t: TestDb;
@@ -187,5 +187,26 @@ describe("dueSchedules", () => {
     expect((await dueSchedules(t.db, new Date(now.getTime() + 48 * 3_600_000))).map((s) => s.id)).not.toContain(schedule.id);
     void organizations;
     void prompts;
+  });
+
+  it("evaluates insights automatically on executeRun and via generateAllInsights", async () => {
+    const c = await setup("run-insights@example.com", 1);
+    const adapters = [
+      adapter("chatgpt", (p) => ({
+        text: `For ${p}: 1. **Figma** is top rated. See https://g2.com/categories/design`,
+        citations: [{ url: "https://g2.com/categories/design" }],
+        provider: "t",
+        tokensIn: 0,
+        tokensOut: 0,
+      })),
+    ];
+    const run = await planRun(t.db, { ...c, trigger: "manual", adapters });
+    await executeRun(t.db, run.id, { adapters });
+    const siteInsights = await t.db.select().from(insights).where(eq(insights.websiteId, c.websiteId));
+    expect(siteInsights.length).toBeGreaterThanOrEqual(2);
+
+    const batch = await generateAllInsights(t.db);
+    expect(batch.websites).toBeGreaterThanOrEqual(1);
+    expect(batch.updated).toBeGreaterThanOrEqual(siteInsights.length);
   });
 });

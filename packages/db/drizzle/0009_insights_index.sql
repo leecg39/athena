@@ -1,0 +1,1 @@
+CREATE INDEX "insights_website_status_idx" ON "insights" USING btree ("website_id","status","created_at");

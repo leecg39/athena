@@ -33,3 +33,6 @@ export const askLimiter = createLimiter(20, 10 * 60_000);
 
 /** New Ask Athena chats: 30 per user per 10 minutes. */
 export const threadLimiter = createLimiter(30, 10 * 60_000);
+
+/** On-demand AI insights generation: 20 per user per 10 minutes. */
+export const insightsLimiter = createLimiter(20, 10 * 60_000);

@@ -18,8 +18,12 @@ interface Entity {
 }
 
 async function prepare(db: Db, input: { actorId: string; websiteId: string; filters: VisibilityFilters }) {
-  const f = filtersSchema.parse(input.filters);
   const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:read");
+  return prepareForSite(db, site, input.filters);
+}
+
+async function prepareForSite(db: Db, site: WebsiteRow, filters: VisibilityFilters) {
+  const f = filtersSchema.parse(filters);
   const comps = await db
     .select()
     .from(competitors)
@@ -48,7 +52,16 @@ export async function compareEntities(
   db: Db,
   input: { actorId: string; websiteId: string; filters: VisibilityFilters },
 ): Promise<{ totalResponses: number; entities: EntityComparison[] }> {
-  const { entities, where } = await prepare(db, input);
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:read");
+  return compareEntitiesForSite(db, site, input.filters);
+}
+
+export async function compareEntitiesForSite(
+  db: Db,
+  site: WebsiteRow,
+  filters: VisibilityFilters,
+): Promise<{ totalResponses: number; entities: EntityComparison[] }> {
+  const { entities, where } = await prepareForSite(db, site, filters);
   const [[total], mentionRows, citeRows] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(responses).innerJoin(prompts, eq(prompts.id, responses.promptId)).where(where),
     db
@@ -105,7 +118,12 @@ export interface Heatmap {
 }
 
 export async function topicHeatmap(db: Db, input: { actorId: string; websiteId: string; filters: VisibilityFilters }): Promise<Heatmap> {
-  const { entities, where } = await prepare(db, input);
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:read");
+  return topicHeatmapForSite(db, site, input.filters);
+}
+
+export async function topicHeatmapForSite(db: Db, site: WebsiteRow, filters: VisibilityFilters): Promise<Heatmap> {
+  const { entities, where } = await prepareForSite(db, site, filters);
   const topicName = sql<string | null>`${topics.name}`;
   const [totals, mentionRows, citeRows] = await Promise.all([
     db

@@ -3,9 +3,10 @@
  * schedule dispatcher. Served by apps/web at /api/inngest.
  */
 import { getDb } from "@athena/db";
+import { generateInsights } from "@athena/core/insights";
 import { configuredAdapters } from "@athena/llm/providers";
 import { inngest } from "./inngest";
-import { executeRun, planRun, dueSchedules, stalledRuns, reanalyzeResponses } from "./collection";
+import { executeRun, planRun, dueSchedules, stalledRuns, reanalyzeResponses, generateAllInsights } from "./collection";
 
 export { inngest };
 export * from "./collection";
@@ -70,4 +71,21 @@ export const reanalyzeFn = inngest.createFunction(
     step.run("reanalyze", () => reanalyzeResponses(getDb(), { websiteId: (event.data as { websiteId: string }).websiteId })),
 );
 
-export const functions = [executeRunFn, dispatchSchedulesFn, reanalyzeFn];
+/** Periodic 6-hour AI insights evaluation across all active websites. */
+export const generateInsightsCronFn = inngest.createFunction(
+  { id: "insights-generate-cron" },
+  { cron: "TZ=UTC 0 */6 * * *" },
+  async ({ step }) => step.run("generate-all-insights", () => generateAllInsights(getDb())),
+);
+
+/** On-demand / event-driven AI insights refresh for one website. */
+export const generateWebsiteInsightsFn = inngest.createFunction(
+  { id: "website-insights-generate", debounce: { key: "event.data.websiteId", period: "15s" } },
+  { event: "website/insights.generate" },
+  async ({ event, step }) =>
+    step.run("generate-website-insights", () =>
+      generateInsights(getDb(), { websiteId: (event.data as { websiteId: string }).websiteId }),
+    ),
+);
+
+export const functions = [executeRunFn, dispatchSchedulesFn, reanalyzeFn, generateInsightsCronFn, generateWebsiteInsightsFn];

@@ -150,30 +150,6 @@ export const demoOutreach = [
   { id: "o7", page: "pce mag.com /picks", status: "New", citationPct: 1.71, impressions: "15.5k", citations: "1.9k" },
 ] as const;
 
-export const demoInsights = [
-  {
-    id: "i1",
-    title: "Missing from 6 of 8 high-impact sources",
-    body: "Comparison articles on zapier.com, g2.com and coursera.org cite competitors but not Canvasly. A source-first guide targeting 'design automation' prompts could close this gap.",
-    kind: "opportunity",
-    status: "active",
-  },
-  {
-    id: "i2",
-    title: "Competitor lead driven by comparison coverage",
-    body: "Canva appears in 99.1% of 'Design Software Comparisons' responses vs Canvasly's 41%. Publishing head-to-head pages and earning third-party mentions can lift share of voice.",
-    kind: "competitor_move",
-    status: "active",
-  },
-  {
-    id: "i3",
-    title: "Highest expected impact: pricing page rewrite",
-    body: "Pricing-related prompts show a 12pt mention gap. AI-friendly structure (FAQ blocks, schema markup, explicit pricing tables) is recommended.",
-    kind: "gap",
-    status: "active",
-  },
-] as const;
-
 export const demoAds = [
   { id: "a1", surface: "ChatGPT", advertiser: "Figma", text: "Try Figma's AI design tools — free for teams", prompt: "best ai design tools" },
   { id: "a2", surface: "AI Mode", advertiser: "Adobe Express", text: "Make anything with Adobe Express", prompt: "online design tools" },

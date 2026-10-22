@@ -1,5 +1,5 @@
 /* Action: outreach / insights / shopping / ads / site health */
-import { pgTable, uuid, text, timestamp, boolean, integer, numeric, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, boolean, integer, numeric, jsonb, index } from "drizzle-orm/pg-core";
 import { insightStatusEnum, outreachStatusEnum, ts } from "./enums";
 import { websites } from "./tenancy";
 import { prompts } from "./tracking";
@@ -22,19 +22,23 @@ export const outreachOpportunities = pgTable("outreach_opportunities", {
   createdAt: ts().notNull(),
 });
 
-export const insights = pgTable("insights", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  title: text().notNull(),
-  body: text().notNull(),
-  kind: text().notNull().default("opportunity"), // opportunity | gap | competitor_move | integrity
-  status: insightStatusEnum().notNull().default("active"),
-  /** suggested action payload (e.g. create content item) */
-  action: jsonb().$type<Record<string, unknown>>().default({}),
-  createdAt: ts().notNull(),
-});
+export const insights = pgTable(
+  "insights",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    title: text().notNull(),
+    body: text().notNull(),
+    kind: text().notNull().default("opportunity"), // opportunity | gap | competitor_move | integrity
+    status: insightStatusEnum().notNull().default("active"),
+    /** suggested action payload (e.g. create content item) */
+    action: jsonb().$type<Record<string, unknown>>().default({}),
+    createdAt: ts().notNull(),
+  },
+  (t) => [index("insights_website_status_idx").on(t.websiteId, t.status, t.createdAt)],
+);
 
 export const shoppingProducts = pgTable("shopping_products", {
   id: uuid().primaryKey().defaultRandom(),
