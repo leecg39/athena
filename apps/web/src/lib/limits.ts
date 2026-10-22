@@ -24,3 +24,6 @@ export const crawlLimiter = createLimiter(10, 10 * 60_000);
 
 /** Prompt discovery (Search Console + LLM calls): 20 runs per user per 10 minutes. */
 export const discoveryLimiter = createLimiter(20, 10 * 60_000);
+
+/** Competitor changes (each re-analyses every stored answer): 30 per user per 10 minutes. */
+export const competitorLimiter = createLimiter(30, 10 * 60_000);

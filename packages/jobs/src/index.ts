@@ -5,7 +5,7 @@
 import { getDb } from "@athena/db";
 import { configuredAdapters } from "@athena/llm/providers";
 import { inngest } from "./inngest";
-import { executeRun, planRun, dueSchedules, stalledRuns } from "./collection";
+import { executeRun, planRun, dueSchedules, stalledRuns, reanalyzeResponses } from "./collection";
 
 export { inngest };
 export * from "./collection";
@@ -62,4 +62,12 @@ export const dispatchSchedulesFn = inngest.createFunction(
     ),
 );
 
-export const functions = [executeRunFn, dispatchSchedulesFn];
+/** Recompute mentions/positions after competitors change (debounced per website). */
+export const reanalyzeFn = inngest.createFunction(
+  { id: "website-reanalyze", debounce: { key: "event.data.websiteId", period: "30s" } },
+  { event: "website/reanalyze" },
+  async ({ event, step }) =>
+    step.run("reanalyze", () => reanalyzeResponses(getDb(), { websiteId: (event.data as { websiteId: string }).websiteId })),
+);
+
+export const functions = [executeRunFn, dispatchSchedulesFn, reanalyzeFn];

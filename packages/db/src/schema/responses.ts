@@ -88,7 +88,7 @@ export const responseMentions = pgTable(
     sentiment: sentimentEnum().default("unknown"),
     position: integer(),
   },
-  (t) => [index("mentions_resp_idx").on(t.responseId)],
+  (t) => [index("mentions_resp_idx").on(t.responseId), index("mentions_competitor_idx").on(t.competitorId)],
 );
 
 export const responseCitations = pgTable(
@@ -144,7 +144,7 @@ export const attributeObservations = pgTable(
     positive: boolean().notNull(),
     createdAt: ts().notNull(),
   },
-  (t) => [index("attr_obs_attr_idx").on(t.attributeId)],
+  (t) => [index("attr_obs_attr_idx").on(t.attributeId), index("attr_obs_competitor_idx").on(t.competitorId)],
 );
 
 /** Aggregated per-domain source intelligence. */

@@ -20,6 +20,7 @@ import { requireWebsitePermission, type WebsiteRow } from "../tenancy/index";
 import { logActivity } from "../org/activity";
 import { cleanPromptText, defaultScheduleId, ensureTopic, isBrandedPrompt, lockWebsite, promptLimitFor } from "../prompts/shared";
 import { DomainError } from "../org/errors";
+import { MAX_COMPETITORS, TOO_MANY_COMPETITORS, competitorConflict, lockLiveCompetitors, type CompetitorEntry } from "../competitors/rules";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -98,17 +99,16 @@ const competitorInput = z.object({
 export async function addCompetitors(db: Db, input: z.input<typeof competitorInput>) {
   const data = competitorInput.parse(input);
   const site = await requireWebsitePermission(db, data.actorId, data.websiteId, "prompts:write");
-  const wanted = new Map<string, string>();
-  for (const c of data.competitors) {
-    const domain = normalizeCompetitorDomain(c.domain);
-    if (domain === site.domain || wanted.has(domain)) continue;
-    wanted.set(domain, c.name);
-  }
+  const entries = data.competitors.map((c) => ({ name: c.name, domain: normalizeCompetitorDomain(c.domain) }));
   return db.transaction(async (tx) => {
-    const rows = wanted.size
+    // same rules as the Competitors page; entries that conflict are skipped (re-submits are idempotent)
+    const live = await lockLiveCompetitors(tx, site.id);
+    const fresh = entries.reduce<CompetitorEntry[]>((acc, e) => (competitorConflict(site, [...live, ...acc], e) ? acc : [...acc, e]), []);
+    if (live.length + fresh.length > MAX_COMPETITORS) throw new DomainError(TOO_MANY_COMPETITORS);
+    const rows = fresh.length
       ? await tx
           .insert(competitors)
-          .values([...wanted].map(([domain, name]) => ({ websiteId: site.id, domain, name })))
+          .values(fresh.map((e) => ({ websiteId: site.id, ...e })))
           .onConflictDoNothing()
           .returning()
       : [];

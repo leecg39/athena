@@ -129,33 +129,6 @@ export function demoSources(): DemoSource[] {
   ];
 }
 
-export function demoHeatmap(): { topics: string[]; competitors: string[]; mention: number[][]; citation: number[][] } {
-  const topics = [
-    "Brand Content-Automation",
-    "Canvas Features & Pricing",
-    "Color Theory",
-    "Creative Skills Development",
-    "Design Collaboration",
-    "Design Software Comparisons",
-    "Design Software Options",
-    "Design to Development",
-  ];
-  const competitors = ["Figma", "Adobe Express", "Canva", "Crello", "Vista", "Piktochart"];
-  const mention = topics.map((t, i) =>
-    competitors.map((_, j) => {
-      const raw = (hash(t + j) % 90) + (j === 2 ? 8 : 0) + (i === 5 ? 8 : 0);
-      return +(raw % 100).toFixed(1);
-    }),
-  );
-  const citation = topics.map((t, i) =>
-    competitors.map((_, j) => {
-      const raw = (hash(t + j + "c") % 45) * (i === 5 ? 1.4 : 1);
-      return +(raw % 100).toFixed(1);
-    }),
-  );
-  return { topics, competitors, mention, citation };
-}
-
 export function demoCompetitorSoV(): { name: string; sov: number }[] {
   return [
     { name: "Canva", sov: 42.3 },

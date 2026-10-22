@@ -22,6 +22,7 @@ import { runAction, str, type ActionState } from "@/lib/action-state";
 import { stepHref, nextStep, type StepId } from "./_steps/frame";
 import { parseCompetitorLines, parsePersonaLines, parseLines } from "./_steps/parse";
 import { crawlLimiter } from "@/lib/limits";
+import { scheduleReanalysis } from "@/lib/collection";
 
 function goNext(websiteId: string, step: StepId): never {
   const next = nextStep(step);
@@ -98,7 +99,9 @@ export async function saveCompetitorStep(_: ActionState, fd: FormData): Promise<
       const [name, domain] = v.split("|");
       return { name, domain };
     });
-    await addCompetitors(db, { actorId: await actor(websiteId), websiteId, competitors: [...picked, ...parseCompetitorLines(str(fd, "manual"))] });
+    const added = await addCompetitors(db, { actorId: await actor(websiteId), websiteId, competitors: [...picked, ...parseCompetitorLines(str(fd, "manual"))] });
+    // the step can be revisited after answers were collected
+    if (added.length) await scheduleReanalysis(websiteId);
   });
   if (r.ok) goNext(websiteId, "competitors");
   return r;

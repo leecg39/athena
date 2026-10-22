@@ -1,0 +1,2 @@
+CREATE INDEX "attr_obs_competitor_idx" ON "attribute_observations" USING btree ("competitor_id");--> statement-breakpoint
+CREATE INDEX "mentions_competitor_idx" ON "response_mentions" USING btree ("competitor_id");

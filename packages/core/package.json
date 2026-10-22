@@ -15,7 +15,8 @@
     "./prompts": "./src/prompts/index.ts",
     "./billing": "./src/billing/index.ts",
     "./analytics": "./src/analytics/index.ts",
-    "./sources": "./src/sources/index.ts"
+    "./sources": "./src/sources/index.ts",
+    "./competitors": "./src/competitors/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

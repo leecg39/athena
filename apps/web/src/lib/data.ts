@@ -11,7 +11,6 @@ import {
   demoCitationSeries,
   demoMentionSeries,
   demoSources,
-  demoHeatmap,
   demoCompetitorSoV,
   demoAds,
   demoShopping,
@@ -23,7 +22,7 @@ import {
   type DemoSource,
 } from "./demo";
 
-export { demoAds, demoShopping, demoInsights, demoHeatmap, demoSources, demoCompetitorSoV, demoActivity, demoOutreach };
+export { demoAds, demoShopping, demoInsights, demoSources, demoCompetitorSoV, demoActivity, demoOutreach };
 
 export async function getResponses(filters?: { model?: string; promptType?: string }): Promise<DemoResponse[]> {
   let rows: DemoResponse[] = demoResponses(24);
@@ -70,6 +69,7 @@ export async function getCompetitorList(websiteId: string): Promise<{ id: string
   const rows = await db
     .select()
     .from(competitors)
-    .where(and(eq(competitors.websiteId, websiteId), isNull(competitors.deletedAt)));
+    .where(and(eq(competitors.websiteId, websiteId), isNull(competitors.deletedAt)))
+    .orderBy(competitors.createdAt, competitors.id);
   return rows.map((r) => ({ id: r.id, domain: r.domain, name: r.name }));
 }

@@ -4,6 +4,7 @@ import { competitors, prompts, topics, personas, locations, promptSchedules, web
 import { and, eq, isNull } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "../tenancy/index";
 import { createInvite, acceptInvite, ForbiddenError } from "../org/index";
+import { MAX_COMPETITORS } from "../competitors";
 import {
   saveBrandProfile,
   addCompetitors,
@@ -57,6 +58,23 @@ describe("onboarding persistence", () => {
     const rows = await t.db.select().from(competitors).where(and(eq(competitors.websiteId, site.id), isNull(competitors.deletedAt)));
     expect(rows).toHaveLength(2);
     await expect(addCompetitors(t.db, { actorId: userId, websiteId: site.id, competitors: [{ name: "x", domain: "not a domain" }] })).rejects.toThrow(/domain/i);
+  });
+
+  it("applies the shared competitor rules: brand name, own sub-domains, duplicate names and the cap", async () => {
+    const { userId, site } = await setup("ob2b@example.com");
+    const added = await addCompetitors(t.db, {
+      actorId: userId,
+      websiteId: site.id,
+      competitors: [
+        { name: "canvasly", domain: "other-brand.com" },
+        { name: "Blog", domain: "blog.ob2b.io" },
+        { name: "Figma", domain: "figma.com" },
+        { name: "FIGMA", domain: "figma.io" },
+      ],
+    });
+    expect(added.map((c) => c.name)).toEqual(["Figma"]);
+    const many = Array.from({ length: MAX_COMPETITORS }, (_, i) => ({ name: `C${i}`, domain: `c${i}.com` }));
+    await expect(addCompetitors(t.db, { actorId: userId, websiteId: site.id, competitors: many })).rejects.toThrow(`at most ${MAX_COMPETITORS}`);
   });
 
   it("creates topics and prompts, de-duplicates case-insensitively and classifies branded prompts", async () => {

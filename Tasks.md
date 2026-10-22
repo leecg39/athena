@@ -48,7 +48,8 @@
   - 검증(R8): vitest 163/163 · typecheck 11/11 · build 성공 · 브라우저 E2E(필터·상세·매트릭스·CSV, SQL 교차 검증). 공개 API 교차 테넌트 결함 긴급 수정 포함. 상세 `docs/review/2026-10-23-task8-review.md`
 - [x] **9. Sources 분석** — 인용 도메인 랭킹(스파크라인·인용률·멘션률·타입 C/T/O/P) + 도메인 상세 + 소스 시각화 + Standalone URL 인스펙터
   - 검증(R9): vitest 173/173 · typecheck 11/11 · build 성공 · 브라우저 E2E(랭킹·Sankey·유형 재지정·상세·URL 인스펙터, SQL 교차 검증) · v1 sources 테넌트 격리 확인. 상세 `docs/review/2026-10-23-task9-review.md`
-- [ ] **10. Competitors 화면** — 경쟁사 관리 + AI 가시성 비교 + 자동 경쟁사 발견 + 토픽×경쟁사 히트맵(멘션률/인용률 토글)
+- [x] **10. Competitors 화면** — 경쟁사 관리 + AI 가시성 비교 + 자동 경쟁사 발견 + 토픽×경쟁사 히트맵(멘션률/인용률 토글)
+  - 검증(R10): vitest 186/186 · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(비교표·히트맵·7일 범위 SQL 교차 검증, 추가/이름 변경/삭제/발견·AI 제안 Track → 백그라운드 재분석 반영) · 실 Postgres red-green(재분석 잠금, 삭제 교착). 상세 `docs/review/2026-10-23-task10-review.md`
 - [ ] **11. Ask Athena** — 홈 화면(인사 헤딩 + 컴포저 + 추천 칩 4종) + 풀스크린 채팅(자사 데이터 툴콜: 메트릭 조회/응답 검색/콘텐츠 추천) + 파일 업로드 + 커넥터 컨텍스트
 - [ ] **12. Insights 엔진** — 주기적 AI 인사이트 생성(기회 경보, 콘텐츠 갭, 경쟁사 변화) + 활성/해결/버림 상태 관리 화면
 
