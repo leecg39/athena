@@ -57,6 +57,13 @@
       "when": 1792687967307,
       "tag": "0007_competitor_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792688828008,
+      "tag": "0008_chat",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,24 @@
+import { db } from "@athena/db";
+import { listThreads } from "@athena/core/assistant";
 import { requireWorkspace } from "@/lib/workspace";
+import { connectorsFor } from "@/lib/assistant";
 import { AthAskHome } from "@/components/ask-home";
 
 export const metadata = { title: "Home" };
 
 export default async function HomePage() {
   const ws = await requireWorkspace();
-  return <AthAskHome firstName={ws.user.name?.split(" ")[0] ?? "there"} websiteName={ws.website.name} />;
+  const [connectors, threads] = await Promise.all([
+    connectorsFor(ws),
+    listThreads(db, { actorId: ws.user.id, websiteId: ws.websiteId, limit: 8 }),
+  ]);
+
+  return (
+    <AthAskHome
+      firstName={ws.user.name?.split(" ")[0] ?? "there"}
+      websiteName={ws.website.name}
+      connectors={connectors}
+      recentThreads={threads.map((t) => ({ id: t.id, title: t.title, updatedAt: t.updatedAt.toISOString() }))}
+    />
+  );
 }

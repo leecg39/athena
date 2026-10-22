@@ -1,10 +1,9 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
-import { db, integrations } from "@athena/db";
-import { readGscCredentials, refreshGoogleAccessToken, fetchGscTopQueries } from "@athena/core/integrations";
+import { db } from "@athena/db";
+import { fetchGscTopQueries } from "@athena/core/integrations";
 import { listPrompts, candidatesFromSearchConsole, competitorGapCandidates, mergeCandidates, type PromptCandidate } from "@athena/core/prompts";
 import type { Workspace } from "./workspace";
-import { gscConfigured, integrationKey } from "./integrations";
+import { gscAccess, gscConnected } from "./integrations";
 import { getCompetitorList } from "./data";
 import { promptSuggestions } from "./onboarding-suggestions";
 
@@ -19,22 +18,14 @@ async function trackedSet(ws: Workspace): Promise<Set<string>> {
 }
 
 async function searchConsoleCandidates(ws: Workspace, tracked: Set<string>, notes: string[]): Promise<PromptCandidate[]> {
-  const [row] = await db
-    .select()
-    .from(integrations)
-    .where(and(eq(integrations.websiteId, ws.websiteId), eq(integrations.provider, "gsc"), eq(integrations.status, "connected")));
-  if (!row || !gscConfigured()) {
+  if (!(await gscConnected(ws.websiteId))) {
     notes.push("Connect Google Search Console to discover prompts from real search demand.");
     return [];
   }
   try {
-    const creds = readGscCredentials(row, integrationKey());
-    const accessToken = await refreshGoogleAccessToken({
-      refreshToken: creds.refreshToken,
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    });
-    return candidatesFromSearchConsole(await fetchGscTopQueries({ accessToken, property: creds.property }), tracked);
+    const access = await gscAccess(ws.websiteId);
+    if (!access) return [];
+    return candidatesFromSearchConsole(await fetchGscTopQueries(access), tracked);
   } catch (err) {
     console.error("[discover] search console failed", err);
     notes.push("Search Console data could not be loaded right now.");

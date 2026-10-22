@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./assist": "./src/assist/index.ts",
-    "./providers": "./src/providers/index.ts"
+    "./providers": "./src/providers/index.ts",
+    "./chat": "./src/chat/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

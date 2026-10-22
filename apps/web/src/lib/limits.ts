@@ -27,3 +27,9 @@ export const discoveryLimiter = createLimiter(20, 10 * 60_000);
 
 /** Competitor changes (each re-analyses every stored answer): 30 per user per 10 minutes. */
 export const competitorLimiter = createLimiter(30, 10 * 60_000);
+
+/** Ask Athena answers (each runs an AI model with tools): 20 per user per 10 minutes. */
+export const askLimiter = createLimiter(20, 10 * 60_000);
+
+/** New Ask Athena chats: 30 per user per 10 minutes. */
+export const threadLimiter = createLimiter(30, 10 * 60_000);

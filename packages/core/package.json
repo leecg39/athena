@@ -16,7 +16,8 @@
     "./billing": "./src/billing/index.ts",
     "./analytics": "./src/analytics/index.ts",
     "./sources": "./src/sources/index.ts",
-    "./competitors": "./src/competitors/index.ts"
+    "./competitors": "./src/competitors/index.ts",
+    "./assistant": "./src/assistant/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -25,7 +26,7 @@
   "dependencies": {
     "@athena/db": "*",
     "drizzle-orm": "^0.45.4",
-    "zod": "^3.24.0",
+    "zod": "^3.25.76",
     "tldts": "7.4.16"
   },
   "devDependencies": {

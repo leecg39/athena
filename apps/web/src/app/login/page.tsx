@@ -10,6 +10,37 @@ const ERROR_TEXT: Record<string, string> = {
   Verification: "The sign-in link is invalid or has expired.",
 };
 
+async function runSignIn(provider: string, to: string, options: Record<string, string>) {
+  try {
+    await signIn(provider, { ...options, redirectTo: to });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      redirect(`/login?error=${encodeURIComponent(err.type)}&redirect=${encodeURIComponent(to)}`);
+    }
+    throw err; // NEXT_REDIRECT and unexpected errors propagate
+  }
+}
+
+async function oauthAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("provider"));
+  const to = safeRedirect(formData.get("redirectTo"));
+  if (id !== "google" && id !== "microsoft-entra-id") redirect("/login?error=Configuration");
+  await runSignIn(id, to, {});
+}
+
+async function emailAction(formData: FormData) {
+  "use server";
+  const to = safeRedirect(formData.get("redirectTo"));
+  await runSignIn("resend", to, { email: String(formData.get("email") ?? "") });
+}
+
+async function devAction(formData: FormData) {
+  "use server";
+  const to = safeRedirect(formData.get("redirectTo"));
+  await runSignIn("dev", to, { email: String(formData.get("email") ?? "") });
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -23,32 +54,6 @@ export default async function LoginPage({
   const oauth = providerInfo.filter((p) => p.id === "google" || p.id === "microsoft-entra-id");
   const hasEmail = providerInfo.some((p) => p.id === "resend");
   const hasDev = providerInfo.some((p) => p.id === "dev");
-
-  async function run(provider: string, options: Record<string, string>) {
-    "use server";
-    try {
-      await signIn(provider, { ...options, redirectTo });
-    } catch (err) {
-      if (err instanceof AuthError) {
-        redirect(`/login?error=${encodeURIComponent(err.type)}&redirect=${encodeURIComponent(redirectTo)}`);
-      }
-      throw err; // NEXT_REDIRECT and unexpected errors propagate
-    }
-  }
-  async function oauthAction(formData: FormData) {
-    "use server";
-    const id = String(formData.get("provider"));
-    if (id !== "google" && id !== "microsoft-entra-id") redirect("/login?error=Configuration");
-    await run(id, {});
-  }
-  async function emailAction(formData: FormData) {
-    "use server";
-    await run("resend", { email: String(formData.get("email") ?? "") });
-  }
-  async function devAction(formData: FormData) {
-    "use server";
-    await run("dev", { email: String(formData.get("email") ?? "") });
-  }
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -70,6 +75,7 @@ export default async function LoginPage({
             {oauth.map((p) => (
               <form key={p.id} action={oauthAction}>
                 <input type="hidden" name="provider" value={p.id} />
+                <input type="hidden" name="redirectTo" value={redirectTo} />
                 <button type="submit" className="btn-secondary w-full !py-2.5">
                   {p.label}
                 </button>
@@ -79,6 +85,7 @@ export default async function LoginPage({
             {hasEmail ? (
               <form action={emailAction} className="flex flex-col gap-2">
                 {oauth.length ? <Divider /> : null}
+                <input type="hidden" name="redirectTo" value={redirectTo} />
                 <label htmlFor="email" className="sr-only">Work email</label>
                 <input id="email" name="email" type="email" required placeholder="you@company.com" className="input" />
                 <button type="submit" className="btn-primary w-full !py-2.5">Continue with email</button>
@@ -87,6 +94,7 @@ export default async function LoginPage({
 
             {hasDev ? (
               <form action={devAction} className="mt-2 flex flex-col gap-2 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 p-3">
+                <input type="hidden" name="redirectTo" value={redirectTo} />
                 <label htmlFor="dev-email" className="text-xs font-medium text-amber-800">
                   Developer login (local only — AUTH_DEV_LOGIN)
                 </label>

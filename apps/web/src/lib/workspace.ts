@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@athena/db";
 import { listWebsitesForUser, getWebsiteForUser, type WebsiteRow } from "@athena/core/tenancy";
-import { requireUser, type SessionUser } from "./session";
+import { getUser, requireUser, type SessionUser } from "./session";
 import { pickWebsite } from "./workspace-pick";
 
 export const WS_COOKIE = "athenum_ws";
@@ -16,6 +16,17 @@ export interface Workspace {
   organizationId: string;
   sites: WebsiteRow[];
 }
+
+/** Active workspace for API routes (returns null instead of redirecting). */
+export const getWorkspace = cache(async (): Promise<Workspace | null> => {
+  const user = await getUser();
+  if (!user) return null;
+  const sites = await listWebsitesForUser(db, user.id);
+  const preferred = (await cookies()).get(WS_COOKIE)?.value;
+  const website = pickWebsite(sites, preferred);
+  if (!website) return null;
+  return { user, website, websiteId: website.id, organizationId: website.organizationId, sites };
+});
 
 /**
  * Active workspace for the signed-in user. The cookie is only a preference:
