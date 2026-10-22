@@ -1,52 +1,54 @@
+import { notFound, redirect } from "next/navigation";
+import { db } from "@athena/db";
+import { ensureDefaultGroup, getGroupDashboardData } from "@athena/core/pitches";
 import { PageHeader } from "@/components/page-header";
-import { demoCompetitorSoV } from "@/lib/data";
+import { GroupDashboardView } from "@/components/group-dashboard-view";
+import { getSettingsContext } from "@/lib/settings-context";
 
-export const metadata = { title: "Group Dashboard" };
+export const metadata = { title: "Group Dashboard & Billing" };
+export const dynamic = "force-dynamic";
 
-export default async function GroupDashboardPage() {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function GroupDashboardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const s = await getSettingsContext();
+  const { id } = await params;
+  const sp = await searchParams;
+
+  if (!UUID_RE.test(id)) {
+    const def = await ensureDefaultGroup(db, {
+      actorId: s.user.id,
+      organizationId: s.organizationId,
+    });
+    redirect(`/group/${def.id}`);
+  }
+
+  let data;
+  try {
+    data = await getGroupDashboardData(db, {
+      actorId: s.user.id,
+      organizationId: s.organizationId,
+      groupId: id,
+    });
+  } catch {
+    notFound();
+  }
+
+  const initialTab = sp.tab === "billing" ? "billing" : "dashboard";
+
   return (
     <div>
       <PageHeader
-        title="Group Dashboard"
-        subtitle="Aggregated AI visibility across every website in this group"
-        actions={
-          <>
-            <button className="btn-secondary">Saved views ⌄</button>
-            <button className="btn-secondary">Scheduled reports</button>
-          </>
-        }
+        title={`Group Dashboard — ${data.group.name}`}
+        subtitle="Aggregated AI search visibility, saved views, and shared credit pool across every website in this portfolio group"
       />
-      <div className="space-y-4 p-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Tile label="Websites" value="6" />
-          <Tile label="Group SOV" value="47.8%" />
-          <Tile label="Group mention rate" value="41.2%" />
-          <Tile label="Dollar value (est.)" value="$58,400" />
-        </div>
-        <div className="metric-card">
-          <div className="mb-3 text-sm font-semibold text-gray-900">Share of voice by brand</div>
-          <div className="space-y-2">
-            {demoCompetitorSoV().map((c, i) => (
-              <div key={c.name} className="flex items-center gap-3">
-                <span className="w-32 text-xs text-gray-600">{i === 0 ? "Canvasly (you)" : c.name}</span>
-                <div className="h-2.5 flex-1 rounded-full bg-gray-100">
-                  <div className={`h-2.5 rounded-full ${i === 0 ? "bg-brand-600" : "bg-gray-300"}`} style={{ width: `${c.sov}%` }} />
-                </div>
-                <span className="w-12 text-right text-xs font-medium">{c.sov}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Tile(props: { label: string; value: string }) {
-  return (
-    <div className="metric-card">
-      <div className="text-xs text-gray-400">{props.label}</div>
-      <div className="mt-1 text-xl font-bold text-gray-900">{props.value}</div>
+      <GroupDashboardView data={data} initialTab={initialTab} />
     </div>
   );
 }

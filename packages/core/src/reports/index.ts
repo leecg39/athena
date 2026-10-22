@@ -103,6 +103,17 @@ export interface ScheduledReportItem {
   createdAt: Date;
 }
 
+export interface PublicReportContentRewrite {
+  targetPageUrl: string;
+  focusPrompt: string;
+  headline: string;
+  beforeCopy: string;
+  afterCopy: string;
+  jsonLdSchema: string;
+  projectedCitationLiftPct: number;
+  keyImprovements: string[];
+}
+
 export interface PublicReportData {
   id: string;
   shareId: string;
@@ -113,6 +124,8 @@ export interface PublicReportData {
   cadence: string;
   charts: ReportChartKey[];
   generatedAt: string;
+  isPitch?: boolean;
+  contentRewrite?: PublicReportContentRewrite;
   kpis: {
     mentionRatePct: number;
     citationRatePct: number;
@@ -717,13 +730,60 @@ export async function getPublicReportByShareId(
     .where(and(eq(pitches.shareId, cleanShareId), isNull(pitches.deletedAt)));
 
   if (pitchRow) {
+    const payload = (pitchRow.payload ?? {}) as Record<string, unknown>;
+    const brandDomain =
+      (typeof payload.domain === "string" && payload.domain) ||
+      pitchRow.websiteUrl.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/.*$/, "");
+
+    if (payload.kpis && typeof payload.kpis === "object") {
+      const kpis = payload.kpis as PublicReportData["kpis"];
+      const contentRewrite = payload.contentRewrite as PublicReportContentRewrite | undefined;
+      return {
+        id: pitchRow.id,
+        shareId: pitchRow.shareId,
+        name:
+          pitchRow.kind === "content"
+            ? `${pitchRow.brandName} — AEO Content Rewrite & Citation Pitch`
+            : `${pitchRow.brandName} — AI Search Visibility Pitch`,
+        reportType: pitchRow.kind === "content" ? "content_proposal" : "ai_search",
+        brandName: pitchRow.brandName,
+        brandDomain,
+        cadence: "pitch",
+        charts:
+          pitchRow.kind === "content"
+            ? ["prompt_gaps", "content_proposals", "share_of_voice", "citation_rate"]
+            : ["mention_rate", "citation_rate", "share_of_voice", "top_sources"],
+        generatedAt: pitchRow.createdAt.toISOString(),
+        isPitch: true,
+        contentRewrite,
+        kpis,
+        mentionSeries: Array.isArray(payload.mentionSeries)
+          ? (payload.mentionSeries as PublicReportData["mentionSeries"])
+          : [],
+        citationSeries: Array.isArray(payload.citationSeries)
+          ? (payload.citationSeries as PublicReportData["citationSeries"])
+          : [],
+        competitorSov: Array.isArray(payload.competitorSov)
+          ? (payload.competitorSov as PublicReportData["competitorSov"])
+          : [],
+        topSources: Array.isArray(payload.topSources)
+          ? (payload.topSources as PublicReportData["topSources"])
+          : [],
+        promptGaps: Array.isArray(payload.promptGaps)
+          ? (payload.promptGaps as PublicReportData["promptGaps"])
+          : [],
+        contentProposals: Array.isArray(payload.contentProposals)
+          ? (payload.contentProposals as PublicReportData["contentProposals"])
+          : [],
+      };
+    }
+
     const [firstSite] = await db
       .select()
       .from(websites)
       .where(and(eq(websites.organizationId, pitchRow.organizationId), isNull(websites.deletedAt)))
       .limit(1);
 
-    const payload = (pitchRow.payload ?? {}) as Record<string, unknown>;
     const mentionRatePct = Number(payload.mentionRatePct ?? 36.4);
     const citationRatePct = Number(payload.citationRatePct ?? 16.8);
     const sovPct = Number(payload.shareOfVoicePct ?? 29.5);
@@ -742,8 +802,9 @@ export async function getPublicReportByShareId(
       });
       return {
         ...base,
+        isPitch: true,
         brandName: pitchRow.brandName,
-        brandDomain: pitchRow.websiteUrl.replace(/^https?:\/\//, "").replace(/\/.*$/, ""),
+        brandDomain,
       };
     }
 
@@ -753,10 +814,11 @@ export async function getPublicReportByShareId(
       name: `${pitchRow.brandName} — AI Search Report`,
       reportType: pitchRow.kind === "content" ? "content_proposal" : "ai_search",
       brandName: pitchRow.brandName,
-      brandDomain: pitchRow.websiteUrl,
+      brandDomain,
       cadence: "pitch",
       charts: ["mention_rate", "citation_rate", "share_of_voice"],
       generatedAt: pitchRow.createdAt.toISOString(),
+      isPitch: true,
       kpis: {
         mentionRatePct,
         citationRatePct,

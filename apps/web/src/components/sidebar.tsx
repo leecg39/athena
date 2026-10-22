@@ -25,6 +25,7 @@ const NAV = [
     { href: "/site-health", label: "Site Health", icon: "🩺" },
     { href: "/ads", label: "Ads", icon: "📢" },
     { href: "/pitches", label: "Pitches", icon: "🚀" },
+    { href: "/group", label: "Groups", icon: "🏢" },
     { href: "/reports", label: "Reports", icon: "📅" },
   ]},
 ];

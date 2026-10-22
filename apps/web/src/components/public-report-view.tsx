@@ -291,6 +291,71 @@ export async function renderPublicReportView(shareId: string, forceContentMode =
           </div>
         ) : null}
 
+        {/* AEO Content Rewrite Pitch (Before vs After + JSON-LD Schema) */}
+        {report.contentRewrite ? (
+          <div className="metric-card space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  AEO Content Rewrite Pitch — Before vs. After
+                </div>
+                <div className="text-xs text-gray-500">
+                  Target URL:{" "}
+                  <span className="font-mono text-brand-600">
+                    {report.contentRewrite.targetPageUrl}
+                  </span>{" "}
+                  · Focus Prompt: &ldquo;{report.contentRewrite.focusPrompt}&rdquo;
+                </div>
+              </div>
+              <span className="badge bg-emerald-50 text-xs font-semibold text-emerald-700">
+                +{report.contentRewrite.projectedCitationLiftPct}% Projected Citation Lift
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-red-100 bg-red-50/30 p-3.5">
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-red-700">
+                  Before (Unoptimized Marketing Copy)
+                </div>
+                <div className="whitespace-pre-wrap text-xs leading-relaxed text-gray-700">
+                  {report.contentRewrite.beforeCopy}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-3.5">
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                  After (AEO Answer-First &amp; Entity-Rich Copy)
+                </div>
+                <div className="whitespace-pre-wrap text-xs leading-relaxed text-gray-800">
+                  {report.contentRewrite.afterCopy}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-3.5">
+                <div className="mb-2 text-xs font-semibold text-gray-900">
+                  Key AEO Structural Improvements
+                </div>
+                <ul className="list-disc space-y-1.5 pl-4 text-xs text-gray-600">
+                  {report.contentRewrite.keyImprovements.map((imp, idx) => (
+                    <li key={idx}>{imp}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-lg border border-gray-100 bg-gray-900 p-3.5 text-gray-100">
+                <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-300">
+                  Recommended FAQPage JSON-LD Schema
+                </div>
+                <pre className="max-h-44 overflow-auto font-mono text-[11px] leading-relaxed text-emerald-300">
+                  {report.contentRewrite.jsonLdSchema}
+                </pre>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="rounded-xl bg-brand-50 p-6 text-center">
           <div className="text-sm font-medium text-brand-700">
             Want live AI search tracking and automated content briefs for your brand?

@@ -24,7 +24,8 @@
     "./outreach": "./src/outreach/index.ts",
     "./commerce": "./src/commerce/index.ts",
     "./site-health": "./src/site-health/index.ts",
-    "./reports": "./src/reports/index.ts"
+    "./reports": "./src/reports/index.ts",
+    "./pitches": "./src/pitches/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
