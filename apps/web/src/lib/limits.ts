@@ -42,3 +42,6 @@ export const kbLimiter = createLimiter(40, 10 * 60_000);
 
 /** Oracle inaccuracy scans: 20 per user per 10 minutes. */
 export const oracleLimiter = createLimiter(20, 10 * 60_000);
+
+/** Content Hub & Shopify Catalog AI drafts/mutations: 50 per user per 10 minutes. */
+export const contentLimiter = createLimiter(50, 10 * 60_000);

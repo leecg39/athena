@@ -1,66 +1,66 @@
+import { db } from "@athena/db";
+import { getMembership } from "@athena/core/org";
+import { listCatalogProducts, syncShopifyCatalog } from "@athena/core/content";
 import { PageHeader } from "@/components/page-header";
+import { CatalogOptimizationView } from "@/components/catalog-optimization-view";
+import { requireWorkspace } from "@/lib/workspace";
 
 export const metadata = { title: "Catalog Optimization" };
 
-const PRODUCTS = [
-  { title: "AI Design Canvas Pro", price: "$29/mo", titleScore: 62, descScore: 48, faq: "missing" },
-  { title: "Team Workspace", price: "$12/seat", titleScore: 81, descScore: 74, faq: "ok" },
-  { title: "Design Tokens Engine", price: "$19/mo", titleScore: 35, descScore: 41, faq: "missing" },
-];
+export default async function CatalogOptimizationPage() {
+  const ws = await requireWorkspace();
+  const [membership, initial] = await Promise.all([
+    getMembership(db, ws.user.id, ws.organizationId),
+    listCatalogProducts(db, { actorId: ws.user.id, websiteId: ws.websiteId }),
+  ]);
+  const canWrite = membership?.permissions.includes("content:write") ?? false;
 
-export default function CatalogOptimizationPage() {
+  let data = initial;
+  if (initial.products.length === 0) {
+    await syncShopifyCatalog(db, {
+      actorId: canWrite ? ws.user.id : undefined,
+      websiteId: ws.websiteId,
+    });
+    data = await listCatalogProducts(db, { actorId: ws.user.id, websiteId: ws.websiteId });
+  }
+
   return (
     <div>
       <PageHeader
-        title="Catalog Optimization"
-        subtitle="Review your Shopify catalog and generate AI-recommended product content"
-        actions={<button className="btn-primary">Sync Shopify catalog</button>}
+        title="Catalog Optimization (Shopify)"
+        subtitle="Audit product title & description AEO scores, generate KB-grounded product copy & FAQ schema, and sync with your Shopify catalog"
       />
-      <div className="overflow-x-auto p-6">
-        <table className="table-base rounded-xl border border-gray-100">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Price</th>
-              <th>Title score</th>
-              <th>Description score</th>
-              <th>FAQ</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {PRODUCTS.map((p) => (
-              <tr key={p.title}>
-                <td className="font-medium">{p.title}</td>
-                <td className="text-gray-500">{p.price}</td>
-                <td>
-                  <Score value={p.titleScore} />
-                </td>
-                <td>
-                  <Score value={p.descScore} />
-                </td>
-                <td>
-                  <span className={`badge ${p.faq === "ok" ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-500"}`}>{p.faq}</span>
-                </td>
-                <td className="text-right">
-                  <button className="btn-secondary !px-3 !py-1 text-xs">Generate drafts</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+      <div className="p-6 space-y-6">
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="metric-card">
+            <div className="text-xs font-medium text-gray-500">Catalog Products</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900">{data.stats.totalProducts}</div>
+            <div className="mt-1 text-xs text-gray-400">{data.stats.optimizedCount} AI-optimized</div>
+          </div>
+          <div className="metric-card">
+            <div className="text-xs font-medium text-gray-500">Avg Title Score</div>
+            <div className="mt-1 text-2xl font-semibold text-brand-600">{data.stats.avgTitleScore} / 100</div>
+            <div className="mt-1 text-xs text-gray-400">Brand + category keyword clarity</div>
+          </div>
+          <div className="metric-card">
+            <div className="text-xs font-medium text-gray-500">Avg Description Score</div>
+            <div className="mt-1 text-2xl font-semibold text-brand-600">{data.stats.avgDescScore} / 100</div>
+            <div className="mt-1 text-xs text-gray-400">KB factual density & specs</div>
+          </div>
+          <div className="metric-card">
+            <div className="text-xs font-medium text-gray-500">FAQ Schema Coverage</div>
+            <div className="mt-1 text-2xl font-semibold text-emerald-600">{data.stats.faqCoveragePct}%</div>
+            <div className="mt-1 text-xs text-gray-400">Structured Q&A for AI shopping</div>
+          </div>
+        </div>
 
-function Score({ value }: { value: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-20 rounded-full bg-gray-100">
-        <div className={`h-1.5 rounded-full ${value < 50 ? "bg-orange-400" : "bg-emerald-500"}`} style={{ width: `${value}%` }} />
+        <CatalogOptimizationView
+          products={data.products}
+          shopifyConnected={data.shopifyConnected}
+          storeDomain={data.storeDomain}
+          canWrite={canWrite}
+        />
       </div>
-      <span className="text-xs text-gray-500">{value}</span>
     </div>
   );
 }

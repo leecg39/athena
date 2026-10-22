@@ -59,7 +59,8 @@
 
 - [x] **13. Knowledge Base + Oracle** — KB(필라/팩트 CRUD + 승인 큐 + 내부링크 페이지) + Oracle(응답 vs KB 부정확성 스캔: 확정된 부정확/KB 불일치/모델 상이 분류 + 해결 워크플로)
   - 검증(R13): vitest 239/239(38 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(필라/팩트 CRUD·AI 응답 팩트 추출·승인 큐 Approve·내부링크 등록·Oracle 3종 스캔 8건·Resolving→Fix KB & Resolve→Resolved 워크플로, SQL 교차 검증). 상세 `docs/review/2026-10-23-task13-review.md`
-- [ ] **14. Content Hub** — 스프레드시트형 그리드 + AI 에이전트 컬럼(브리프→초안→버전) + Revise with Athena + CMS 발행 통합(WordPress/Webflow/Contentful/Sanity/Wix/Framer/Payload) + Shopify Catalog Optimization
+- [x] **14. Content Hub** — 스프레드시트형 그리드 + AI 에이전트 컬럼(브리프→초안→버전) + Revise with Athena + CMS 발행 통합(WordPress/Webflow/Contentful/Sanity/Wix/Framer/Payload) + Shopify Catalog Optimization
+  - 검증(R14): vitest 244/244(39 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(스프레드시트 그리드 생성·URL 임포트·Brief→Draft→Revise with Athena v2·Webflow CMS 발행·Shopify Catalog Optimization 초안 생성 및 발행, SQL 교차 검증). M4 충족(콘텐츠/인사이트/KB·Oracle). 상세 `docs/review/2026-10-23-task14-review.md`
 - [ ] **15. Outreach** — 인용 기회 페이지 목록(인용률·예상 노출) + 발신자 찾기 + 이메일 초안 생성 + 칸반 파이프라인(New/Todo/Done)
 
 ## Phase 5 — 커머스 & 사이트 & 리포트

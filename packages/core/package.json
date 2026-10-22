@@ -19,7 +19,8 @@
     "./competitors": "./src/competitors/index.ts",
     "./assistant": "./src/assistant/index.ts",
     "./insights": "./src/insights/index.ts",
-    "./knowledge": "./src/knowledge/index.ts"
+    "./knowledge": "./src/knowledge/index.ts",
+    "./content": "./src/content/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
