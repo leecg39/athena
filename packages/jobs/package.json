@@ -7,20 +7,28 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./inngest": "./src/inngest.ts"
+    "./inngest": "./src/inngest.ts",
+    "./collection": "./src/collection/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "seed": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@athena/db": "*",
     "@athena/core": "*",
     "@athena/llm": "*",
     "inngest": "^3.25.0",
-    "drizzle-orm": "^0.45.4"
+    "drizzle-orm": "^0.45.4",
+    "zod": "^3.25.76",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.10.0",
+    "vitest": "^3.2.4",
+    "@electric-sql/pglite": "^0.3.0",
+    "tsx": "^4.19.0"
   }
 }

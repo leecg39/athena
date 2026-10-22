@@ -1,7 +1,7 @@
 /* Response collection */
 import { pgTable, uuid, text, timestamp, boolean, integer, numeric, jsonb, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { runStateEnum, sentimentEnum, sourceTypeEnum, ts } from "./enums";
-import { websites } from "./tenancy";
+import { users, websites } from "./tenancy";
 import { competitors, promptSchedules, prompts } from "./tracking";
 
 /** One scheduled or ad-hoc collection run over a website's prompts. */
@@ -19,6 +19,14 @@ export const runs = pgTable(
     totalResponses: integer().notNull().default(0),
     completedResponses: integer().notNull().default(0),
     creditsReserved: integer().notNull().default(0),
+    /** credits returned to the balance for items that failed */
+    creditsRefunded: integer().notNull().default(0),
+    failedResponses: integer().notNull().default(0),
+    /** manual | schedule | api */
+    trigger: text().notNull().default("manual"),
+    requestedBy: uuid().references(() => users.id),
+    models: jsonb().$type<string[]>().notNull().default([]),
+    error: text(),
     startedAt: timestamp({ withTimezone: true }),
     finishedAt: timestamp({ withTimezone: true }),
     createdAt: ts().notNull(),
@@ -54,6 +62,10 @@ export const responses = pgTable(
     } | null>(),
     tokensIn: integer().default(0),
     tokensOut: integer().default(0),
+    /** concrete provider/model that answered, e.g. "anthropic:claude-opus-5-5" */
+    provider: text(),
+    /** produced by the dev-only simulated provider — never real AI output */
+    simulated: boolean().notNull().default(false),
     ranAt: ts().notNull(),
     createdAt: ts().notNull(),
   },
@@ -147,4 +159,26 @@ export const sources = pgTable(
     updatedAt: ts().notNull(),
   },
   (t) => [uniqueIndex("sources_ws_domain_idx").on(t.websiteId, t.domain)],
+);
+
+/** One unit of work in a run: a prompt asked to one AI model (idempotent, resumable). */
+export const runItems = pgTable(
+  "run_items",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    runId: uuid()
+      .notNull()
+      .references(() => runs.id),
+    promptId: uuid()
+      .notNull()
+      .references(() => prompts.id),
+    model: text().notNull(),
+    /** pending | running | succeeded | failed */
+    status: text().notNull().default("pending"),
+    attempts: integer().notNull().default(0),
+    responseId: uuid().references(() => responses.id),
+    error: text(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("run_items_unique_idx").on(t.runId, t.promptId, t.model), index("run_items_run_status_idx").on(t.runId, t.status)],
 );

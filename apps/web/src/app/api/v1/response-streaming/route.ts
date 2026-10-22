@@ -1,17 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, websites } from "@athena/db";
+import { DomainError } from "@athena/core/org";
+import { planRun } from "@athena/jobs/collection";
+import { configuredAdapters } from "@athena/llm/providers";
 import { authenticate, isResponse } from "@/lib/api-key";
-import { startCollection } from "@athena/jobs";
+import { dispatchRun } from "@/lib/collection";
 
-/** POST /api/v1/response-streaming — start a collection run (1 credit per response). */
+const Body = z.object({ websiteId: z.string().uuid(), promptIds: z.array(z.string().uuid()).max(500).optional() });
+
+/** POST /api/v1/response-streaming — start a collection run for a website owned by the key's organization. */
 export async function POST(req: NextRequest) {
   const ctx = await authenticate(req);
   if (isResponse(ctx)) return ctx;
-  const body = (await req.json()) as { websiteId: string; promptIds?: string[] };
-  if (!body.websiteId) return NextResponse.json({ error: "websiteId required" }, { status: 400 });
+  const parsed = Body.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "invalid body: websiteId (uuid) required" }, { status: 400 });
+  const [site] = await db
+    .select({ id: websites.id })
+    .from(websites)
+    .where(and(eq(websites.id, parsed.data.websiteId), eq(websites.organizationId, ctx.organizationId), isNull(websites.deletedAt)));
+  if (!site) return NextResponse.json({ error: "website not found" }, { status: 404 });
   try {
-    const runId = await startCollection(body.websiteId, body.promptIds);
-    return NextResponse.json({ data: { workflow_id: runId, state: "queued" } }, { status: 202 });
+    const run = await planRun(db, { websiteId: site.id, trigger: "api", promptIds: parsed.data.promptIds, adapters: configuredAdapters() });
+    await dispatchRun(run.id);
+    return NextResponse.json({ data: { workflow_id: run.id, state: run.state, total: run.totalResponses } }, { status: 202 });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    if (err instanceof DomainError) return NextResponse.json({ error: err.message }, { status: 409 });
+    throw err;
   }
 }

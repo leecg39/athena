@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "npx turbo run build --filter=@athena/web",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/cron/dispatch",
+      "schedule": "*/30 * * * *"
+    }
+  ]
 }

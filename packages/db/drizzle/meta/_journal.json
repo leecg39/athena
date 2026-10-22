@@ -36,6 +36,13 @@
       "when": 1792669335435,
       "tag": "0004_taxonomy_ci",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792670080923,
+      "tag": "0005_collection",
+      "breakpoints": true
     }
   ]
 }

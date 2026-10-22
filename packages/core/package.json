@@ -13,7 +13,8 @@
     "./org": "./src/org/index.ts",
     "./onboarding": "./src/onboarding/index.ts",
     "./integrations": "./src/integrations/index.ts",
-    "./prompts": "./src/prompts/index.ts"
+    "./prompts": "./src/prompts/index.ts",
+    "./billing": "./src/billing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

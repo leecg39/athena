@@ -8,6 +8,7 @@ import { UniverseTab } from "./_tabs/universe";
 import { TopicsTab, TagsTab, PersonasTab, LocationsTab } from "./_tabs/taxonomy";
 import { SchedulesTab } from "./_tabs/schedules";
 import { DiscoverTab } from "./_tabs/discover";
+import { RunsTab } from "./_tabs/runs";
 
 export const metadata = { title: "Prompts" };
 
@@ -19,6 +20,7 @@ const TABS = [
   ["locations", "Locations"],
   ["schedules", "Schedules"],
   ["discover", "Discover"],
+  ["runs", "Runs"],
 ] as const;
 type TabId = (typeof TABS)[number][0];
 
@@ -74,6 +76,7 @@ export default async function PromptsPage({ searchParams }: { searchParams: Prom
   else if (tab === "personas") body = <PersonasTab personas={await listPersonas(db, c)} canWrite={canWrite} />;
   else if (tab === "locations") body = <LocationsTab locations={await listLocations(db, c)} canWrite={canWrite} defaultCountry={ws.website.country} />;
   else if (tab === "schedules") body = <SchedulesTab schedules={await listSchedules(db, c)} canWrite={canWrite} />;
+  else if (tab === "runs") body = <RunsTab websiteId={ws.websiteId} organizationId={ws.organizationId} canWrite={canWrite} />;
   else body = <DiscoverTab canWrite={canWrite} />;
 
   return (

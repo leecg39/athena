@@ -24,6 +24,9 @@ import { requireWorkspace } from "@/lib/workspace";
 import { runAction, str, type ActionState } from "@/lib/action-state";
 import { runDiscovery, type DiscoveryResult } from "@/lib/discovery";
 import { discoveryLimiter } from "@/lib/limits";
+import { planRun, cancelRun } from "@athena/jobs/collection";
+import { configuredAdapters } from "@athena/llm/providers";
+import { dispatchRun } from "@/lib/collection";
 
 async function c() {
   const ws = await requireWorkspace();
@@ -186,5 +189,24 @@ export async function trackCandidatesAction(_: ActionState, fd: FormData): Promi
     revalidatePath("/prompts");
     if (!added) return { ok: false, error: errors[0] ?? "Nothing added" };
     return { ok: true, message: `${added} prompt(s) now tracked${errors.length ? ` · ${errors.length} skipped (${errors[0]})` : ""}` };
+  });
+}
+
+export async function startRunAction(_: ActionState, _fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const ws = await requireWorkspace();
+    const run = await planRun(db, { actorId: ws.user.id, websiteId: ws.websiteId, trigger: "manual", adapters: configuredAdapters() });
+    await dispatchRun(run.id);
+    revalidatePath("/prompts");
+    return { ok: true, message: `Collection started: ${run.totalResponses} answers (${run.totalResponses} credits reserved)` };
+  });
+}
+
+export async function cancelRunAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const ws = await requireWorkspace();
+    await cancelRun(db, { actorId: ws.user.id, runId: str(fd, "runId") });
+    revalidatePath("/prompts");
+    return { ok: true, message: "Collection cancelled; unused credits refunded" };
   });
 }
