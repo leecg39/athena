@@ -13,7 +13,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed": "tsx scripts/seed-demo.ts"
+    "seed": "tsx scripts/seed-demo.ts",
+    "reanalyze": "tsx scripts/reanalyze.ts"
   },
   "dependencies": {
     "@athena/db": "*",

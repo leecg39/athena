@@ -116,7 +116,14 @@ async function persist(db: Db, ctx: RunContext, item: ItemRow, answer: Collected
     const obs = ex.observations.filter((o) => attrIds.has(o.attribute));
     if (obs.length) {
       await tx.insert(attributeObservations).values(
-        obs.map((o) => ({ attributeId: attrIds.get(o.attribute)!, responseId: saved.id, textSpan: o.textSpan, score: o.score.toFixed(2), positive: o.positive })),
+        obs.map((o) => ({
+          attributeId: attrIds.get(o.attribute)!,
+          responseId: saved.id,
+          competitorId: o.competitorId,
+          textSpan: o.textSpan,
+          score: o.score.toFixed(2),
+          positive: o.positive,
+        })),
       );
     }
     await tx.update(runItems).set({ status: "succeeded", responseId: saved.id, error: null, updatedAt: new Date() }).where(eq(runItems.id, item.id));

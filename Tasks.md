@@ -37,7 +37,8 @@
 
 - [x] **5. 응답 수집 엔진** — LLM 프로바이더 어댑터 6종(OpenAI/Anthropic/Perplexity/Gemini/xAI/DeepSeek) + Inngest 스케줄 워크플로 + 크레딧 차감(1크레딧=1응답) + 진행률 폴링 API (`packages/llm`, `packages/jobs`)
   - 검증(R5): vitest 129/129 · typecheck 11/11 · build 성공 · 브라우저 E2E(수집→진행률→실패 환불, 가짜 응답 0). 실제 프로바이더 성공 응답은 키/크레딧 부재로 미검증. 상세 `docs/review/2026-10-22-task5-review.md`
-- [ ] **6. 분석 파이프라인** — 응답 구조화 추출(멘션/인용 URL/포지션/감성/속성 관측/쇼핑 카드) + 메트릭 집계(멘션률·인용률·SOV·포지션 누적/일별) (`packages/core`)
+- [x] **6. 분석 파이프라인** — 응답 구조화 추출(멘션/인용 URL/포지션/감성/속성 관측/쇼핑 카드) + 메트릭 집계(멘션률·인용률·SOV·포지션 누적/일별) (`packages/core`)
+  - 검증(R6): vitest 146/146 · typecheck 11/11 · build 성공 · 실제 Postgres에서 집계 결과와 수기 SQL 일치. 감성은 영어 사전 기반. 상세 `docs/review/2026-10-22-task6-review.md`
 
 ## Phase 3 — 핵심 대시보드
 

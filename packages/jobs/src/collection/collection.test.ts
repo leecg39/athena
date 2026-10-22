@@ -7,7 +7,7 @@ import { createPrompt } from "@athena/core/prompts";
 import { saveMonitoringSchedule } from "@athena/core/onboarding";
 import { DomainError } from "@athena/core/org";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
-import { planRun, executeRun, getRunProgress, dueSchedules, requeueStale, stalledRuns, cancelRun } from "./index";
+import { planRun, executeRun, getRunProgress, dueSchedules, requeueStale, stalledRuns, cancelRun, reanalyzeResponses } from "./index";
 import { createLocation, updatePrompt } from "@athena/core/prompts";
 
 let t: TestDb;
@@ -150,6 +150,26 @@ describe("recovery and cancellation", () => {
     expect(seen).toEqual(["KR"]);
     const [r] = await t.db.select().from(responses).where(eq(responses.runId, run.id));
     expect(r.rawText.length).toBeLessThanOrEqual(100_000);
+  });
+});
+
+describe("reanalyzeResponses", () => {
+  it("recomputes mentions after a competitor is added, keeping provider citations", async () => {
+    const c = await setup("run10@example.com", 1);
+    const adapters = [adapter("chatgpt", (p) => ({ text: `For ${p}: Canva and Canvasly are both popular.`, citations: [{ url: "https://canvasly.io/x" }], provider: "t", tokensIn: 0, tokensOut: 0 }))];
+    const run = await planRun(t.db, { ...c, trigger: "manual", adapters });
+    await executeRun(t.db, run.id, { adapters });
+    const [r] = await t.db.select().from(responses).where(eq(responses.runId, run.id));
+    expect((await t.db.select().from(responseMentions).where(eq(responseMentions.responseId, r.id))).map((m) => m.name)).toEqual(["Canvasly"]);
+    await t.db.insert(competitors).values({ websiteId: c.websiteId, name: "Canva", domain: "canva.com" });
+    const n = await reanalyzeResponses(t.db, { websiteId: c.websiteId });
+    expect(n).toBe(1);
+    const after = await t.db.select().from(responseMentions).where(eq(responseMentions.responseId, r.id));
+    expect(after.map((m) => m.name).sort()).toEqual(["Canva", "Canvasly"]);
+    const [r2] = await t.db.select().from(responses).where(eq(responses.id, r.id));
+    expect(r2.position).toBe(2); // Canva is mentioned first
+    expect(r2.cited).toBe(true);
+    expect(await t.db.select().from(responseCitations).where(eq(responseCitations.responseId, r.id))).toHaveLength(1);
   });
 });
 
