@@ -54,3 +54,6 @@ export const commerceLimiter = createLimiter(40, 10 * 60_000);
 
 /** Site Health crawls, staging checks & live content verifications: 40 per user per 10 minutes. */
 export const siteHealthLimiter = createLimiter(40, 10 * 60_000);
+
+/** Report Builder mutations & on-demand email/Slack dispatches: 40 per user per 10 minutes. */
+export const reportsLimiter = createLimiter(40, 10 * 60_000);

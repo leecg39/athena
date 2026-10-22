@@ -23,7 +23,8 @@
     "./content": "./src/content/index.ts",
     "./outreach": "./src/outreach/index.ts",
     "./commerce": "./src/commerce/index.ts",
-    "./site-health": "./src/site-health/index.ts"
+    "./site-health": "./src/site-health/index.ts",
+    "./reports": "./src/reports/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

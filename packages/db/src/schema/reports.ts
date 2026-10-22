@@ -1,5 +1,5 @@
 /* Pitches / reports / saved views */
-import { pgTable, uuid, text, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { deletedAt, ts } from "./enums";
 import { groups, organizations, websites } from "./tenancy";
 
@@ -26,18 +26,24 @@ export const savedViews = pgTable("saved_views", {
   createdAt: ts().notNull(),
 });
 
-export const scheduledReports = pgTable("scheduled_reports", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  name: text().notNull(),
-  shareId: text().notNull().unique(),
-  /** chart keys to include */
-  charts: jsonb().$type<string[]>().notNull().default([]),
-  recipients: jsonb().$type<string[]>().notNull().default([]),
-  cadence: text().notNull().default("weekly"),
-  slackChannel: text(),
-  lastSentAt: timestamp({ withTimezone: true }),
-  createdAt: ts().notNull(),
-});
+export const scheduledReports = pgTable(
+  "scheduled_reports",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    name: text().notNull(),
+    shareId: text().notNull().unique(),
+    /** ai_search | content_proposal */
+    reportType: text().notNull().default("ai_search"),
+    /** chart keys to include */
+    charts: jsonb().$type<string[]>().notNull().default([]),
+    recipients: jsonb().$type<string[]>().notNull().default([]),
+    cadence: text().notNull().default("weekly"),
+    slackChannel: text(),
+    lastSentAt: timestamp({ withTimezone: true }),
+    createdAt: ts().notNull(),
+  },
+  (t) => [index("scheduled_reports_ws_idx").on(t.websiteId, t.createdAt)],
+);

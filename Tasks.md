@@ -70,7 +70,8 @@
   - 검증(R16): vitest 250/250(41 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/shopping` 카로셀 리더보드 13건·자사 vs 경쟁사 브랜드 비교·6개 소매사 분포·수동 제품 추가, `/ads` 3대 AI 표면 스폰서드 광고 캡처 8건·광고주 점유율·수동 광고 등록·AI Mode 필터, SQL 교차 검증). 상세 `docs/review/2026-10-23-task16-review.md`
 - [x] **17. Site Health** — 키워드/랭킹, 스테이징 체크(릴리스 비교), 사이트맵, 크롤 범위, 페이지 편집 최적화 보드, 라이브 콘텐츠 검증 + AI 크롤러 접근성 체크(OAI-SearchBot 등)
   - 검증(R17): vitest 253/253(42 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/site-health` 10대 AI 봇 매트릭스·키워드/랭킹·스테이징 릴리스 비교·사이트맵/크롤 범위 속성·페이지 편집 최적화 보드 `Needs Edit→Staged→Verified Live`·라이브 콘텐츠 검증 서명, `/bot` 공개 문서, SQL 교차 검증). 상세 `docs/review/2026-10-23-task17-review.md`
-- [ ] **18. Report Builder** — 차트 조합 편집기 + 수신자/스케줄 + PDF 내보내기 + 공개 공유 링크(AI 검색 리포트/콘텐츠 제안 리포트) + Slack 주간 리포트
+- [x] **18. Report Builder** — 차트 조합 편집기 + 수신자/스케줄 + PDF 내보내기 + 공개 공유 링크(AI 검색 리포트/콘텐츠 제안 리포트) + Slack 주간 리포트
+  - 검증(R18): vitest 256/256(43 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/reports` 차트 조합 편집기·신규 리포트 생성·이메일 및 `#board-aeo` Slack 즉시 발송·`/api/reports/.../pdf` `%PDF-1.4` 바이너리 내보내기·`/report/[shareId]` 및 `/report/content/[shareId]` 공개 공유 뷰, SQL 교차 검증). M5 충족(커머스/헬스/리포트). 상세 `docs/review/2026-10-23-task18-review.md`
 
 ## Phase 6 — 에이전시 & 과금
 

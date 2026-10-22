@@ -1,0 +1,2 @@
+ALTER TABLE "scheduled_reports" ADD COLUMN "report_type" text DEFAULT 'ai_search' NOT NULL;--> statement-breakpoint
+CREATE INDEX "scheduled_reports_ws_idx" ON "scheduled_reports" USING btree ("website_id","created_at");
