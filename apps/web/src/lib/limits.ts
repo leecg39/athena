@@ -48,3 +48,6 @@ export const contentLimiter = createLimiter(50, 10 * 60_000);
 
 /** Outreach opportunity discovery, author lookup & pitch drafts: 40 per user per 10 minutes. */
 export const outreachLimiter = createLimiter(40, 10 * 60_000);
+
+/** Shopping Insights & Sponsored Ads sync/mutations: 40 per user per 10 minutes. */
+export const commerceLimiter = createLimiter(40, 10 * 60_000);

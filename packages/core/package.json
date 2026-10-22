@@ -21,7 +21,8 @@
     "./insights": "./src/insights/index.ts",
     "./knowledge": "./src/knowledge/index.ts",
     "./content": "./src/content/index.ts",
-    "./outreach": "./src/outreach/index.ts"
+    "./outreach": "./src/outreach/index.ts",
+    "./commerce": "./src/commerce/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -1,45 +1,84 @@
+import Link from "next/link";
+import { db } from "@athena/db";
+import { getShoppingInsightsSummary } from "@athena/core/commerce";
 import { PageHeader } from "@/components/page-header";
-import { demoShopping } from "@/lib/data";
+import { ShoppingInsightsView } from "@/components/shopping-insights-view";
+import { getSettingsContext } from "@/lib/settings-context";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Shopping Insights" };
 
 export default async function ShoppingPage() {
-  const maxAppearances = Math.max(...demoShopping.map((s) => s.appearances));
+  const s = await getSettingsContext();
+  const summary = await getShoppingInsightsSummary(db, s.websiteId);
+  const canWrite = s.membership.permissions.includes("content:write");
+
   return (
     <div>
-      <PageHeader title="Shopping Insights" subtitle="How your products appear in AI shopping answers (ChatGPT, AI Mode, Gemini carousels)" />
-      <div className="space-y-4 p-6">
+      <PageHeader
+        title="Shopping Insights"
+        subtitle="Track how your products appear in AI shopping carousels (ChatGPT, Google AI Mode, Gemini) — compare positions, pricing, competitors, and retailer distribution"
+        actions={
+          <Link href="/content/catalog-optimization" className="btn-secondary text-xs">
+            🛍 Shopify Catalog Optimization →
+          </Link>
+        }
+      />
+      <div className="space-y-5 p-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Tile label="Product appearances" value="5.9k" />
-          <Tile label="Avg position" value="#2.0" />
-          <Tile label="Avg price shown" value="$16.50" />
-          <Tile label="Retailer coverage" value="18" />
-        </div>
-        <div className="metric-card">
-          <div className="mb-3 text-sm font-semibold text-gray-900">AI shopping leaderboard</div>
-          <div className="space-y-2">
-            {demoShopping.map((s) => (
-              <div key={s.product} className="flex items-center gap-3">
-                <span className={`w-44 truncate text-sm ${s.isOwn ? "font-semibold text-brand-600" : "text-gray-600"}`}>{s.product}</span>
-                <div className="h-2.5 flex-1 rounded-full bg-gray-100">
-                  <div className={`h-2.5 rounded-full ${s.isOwn ? "bg-brand-600" : "bg-gray-300"}`} style={{ width: `${(s.appearances / maxAppearances) * 100}%` }} />
-                </div>
-                <span className="w-24 text-right text-xs text-gray-400">{s.retailer} · ${s.price}</span>
-                <span className="w-12 text-right text-xs font-medium text-gray-700">{((s.appearances / 6000) * 100).toFixed(1)}%</span>
-              </div>
-            ))}
+          <div className="metric-card">
+            <div className="text-xs text-gray-400">Carousel Appearances</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900">
+              {summary.stats.totalAppearances.toLocaleString()}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Own share {summary.stats.ownSharePct.toFixed(1)}% ({summary.stats.ownAppearances.toLocaleString()} own ·{" "}
+              {summary.stats.competitorAppearances.toLocaleString()} comp)
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <div className="text-xs text-gray-400">Own Avg Carousel Position</div>
+            <div className="mt-1 text-2xl font-bold text-brand-700">
+              #{summary.stats.ownAvgPosition.toFixed(2)}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Competitor avg #{summary.stats.competitorAvgPosition.toFixed(2)} · Overall #
+              {summary.stats.overallAvgPosition.toFixed(2)}
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <div className="text-xs text-gray-400">Avg Price Shown (Own vs Market)</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900">
+              ${summary.stats.ownAvgPrice.toFixed(2)}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Market avg ${summary.stats.marketAvgPrice.toFixed(2)} (
+              {summary.stats.priceDeltaPct >= 0 ? "+" : ""}
+              {summary.stats.priceDeltaPct.toFixed(1)}% vs comp)
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <div className="text-xs text-gray-400">Retailer Coverage</div>
+            <div className="mt-1 text-2xl font-bold text-emerald-700">
+              {summary.stats.retailerCoverageCount}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Own brand listed on {summary.stats.ownRetailerCount} of {summary.stats.retailerCoverageCount} retailers
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-function Tile(props: { label: string; value: string }) {
-  return (
-    <div className="metric-card">
-      <div className="text-xs text-gray-400">{props.label}</div>
-      <div className="mt-1 text-xl font-bold text-gray-900">{props.value}</div>
+        <ShoppingInsightsView
+          products={summary.products}
+          brandComparison={summary.brandComparison}
+          retailerDistribution={summary.retailerDistribution}
+          retailers={summary.retailers}
+          canWrite={canWrite}
+        />
+      </div>
     </div>
   );
 }

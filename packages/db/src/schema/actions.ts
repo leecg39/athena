@@ -44,32 +44,40 @@ export const insights = pgTable(
   (t) => [index("insights_website_status_idx").on(t.websiteId, t.status, t.createdAt)],
 );
 
-export const shoppingProducts = pgTable("shopping_products", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  title: text().notNull(),
-  retailer: text(),
-  price: numeric({ precision: 10, scale: 2 }),
-  appearances: integer().notNull().default(0),
-  avgPosition: numeric({ precision: 5, scale: 2 }).default("0"),
-  isOwn: boolean().notNull().default(true),
-  lastSeenAt: timestamp({ withTimezone: true }),
-});
+export const shoppingProducts = pgTable(
+  "shopping_products",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    title: text().notNull(),
+    retailer: text(),
+    price: numeric({ precision: 10, scale: 2 }),
+    appearances: integer().notNull().default(0),
+    avgPosition: numeric({ precision: 5, scale: 2 }).default("0"),
+    isOwn: boolean().notNull().default(true),
+    lastSeenAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index("shopping_ws_own_idx").on(t.websiteId, t.isOwn, t.appearances)],
+);
 
-export const adsImpressions = pgTable("ads_impressions", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  promptId: uuid().references(() => prompts.id),
-  /** chatgpt | ai_mode | ai_overview */
-  surface: text().notNull(),
-  advertiser: text().notNull(),
-  adText: text(),
-  seenAt: ts().notNull(),
-});
+export const adsImpressions = pgTable(
+  "ads_impressions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    promptId: uuid().references(() => prompts.id, { onDelete: "set null" }),
+    /** chatgpt | ai_mode | ai_overview */
+    surface: text().notNull(),
+    advertiser: text().notNull(),
+    adText: text(),
+    seenAt: ts().notNull(),
+  },
+  (t) => [index("ads_ws_surface_seen_idx").on(t.websiteId, t.surface, t.seenAt)],
+);
 
 export const siteHealthPages = pgTable("site_health_pages", {
   id: uuid().primaryKey().defaultRandom(),

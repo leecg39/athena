@@ -66,7 +66,8 @@
 
 ## Phase 5 — 커머스 & 사이트 & 리포트
 
-- [ ] **16. Shopping Insights + Ads** — AI 쇼핑 카로셀 노출/포지션/가격/경쟁사 비교 + 소매사 분포 / ChatGPT·AI Mode·AI Overview 스폰서드 광고 캡처 표시
+- [x] **16. Shopping Insights + Ads** — AI 쇼핑 카로셀 노출/포지션/가격/경쟁사 비교 + 소매사 분포 / ChatGPT·AI Mode·AI Overview 스폰서드 광고 캡처 표시
+  - 검증(R16): vitest 250/250(41 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/shopping` 카로셀 리더보드 13건·자사 vs 경쟁사 브랜드 비교·6개 소매사 분포·수동 제품 추가, `/ads` 3대 AI 표면 스폰서드 광고 캡처 8건·광고주 점유율·수동 광고 등록·AI Mode 필터, SQL 교차 검증). 상세 `docs/review/2026-10-23-task16-review.md`
 - [ ] **17. Site Health** — 키워드/랭킹, 스테이징 체크(릴리스 비교), 사이트맵, 크롤 범위, 페이지 편집 최적화 보드, 라이브 콘텐츠 검증 + AI 크롤러 접근성 체크(OAI-SearchBot 등)
 - [ ] **18. Report Builder** — 차트 조합 편집기 + 수신자/스케줄 + PDF 내보내기 + 공개 공유 링크(AI 검색 리포트/콘텐츠 제안 리포트) + Slack 주간 리포트
 
