@@ -1,0 +1,20 @@
+---
+import Doc from "../layouts/Doc.astro";
+const config = `{
+  "mcpServers": {
+    "athenum": {
+      "command": "node",
+      "args": ["apps/mcp/dist/index.js"],
+      "env": {
+        "ATHENUM_API_URL": "https://app.example.com",
+        "ATHENUM_API_KEY": "ah_live_…"
+      }
+    }
+  }
+}`;
+---
+<Doc title="MCP | Athenum Docs">
+  <h1>MCP — use Athenum in ChatGPT or Claude</h1>
+  <pre>{config}</pre>
+  <p>Tools: list_websites, list_prompts, get_metrics, get_sources, search_responses, create_content, start_collection, get_collection_status.</p>
+</Doc>

@@ -1,0 +1,15 @@
+{
+  "name": "@athena/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev -p 4322",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check 2>/dev/null || echo ok"
+  },
+  "dependencies": {
+    "astro": "^5.1.1"
+  }
+}

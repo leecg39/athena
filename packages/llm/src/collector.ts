@@ -18,7 +18,7 @@ import {
 } from "@athena/db";
 import { extract } from "@athena/core/extract";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { providerFor, type SearchProvider } from "./index.js";
+import { providerFor, type SearchProvider } from "./index";
 
 export interface CollectBatchOptions {
   runId: string;

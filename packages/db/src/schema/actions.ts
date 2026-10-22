@@ -1,0 +1,79 @@
+/* Action: outreach / insights / shopping / ads / site health */
+import { pgTable, uuid, text, timestamp, boolean, integer, numeric, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { insightStatusEnum, outreachStatusEnum, ts } from "./enums";
+import { websites } from "./tenancy";
+import { prompts } from "./tracking";
+
+export const outreachOpportunities = pgTable("outreach_opportunities", {
+  id: uuid().primaryKey().defaultRandom(),
+  websiteId: uuid()
+    .notNull()
+    .references(() => websites.id),
+  url: text().notNull(),
+  domain: text().notNull(),
+  status: outreachStatusEnum().notNull().default("new"),
+  citationPct: numeric({ precision: 5, scale: 2 }).notNull().default("0"),
+  estimatedImpressions: integer().notNull().default(0),
+  citations: integer().notNull().default(0),
+  authorName: text(),
+  authorEmail: text(),
+  emailDraft: text(),
+  notes: text(),
+  createdAt: ts().notNull(),
+});
+
+export const insights = pgTable("insights", {
+  id: uuid().primaryKey().defaultRandom(),
+  websiteId: uuid()
+    .notNull()
+    .references(() => websites.id),
+  title: text().notNull(),
+  body: text().notNull(),
+  kind: text().notNull().default("opportunity"), // opportunity | gap | competitor_move | integrity
+  status: insightStatusEnum().notNull().default("active"),
+  /** suggested action payload (e.g. create content item) */
+  action: jsonb().$type<Record<string, unknown>>().default({}),
+  createdAt: ts().notNull(),
+});
+
+export const shoppingProducts = pgTable("shopping_products", {
+  id: uuid().primaryKey().defaultRandom(),
+  websiteId: uuid()
+    .notNull()
+    .references(() => websites.id),
+  title: text().notNull(),
+  retailer: text(),
+  price: numeric({ precision: 10, scale: 2 }),
+  appearances: integer().notNull().default(0),
+  avgPosition: numeric({ precision: 5, scale: 2 }).default("0"),
+  isOwn: boolean().notNull().default(true),
+  lastSeenAt: timestamp({ withTimezone: true }),
+});
+
+export const adsImpressions = pgTable("ads_impressions", {
+  id: uuid().primaryKey().defaultRandom(),
+  websiteId: uuid()
+    .notNull()
+    .references(() => websites.id),
+  promptId: uuid().references(() => prompts.id),
+  /** chatgpt | ai_mode | ai_overview */
+  surface: text().notNull(),
+  advertiser: text().notNull(),
+  adText: text(),
+  seenAt: ts().notNull(),
+});
+
+export const siteHealthPages = pgTable("site_health_pages", {
+  id: uuid().primaryKey().defaultRandom(),
+  websiteId: uuid()
+    .notNull()
+    .references(() => websites.id),
+  url: text().notNull(),
+  title: text(),
+  statusCode: integer(),
+  aiAccessible: boolean().default(true),
+  inSitemap: boolean().default(true),
+  keywords: jsonb().$type<{ keyword: string; position: number }[]>().default([]),
+  lastCheckedAt: timestamp({ withTimezone: true }),
+  createdAt: ts().notNull(),
+});

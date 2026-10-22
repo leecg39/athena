@@ -1,0 +1,24 @@
+---
+import Doc from "../layouts/Doc.astro";
+const apiTable = `GET  /api/v1/websites
+GET  /api/v1/prompts?websiteId=
+POST /api/v1/prompts            { websiteId, prompts: [{ text, topic }] }
+GET  /api/v1/responses?websiteId=&since=&model=
+GET  /api/v1/metrics/share-of-voice?websiteId=&window=cumulative|over-time
+GET  /api/v1/metrics/mention-rate?…
+GET  /api/v1/metrics/citation-rate?…
+GET  /api/v1/metrics/position?…
+GET  /api/v1/sources?websiteId=&root_domain=
+POST /api/v1/response-streaming          { websiteId, promptIds? } → workflow_id
+GET  /api/v1/response-streaming/status?runId=
+GET  /api/v1/billing/credits
+GET  /api/v1/basics/{topics|competitors|personas|locations}?websiteId=
+GET  /api/v1/content?websiteId=
+POST /api/v1/content                     { websiteId, title, promptId? }
+GET  /api/v1/validate-api-key`;
+---
+<Doc title="API Reference | Athenum Docs">
+  <h1>API Reference</h1>
+  <p>Base URL: <code>/api/v1</code> — Bearer auth with <code>ah_live_…</code> keys. Rate limit 60 req/min.</p>
+  <pre>{apiTable}</pre>
+</Doc>

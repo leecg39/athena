@@ -15,11 +15,14 @@
     "db:generate": "npm run generate -w @athena/db",
     "db:migrate": "npm run migrate -w @athena/db",
     "db:push": "npm run push -w @athena/db",
-    "db:seed": "npm run seed -w @athena/db"
+    "db:seed": "npm run seed -w @athena/db",
+    "test": "vitest run"
   },
   "devDependencies": {
     "turbo": "^2.3.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4",
+    "@types/node": "^22.10.0"
   },
   "engines": {
     "node": ">=20"

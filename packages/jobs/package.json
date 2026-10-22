@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./inngest": "./src/inngest.js"
+    "./inngest": "./src/inngest.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -17,7 +17,7 @@
     "@athena/core": "*",
     "@athena/llm": "*",
     "inngest": "^3.25.0",
-    "drizzle-orm": "^0.38.0"
+    "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

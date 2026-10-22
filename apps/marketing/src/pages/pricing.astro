@@ -1,0 +1,31 @@
+---
+import Base from "../layouts/Base.astro";
+const plans = [
+  { name: "Free", price: "$0", credits: "300 credits", models: "5 AI surfaces", features: ["Unlimited users", "Prompt & response analysis", "Sources & competitor insights", "Content recommendations", "Athena AI agent"] },
+  { name: "Starter", price: "$295", credits: "3,600 credits /mo", models: "11 AI surfaces", features: ["Unlimited topics & prompts", "Unlimited competitors", "Country-level support", "API access (add-on)", "CMS integrations", "Content optimization agent"], popular: true },
+  { name: "Enterprise", price: "Custom", credits: "Custom credits", models: "11 AI surfaces", features: ["Knowledge Base & claim review", "Oracle discrepancy detection", "Citation Engine (ACE)", "SAML / OIDC SSO", "BI tool support", "White-glove setup"] },
+];
+---
+<Base title="Pricing | Athenum">
+  <section class="wrap" style="padding:60px 24px;">
+    <h1 style="text-align:center;font-size:40px;letter-spacing:-1px;">Plans & Pricing</h1>
+    <p style="text-align:center;color:#6b7280;margin-top:8px;">Track and improve on AI search with Athenum. 1 credit = 1 AI response.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;">
+      {plans.map((p) => (
+        <div style={`border:1px solid ${p.popular ? "var(--brand)" : "#eee"};border-radius:20px;padding:28px;${p.popular ? "box-shadow:0 12px 40px rgba(79,57,246,.12);" : ""}`}>
+          {p.popular ? <span class="badge">Most popular</span> : null}
+          <h2 style="font-size:20px;margin:12px 0 4px;">{p.name}</h2>
+          <div style="font-size:36px;font-weight:700;">{p.price}<span style="font-size:14px;color:#9ca3af;">/mo</span></div>
+          <div style="color:#6b7280;font-size:13px;margin:6px 0 2px;">{p.credits}</div>
+          <div style="color:#6b7280;font-size:13px;margin-bottom:16px;">{p.models}</div>
+          <ul style="list-style:none;padding:0;font-size:14px;color:#374151;display:grid;gap:8px;">
+            {p.features.map((f) => <li>✓ {f}</li>)}
+          </ul>
+          <a class={`btn ${p.popular ? "btn-primary" : "btn-secondary"}`} style="margin-top:20px;width:100%;justify-content:center;" href="http://localhost:3000/signup">
+            {p.name === "Enterprise" ? "Contact sales" : "Start for free"}
+          </a>
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>

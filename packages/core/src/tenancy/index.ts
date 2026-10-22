@@ -1,0 +1,179 @@
+/**
+ * Tenancy services: users ↔ organizations ↔ websites.
+ * All functions take an explicit `Db` so they run against Postgres or PGlite.
+ */
+import { z } from "zod";
+import { and, eq, isNull, inArray } from "drizzle-orm";
+import {
+  type Db,
+  users,
+  organizations,
+  orgMembers,
+  websites,
+  websiteMembers,
+  creditBalances,
+  creditLedger,
+  subscriptions,
+} from "@athena/db";
+
+export const FREE_PLAN_CREDITS = 300;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const isUuid = (v: string): boolean => UUID_RE.test(v);
+
+export function slugify(input: string): string {
+  const s = input
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return s || "org";
+}
+
+/** Normalise "https://www.Example.com/x" → "example.com". */
+export function normalizeDomain(input: string): string {
+  const trimmed = input.trim();
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withScheme).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    throw new Error(`Invalid domain: ${input}`);
+  }
+}
+
+const userInput = z.object({
+  email: z.string().trim().toLowerCase().email("A valid email is required"),
+  name: z.string().trim().max(120).optional().nullable(),
+  image: z.string().url().optional().nullable(),
+});
+
+export interface EnsuredUser {
+  user: typeof users.$inferSelect;
+  organizationId: string;
+  created: boolean;
+}
+
+async function uniqueSlug(db: Db, base: string): Promise<string> {
+  for (let i = 0; i < 20; i++) {
+    const candidate = i === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 7)}`;
+    const [hit] = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, candidate));
+    if (!hit) return candidate;
+  }
+  throw new Error("Could not allocate a unique organization slug");
+}
+
+/** Create a free-plan organization owned by `userId`, with starting credits. */
+export async function createOrganization(db: Db, opts: { userId: string; name: string }): Promise<string> {
+  const slug = await uniqueSlug(db, slugify(opts.name));
+  return db.transaction(async (tx) => {
+    const [org] = await tx.insert(organizations).values({ name: opts.name, slug }).returning();
+    await tx.insert(orgMembers).values({ organizationId: org.id, userId: opts.userId, role: "owner" });
+    await tx.insert(subscriptions).values({ organizationId: org.id, plan: "free", monthlyCredits: FREE_PLAN_CREDITS });
+    await tx.insert(creditBalances).values({ organizationId: org.id, balance: FREE_PLAN_CREDITS });
+    await tx.insert(creditLedger).values({
+      organizationId: org.id,
+      kind: "grant",
+      amount: FREE_PLAN_CREDITS,
+      reason: "Free plan monthly credits",
+    });
+    return org.id;
+  });
+}
+
+/** Find or create the user by email; guarantees at least one organization membership. */
+export async function ensureUserWithOrg(db: Db, input: z.input<typeof userInput>): Promise<EnsuredUser> {
+  const data = userInput.parse(input);
+  let created = false;
+  let [user] = await db.select().from(users).where(eq(users.email, data.email));
+  if (!user) {
+    [user] = await db
+      .insert(users)
+      .values({ email: data.email, name: data.name ?? null, image: data.image ?? null })
+      .onConflictDoNothing()
+      .returning();
+    if (!user) [user] = await db.select().from(users).where(eq(users.email, data.email));
+    else created = true;
+  }
+  const [membership] = await db
+    .select({ organizationId: orgMembers.organizationId })
+    .from(orgMembers)
+    .innerJoin(organizations, eq(organizations.id, orgMembers.organizationId))
+    .where(and(eq(orgMembers.userId, user.id), isNull(organizations.deletedAt)))
+    .limit(1);
+  if (membership) return { user, organizationId: membership.organizationId, created };
+
+  const orgName = data.name ? `${data.name}'s workspace` : `${data.email.split("@")[0]}'s workspace`;
+  const organizationId = await createOrganization(db, { userId: user.id, name: orgName });
+  return { user, organizationId, created };
+}
+
+export type WebsiteRow = typeof websites.$inferSelect;
+
+async function orgIdsForUser(db: Db, userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ id: orgMembers.organizationId })
+    .from(orgMembers)
+    .innerJoin(organizations, eq(organizations.id, orgMembers.organizationId))
+    .where(and(eq(orgMembers.userId, userId), isNull(organizations.deletedAt)));
+  return rows.map((r) => r.id);
+}
+
+/** Websites visible to the user: every non-deleted website in their organizations. */
+export async function listWebsitesForUser(db: Db, userId: string): Promise<WebsiteRow[]> {
+  const orgIds = await orgIdsForUser(db, userId);
+  if (!orgIds.length) return [];
+  return db
+    .select()
+    .from(websites)
+    .where(and(inArray(websites.organizationId, orgIds), isNull(websites.deletedAt)))
+    .orderBy(websites.createdAt);
+}
+
+/** Returns the website only when the user may access it (else null). */
+export async function getWebsiteForUser(db: Db, userId: string, websiteId: string): Promise<WebsiteRow | null> {
+  if (!isUuid(websiteId) || !isUuid(userId)) return null;
+  const orgIds = await orgIdsForUser(db, userId);
+  if (!orgIds.length) return null;
+  const [site] = await db
+    .select()
+    .from(websites)
+    .where(and(eq(websites.id, websiteId), inArray(websites.organizationId, orgIds), isNull(websites.deletedAt)));
+  return site ?? null;
+}
+
+const websiteInput = z.object({
+  organizationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  domain: z.string().min(3).max(253),
+  name: z.string().trim().min(1).max(120),
+  groupId: z.string().uuid().optional().nullable(),
+});
+
+export async function createWebsite(db: Db, input: z.input<typeof websiteInput>): Promise<WebsiteRow> {
+  const data = websiteInput.parse(input);
+  const domain = normalizeDomain(data.domain);
+  const allowed = await orgIdsForUser(db, data.userId);
+  if (!allowed.includes(data.organizationId)) throw new Error("Not a member of this organization");
+  return db.transaction(async (tx) => {
+    const [site] = await tx
+      .insert(websites)
+      .values({ organizationId: data.organizationId, groupId: data.groupId ?? null, domain, name: data.name })
+      .returning();
+    await tx.insert(websiteMembers).values({ websiteId: site.id, userId: data.userId, role: "owner" });
+    return site;
+  });
+}
+
+/** First (oldest) organization the user belongs to, or null. */
+export async function getPrimaryOrganizationId(db: Db, userId: string): Promise<string | null> {
+  if (!isUuid(userId)) return null;
+  const [row] = await db
+    .select({ id: orgMembers.organizationId })
+    .from(orgMembers)
+    .innerJoin(organizations, eq(organizations.id, orgMembers.organizationId))
+    .where(and(eq(orgMembers.userId, userId), isNull(organizations.deletedAt)))
+    .orderBy(orgMembers.createdAt)
+    .limit(1);
+  return row?.id ?? null;
+}

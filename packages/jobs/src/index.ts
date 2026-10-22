@@ -3,7 +3,7 @@
  * insight generation, oracle scanning, weekly reports.
  * These are wired into apps/web via /api/inngest.
  */
-import { inngest } from "./inngest.js";
+import { inngest } from "./inngest";
 import { db } from "@athena/db";
 import {
   runs,
@@ -260,3 +260,5 @@ export const functions = [
   oracleScan,
   weeklyReports,
 ];
+
+export { inngest };

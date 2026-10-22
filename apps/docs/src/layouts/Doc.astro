@@ -1,0 +1,36 @@
+---
+interface Props { title: string }
+const { title } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <style is:global>
+      body { font-family: system-ui, sans-serif; margin: 0; display: flex; color: #111; }
+      aside { width: 240px; border-right: 1px solid #eee; padding: 24px; height: 100vh; position: sticky; top: 0; }
+      aside a { display: block; padding: 6px 10px; font-size: 14px; color: #4b5563; text-decoration: none; border-radius: 8px; }
+      aside a:hover { background: #f4f3ff; color: #4f39f6; }
+      main { padding: 40px; max-width: 760px; }
+      pre { background: #f7f7fb; padding: 14px; border-radius: 10px; font-size: 13px; overflow-x: auto; }
+      code { font-family: ui-monospace, monospace; }
+      h1 { letter-spacing: -1px; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <a href="/" style="font-weight:700;color:#111;">📖 Athenum Docs</a>
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;" />
+      <a href="/">Getting Started</a>
+      <a href="/prompts">Setting Up Prompts</a>
+      <a href="/knowledge-base">Knowledge Base</a>
+      <a href="/oracle">Oracle</a>
+      <a href="/integrations">Integrations</a>
+      <a href="/api">API Reference</a>
+      <a href="/mcp">MCP</a>
+    </aside>
+    <main><slot /></main>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "Athenum",
+  "short_name": "Athenum",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f39f6",
+  "icons": []
+}

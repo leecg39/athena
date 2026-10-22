@@ -7,17 +7,15 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./collector": "./src/collector.js"
+    "./collector": "./src/collector.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.0.0",
-    "@ai-sdk/deepseek": "^0.1.0",
-    "@ai-sdk/google": "^1.0.0",
-    "@ai-sdk/openai": "^1.0.0",
-    "ai": "^4.0.0"
+    "@athena/core": "*",
+    "@athena/db": "*",
+    "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

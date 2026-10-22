@@ -1,5 +1,5 @@
-export * from "./extract.js";
-export * from "./metrics.js";
+export * from "./extract";
+export * from "./metrics";
 
 /** Model registry observed on the marketing site (Free plan ⊂ Starter ⊂ Enterprise). */
 export const AI_MODELS = [

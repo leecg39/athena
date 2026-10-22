@@ -4,7 +4,7 @@
  * Run: npm run db:seed
  */
 import "dotenv/config";
-import { db } from "./index.js";
+import { db } from "./index";
 import {
   users,
   organizations,
@@ -22,7 +22,7 @@ import {
   creditBalances,
   creditLedger,
   subscriptions,
-} from "./index.js";
+} from "./index";
 import { eq } from "drizzle-orm";
 
 const MODELS = ["chatgpt", "perplexity", "gemini", "claude", "copilot", "grok", "ai_overview", "ai_mode"];
