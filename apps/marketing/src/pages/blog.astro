@@ -1,11 +1,58 @@
 ---
 import Base from "../layouts/Base.astro";
+
+const posts = [
+  {
+    date: "2026-10-20",
+    category: "Research Report",
+    title: "State of AI Search 2026: How ChatGPT, Perplexity & AI Overviews Choose Citations",
+    excerpt: "We analyzed 1.4 million AI responses across 8 answer engines to uncover why high-density factual tables, canonical KB claims, and third-party review domains dominate citation share.",
+    readTime: "8 min read",
+  },
+  {
+    date: "2026-10-14",
+    category: "Engineering & MCP",
+    title: "Connecting Claude & Looker Studio to Athenum with MCP and Public REST API v1",
+    excerpt: "A step-by-step guide to querying Share of Voice, Knowledge Base facts, and multi-scope credit balances directly from Claude Desktop and BI dashboards.",
+    readTime: "6 min read",
+  },
+  {
+    date: "2026-10-05",
+    category: "Brand Safety",
+    title: "Eliminating LLM Hallucinations: Inside Athenum Oracle's 3-Tier Discrepancy Scanner",
+    excerpt: "How to detect Confirmed Inaccuracies, KB Discrepancies, and Model Divergence before enterprise prospects encounter outdated pricing or compliance claims.",
+    readTime: "7 min read",
+  },
+  {
+    date: "2026-09-28",
+    category: "Technical AEO",
+    title: "AI Crawler Accessibility in 2026: OAI-SearchBot, PerplexityBot & ClaudeBot Checklist",
+    excerpt: "Why blocking training bots while allowing real-time retrieval bots is critical for citation visibility—and how to verify live page signatures automatically.",
+    readTime: "5 min read",
+  },
+];
 ---
-<Base title="Blog | Athenum">
-  <section class="wrap" style="padding:60px 24px;">
-    <h1 style="font-size:36px;letter-spacing:-1px;">Blog</h1>
-    <p style="color:#6b7280;margin-top:10px;max-width:560px;">
-      Observation-based reimplementation for the Athenum clone — content coming from the workspace CMS.
+<Base title="Blog & Research | Athenum">
+  <section class="wrap" style="padding:64px 24px 32px;">
+    <span class="badge">Athenum Research & Playbooks</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
+      AI Search Engineering & AEO Insights
+    </h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">
+      Deep dives into Answer Engine Optimization, citation graph mechanics, LLM hallucination remediation, and agentic workflows.
     </p>
+  </section>
+
+  <section class="wrap grid-2" style="padding:16px 24px 48px;">
+    {posts.map((post) => (
+      <article class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#64748b;margin-bottom:10px;">
+          <span class="badge">{post.category}</span>
+          <span>{post.date} · {post.readTime}</span>
+        </div>
+        <h2 style="font-size:20px;margin-bottom:10px;line-height:1.35;">{post.title}</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.6;">{post.excerpt}</p>
+      </article>
+    ))}
   </section>
 </Base>

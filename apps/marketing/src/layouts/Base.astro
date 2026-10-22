@@ -3,7 +3,10 @@ interface Props {
   title: string;
   description?: string;
 }
-const { title, description = "Track, understand and act on your AI search presence." } = Astro.props;
+const {
+  title,
+  description = "Athenum — AI Search Visibility, Answer Engine Optimization & Autonomous Content Platform.",
+} = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -13,39 +16,103 @@ const { title, description = "Track, understand and act on your AI search presen
     <title>{title}</title>
     <meta name="description" content={description} />
     <style is:global>
-      :root { --brand: #4f39f6; --brand-light: #7c86ff; }
+      :root {
+        --brand: #4f39f6;
+        --brand-dark: #3b27d1;
+        --brand-light: #eef2ff;
+        --slate-900: #0f172a;
+        --slate-600: #475569;
+        --slate-200: #e2e8f0;
+      }
       * { box-sizing: border-box; margin: 0; }
-      body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #111; }
-      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-      .btn { display: inline-flex; padding: 10px 20px; border-radius: 10px; font-size: 14px; text-decoration: none; }
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: var(--slate-900);
+        background: #ffffff;
+        line-height: 1.5;
+      }
+      .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.15s ease;
+      }
       .btn-primary { background: var(--brand); color: #fff; }
-      .btn-secondary { border: 1px solid #e5e7eb; color: #374151; }
-      .badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; background: #f4f3ff; color: var(--brand); }
+      .btn-primary:hover { background: var(--brand-dark); }
+      .btn-secondary { border: 1px solid var(--slate-200); color: #1e293b; background: #fff; }
+      .btn-secondary:hover { background: #f8fafc; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--brand-light);
+        color: var(--brand);
+      }
+      .card {
+        border: 1px solid var(--slate-200);
+        border-radius: 16px;
+        padding: 24px;
+        background: #fff;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: 24px;
+      }
     </style>
   </head>
   <body>
-    <header class="wrap" style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;">
-      <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:#111;font-weight:600;">
-        <span style="display:inline-flex;width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;align-items:center;justify-content:center;">◈</span>
-        Athenum
-      </a>
-      <nav style="display:flex;gap:20px;font-size:14px;">
-        <a href="/platform" style="color:#4b5563;text-decoration:none;">Platform</a>
-        <a href="/pricing" style="color:#4b5563;text-decoration:none;">Pricing</a>
-        <a href="/case-studies" style="color:#4b5563;text-decoration:none;">Case Studies</a>
-        <a href="/blog" style="color:#4b5563;text-decoration:none;">Blog</a>
-        <a href="/comparison" style="color:#4b5563;text-decoration:none;">Compare</a>
-      </nav>
-      <div style="display:flex;gap:10px;">
-        <a class="btn btn-secondary" href="http://localhost:3000/login">Log in</a>
-        <a class="btn btn-primary" href="http://localhost:3000/signup">Start free</a>
+    <header style="border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:rgba(255,255,255,0.92);backdrop-filter:blur(8px);z-index:20;">
+      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;flex-wrap:wrap;gap:12px;">
+        <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:#0f172a;font-weight:700;font-size:18px;">
+          <span style="display:inline-flex;width:32px;height:32px;border-radius:9px;background:var(--brand);color:#fff;align-items:center;justify-content:center;">◈</span>
+          Athenum
+        </a>
+        <nav aria-label="Main navigation" style="display:flex;gap:20px;font-size:14px;font-weight:500;flex-wrap:wrap;">
+          <a href="/platform" style="color:#475569;text-decoration:none;">Platform</a>
+          <a href="/pricing" style="color:#475569;text-decoration:none;">Pricing</a>
+          <a href="/industries" style="color:#475569;text-decoration:none;">Industries</a>
+          <a href="/comparison" style="color:#475569;text-decoration:none;">Compare</a>
+          <a href="/case-studies" style="color:#475569;text-decoration:none;">Case Studies</a>
+          <a href="/blog" style="color:#475569;text-decoration:none;">Blog</a>
+        </nav>
+        <div style="display:flex;gap:10px;">
+          <a class="btn btn-secondary" href="http://localhost:3000/login">Sign in</a>
+          <a class="btn btn-primary" href="http://localhost:3000/home">Launch Workspace →</a>
+        </div>
       </div>
     </header>
     <main>
       <slot />
     </main>
-    <footer class="wrap" style="border-top:1px solid #eee;margin-top:60px;padding:28px 24px;font-size:13px;color:#9ca3af;">
-      © 2026 Athenum — observation-based reimagination for internal use. Not affiliated with any other product.
+    <footer style="border-top:1px solid #f1f5f9;margin-top:80px;background:#f8fafc;padding:48px 0;">
+      <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;font-size:13px;color:#64748b;">
+        <div>
+          <strong style="color:#0f172a;">Athenum AI Search Intelligence</strong> — Answer Engine Optimization & Autonomous Content Platform.
+        </div>
+        <div style="display:flex;gap:16px;">
+          <a href="/platform" style="color:#64748b;text-decoration:none;">Platform</a>
+          <a href="/pricing" style="color:#64748b;text-decoration:none;">Pricing</a>
+          <a href="/industries" style="color:#64748b;text-decoration:none;">Industries</a>
+          <a href="/comparison" style="color:#64748b;text-decoration:none;">Comparison</a>
+          <a href="/case-studies" style="color:#64748b;text-decoration:none;">Case Studies</a>
+          <a href="/blog" style="color:#64748b;text-decoration:none;">Blog</a>
+        </div>
+      </div>
     </footer>
   </body>
 </html>

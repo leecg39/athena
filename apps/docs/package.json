@@ -7,7 +7,7 @@
     "dev": "astro dev -p 4322",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "astro check 2>/dev/null || echo ok"
+    "typecheck": "astro sync"
   },
   "dependencies": {
     "astro": "^5.1.1"

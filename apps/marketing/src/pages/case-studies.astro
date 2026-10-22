@@ -1,11 +1,58 @@
 ---
 import Base from "../layouts/Base.astro";
+
+const studies = [
+  {
+    company: "Canvasly (Collaborative Vector Design)",
+    industry: "B2B SaaS",
+    headline: "+184% Citation Rate Lift on ChatGPT & Perplexity in 45 Days",
+    metrics: ["64.2% Mention Rate", "41.8% Citation Share", "8 Oracle Hallucinations Resolved"],
+    story: "Canvasly used Athenum's Oracle scanner to identify outdated pricing and SAML claims across GPT-4o and Claude, then published 12 citation-engineered comparison guides directly to Webflow via Content Hub.",
+  },
+  {
+    company: "LumenCart (Modern Commerce Infrastructure)",
+    industry: "E-Commerce & Retail",
+    headline: "3.4x Increase in AI Shopping Carousel Recommendations",
+    metrics: ["13 Carousel Leaderboards Won", "+$48k/mo Est. AI Traffic Value", "100% OAI-SearchBot Crawl Pass"],
+    story: "By combining Shopping Insights with Athenum's Shopify Catalog Optimization and Site Health AI crawler checks, LumenCart became the #1 cited merchant for headless checkout prompts.",
+  },
+  {
+    company: "Apex Growth Partners",
+    industry: "Digital & AEO Agency",
+    headline: "Closed $320k in New Annual Retainers Using Pitch Workspace",
+    metrics: ["19 Prospect Pitches Shared", "62% Pitch-to-Close Rate", "3-Scope Group Credit Pooling"],
+    story: "Apex Growth Partners automated prospect audits with Athenum Pitch Workspace—delivering interactive Share-of-Voice benchmarks and Before/After FAQPage JSON-LD rewrites in under 3 minutes.",
+  },
+];
 ---
-<Base title="Case Studies | Athenum">
-  <section class="wrap" style="padding:60px 24px;">
-    <h1 style="font-size:36px;letter-spacing:-1px;">Case Studies</h1>
-    <p style="color:#6b7280;margin-top:10px;max-width:560px;">
-      Observation-based reimplementation for the Athenum clone — content coming from the workspace CMS.
+<Base title="Case Studies | Athenum Customer Outcomes">
+  <section class="wrap" style="padding:64px 24px 32px;">
+    <span class="badge">Verified Customer Impact</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
+      How Category Leaders Win Share of Voice with Athenum
+    </h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">
+      Explore how SaaS, commerce, and agency teams turn AI search observability into measurable citation growth and pipeline.
     </p>
+  </section>
+
+  <section class="wrap" style="padding:16px 24px 48px;display:grid;gap:24px;">
+    {studies.map((s) => (
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span class="badge">{s.industry}</span>
+          <strong style="font-size:14px;color:#475569;">{s.company}</strong>
+        </div>
+        <h2 style="font-size:24px;margin:12px 0 10px;">{s.headline}</h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          {s.metrics.map((m) => (
+            <span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;">
+              {m}
+            </span>
+          ))}
+        </div>
+        <p style="font-size:14px;color:#334155;line-height:1.65;">{s.story}</p>
+      </div>
+    ))}
   </section>
 </Base>

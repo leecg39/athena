@@ -1,11 +1,50 @@
 ---
 import Base from "../layouts/Base.astro";
+
+const rows = [
+  { capability: "8 AI Answer Engines (ChatGPT, Perplexity, Claude, Gemini, AI Mode, Overviews, Copilot, Grok)", athenum: "Included", trackers: "2–3 Engines", seo: "Keyword SERP only" },
+  { capability: "Oracle Hallucination & Knowledge Base Fact Auditing", athenum: "Native 3-tier scanner", trackers: "Not available", seo: "Not available" },
+  { capability: "Autonomous Content Hub + 7 Native CMS Publishers", athenum: "Built-in with version diff", trackers: "Export only", seo: "Manual brief only" },
+  { capability: "Shopify Product Catalog AEO Optimization", athenum: "Native JSON-LD & sync", trackers: "Not available", seo: "Not available" },
+  { capability: "AI Shopping Carousel & Sponsored Ad Capture", athenum: "Real-time leaderboard", trackers: "Not available", seo: "Traditional PLA only" },
+  { capability: "10 AI Bot Crawler Health & Live Content Signature Verification", athenum: "Automated matrix", trackers: "Basic robots.txt", seo: "Googlebot only" },
+  { capability: "Agency Pitch Workspace & Multi-Brand Shared Credit Pools", athenum: "3-Scope Credit Ledger", trackers: "Single workspace", seo: "Per-seat only" },
+  { capability: "Public REST API v1 + 14-Tool MCP Server + Looker Studio / Power BI", athenum: "Full programmatic suite", trackers: "CSV export only", seo: "Legacy REST API" },
+];
 ---
-<Base title="Comparison | Athenum">
-  <section class="wrap" style="padding:60px 24px;">
-    <h1 style="font-size:36px;letter-spacing:-1px;">Comparison</h1>
-    <p style="color:#6b7280;margin-top:10px;max-width:560px;">
-      Observation-based reimplementation for the Athenum clone — content coming from the workspace CMS.
+<Base title="Compare Athenum | AI Search Intelligence vs. Legacy Tools">
+  <section class="wrap" style="padding:64px 24px 32px;">
+    <span class="badge">Platform Comparison</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
+      Why Revenue & AEO Teams Choose Athenum
+    </h1>
+    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">
+      Point prompt trackers only show screenshots of AI answers. Legacy SEO suites only measure 10-blue-link SERPs. Athenum closes the loop from multi-model measurement to verified CMS execution.
     </p>
+  </section>
+
+  <section class="wrap" style="padding:16px 24px 48px;">
+    <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;text-align:left;">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+            <th style="padding:14px 18px;">Capability</th>
+            <th style="padding:14px 18px;color:var(--brand);">Athenum Platform</th>
+            <th style="padding:14px 18px;color:#64748b;">Basic Prompt Trackers</th>
+            <th style="padding:14px 18px;color:#64748b;">Legacy SEO Suites</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:14px 18px;font-weight:600;color:#0f172a;">{r.capability}</td>
+              <td style="padding:14px 18px;font-weight:700;color:#059669;">✓ {r.athenum}</td>
+              <td style="padding:14px 18px;color:#64748b;">{r.trackers}</td>
+              <td style="padding:14px 18px;color:#64748b;">{r.seo}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </section>
 </Base>

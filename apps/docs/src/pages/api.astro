@@ -1,24 +1,26 @@
 ---
 import Doc from "../layouts/Doc.astro";
-const apiTable = `GET  /api/v1/websites
+const apiTable = `GET  /api/v1/validate-api-key
+GET  /api/v1/websites
+POST /api/v1/websites            { domain, name?, groupId? }
 GET  /api/v1/prompts?websiteId=
-POST /api/v1/prompts            { websiteId, prompts: [{ text, topic }] }
-GET  /api/v1/responses?websiteId=&since=&model=
-GET  /api/v1/metrics/share-of-voice?websiteId=&window=cumulative|over-time
-GET  /api/v1/metrics/mention-rate?…
-GET  /api/v1/metrics/citation-rate?…
-GET  /api/v1/metrics/position?…
-GET  /api/v1/sources?websiteId=&root_domain=
-POST /api/v1/response-streaming          { websiteId, promptIds? } → workflow_id
+POST /api/v1/prompts             { websiteId, text, topicName?, volumeEstimate? }
+GET  /api/v1/basics/{topics|competitors|personas|locations|tags|schedules}?websiteId=
+GET  /api/v1/metrics/{share-of-voice|mention-rate|citation-rate|position}?websiteId=&window=cumulative|over-time
+GET  /api/v1/sources?websiteId=&type=c|t|o|p&limit=50
+GET  /api/v1/responses?websiteId=&since=&until=&model=&limit=100
+POST /api/v1/response-streaming  { websiteId, promptIds? } → workflow_id
 GET  /api/v1/response-streaming/status?runId=
-GET  /api/v1/billing/credits
-GET  /api/v1/basics/{topics|competitors|personas|locations}?websiteId=
 GET  /api/v1/content?websiteId=
-POST /api/v1/content                     { websiteId, title, promptId? }
-GET  /api/v1/validate-api-key`;
+POST /api/v1/content             { websiteId, title, promptId?, targetUrl?, status? }
+GET  /api/v1/kb?websiteId=&section=all|pillars|facts|oracle
+POST /api/v1/kb                  { websiteId, kind: "pillar"|"fact", claim, sourceUrl?, status? }
+GET  /api/v1/billing/credits?scope=all|organization|website|group
+GET  /api/v1/teams
+GET  /api/v1/connectors/{looker-studio|power-bi}?websiteId=&days=14&format=json|csv`;
 ---
 <Doc title="API Reference | Athenum Docs">
   <h1>API Reference</h1>
-  <p>Base URL: <code>/api/v1</code> — Bearer auth with <code>ath_…</code> keys. Rate limit 60 req/min.</p>
+  <p>Base URL: <code>/api/v1</code> — Authenticate via <code>Authorization: Bearer ath_…</code> or <code>X-API-Key: ath_…</code>. Rate limit: 60 req/min per key.</p>
   <pre>{apiTable}</pre>
 </Doc>
