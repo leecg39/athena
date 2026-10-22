@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "../tenancy";
 import { createPrompt, createTopic } from "../prompts";
 import { ForbiddenError } from "../org/errors";
-import { getVisibilityMetrics } from "./visibility";
+import { getVisibilityMetrics, getSearchValue, compareTotals } from "./visibility";
+import { prompts } from "@athena/db";
 
 let t: TestDb;
 let c: { actorId: string; websiteId: string };
@@ -67,6 +68,37 @@ describe("getVisibilityMetrics", () => {
       ["chatgpt", 50, 1],
       ["perplexity", 50, 3],
     ]);
+  });
+
+  it("includes per-model and per-entity daily series for detailed charts", async () => {
+    const m = await getVisibilityMetrics(t.db, { ...c, filters: range });
+    expect(m.dailyByModel).toEqual([
+      { date: "2026-10-01", model: "chatgpt", responses: 2, mentionRate: 50, citationRate: 0, avgPosition: 1 },
+      { date: "2026-10-02", model: "perplexity", responses: 2, mentionRate: 50, citationRate: 50, avgPosition: 3 },
+    ]);
+    expect(m.dailyEntities.filter((e) => e.date === "2026-10-01").map((e) => [e.name, e.shareOfVoice])).toEqual([
+      ["Canvasly", 33.3],
+      ["Figma", 66.7],
+    ]);
+  });
+
+  it("estimates AI-visible searches only from real volume data", async () => {
+    expect(await getSearchValue(t.db, { ...c, filters: range })).toEqual({ hasVolume: false, aiVisibleSearches: 0, trackedVolume: 0 });
+    // prompt A (volume 1000) is mentioned in 2/2 of its answers; prompt B (volume 500) in 0/2
+    const [pa] = await t.db.select().from(prompts).where(eq(prompts.text, "prompt in topic a"));
+    const [pb] = await t.db.select().from(prompts).where(eq(prompts.text, "prompt without topic"));
+    await t.db.update(prompts).set({ volumeEstimate: 1000 }).where(eq(prompts.id, pa.id));
+    await t.db.update(prompts).set({ volumeEstimate: 500 }).where(eq(prompts.id, pb.id));
+    expect(await getSearchValue(t.db, { ...c, filters: range })).toEqual({ hasVolume: true, aiVisibleSearches: 1000, trackedVolume: 1500 });
+  });
+
+  it("compares two periods as point/percent deltas", () => {
+    const d = compareTotals(
+      { responses: 10, mentionRate: 40, citationRate: 10, avgPosition: 2.5, shareOfVoice: 30, simulatedShare: 0 },
+      { responses: 8, mentionRate: 35, citationRate: 12, avgPosition: 3, shareOfVoice: 30, simulatedShare: 0 },
+    );
+    expect(d).toEqual({ mentionRate: 5, citationRate: -2, shareOfVoice: 0, avgPosition: -0.5 });
+    expect(compareTotals({ responses: 3, mentionRate: 1, citationRate: 1, avgPosition: null, shareOfVoice: 1, simulatedShare: 0 }, { responses: 0, mentionRate: 0, citationRate: 0, avgPosition: null, shareOfVoice: 0, simulatedShare: 0 })).toBeNull();
   });
 
   it("applies model, topic and date filters", async () => {
