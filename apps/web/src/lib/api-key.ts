@@ -41,29 +41,45 @@ export function rateLimitBucketCount(): number {
   return buckets.size;
 }
 
+export function resetRateLimitBuckets(): void {
+  buckets.clear();
+}
+
 export interface ApiContext {
   organizationId: string;
   keyId: string;
+  rateLimitRemaining?: number;
 }
 
 /**
- * Authenticate a /api/v1 request via `Authorization: Bearer ath_…`.
+ * Authenticate a /api/v1 request via `Authorization: Bearer ath_…` or `X-API-Key: ath_…`.
  * Returns a 401/429 response on failure, or the API context. Database errors
  * propagate (500) — there is no fallback key.
  */
 export async function authenticate(req: NextRequest): Promise<ApiContext | NextResponse> {
   const authz = req.headers.get("authorization") ?? "";
-  const token = authz.replace(/^Bearer\s+/i, "").trim();
+  const xApiKey = req.headers.get("x-api-key") ?? "";
+  const token = (authz ? authz.replace(/^Bearer\s+/i, "") : xApiKey).trim();
   if (!token.startsWith(API_KEY_PREFIX)) {
     return NextResponse.json({ error: "missing or malformed api key" }, { status: 401 });
   }
   const limit = rateLimit(hashApiKey(token));
   if (!limit.ok) {
-    return NextResponse.json({ error: "rate limit exceeded" }, { status: 429, headers: { "Retry-After": "5" } });
+    return NextResponse.json(
+      { error: "rate limit exceeded" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "5",
+          "X-RateLimit-Limit": String(RATE),
+          "X-RateLimit-Remaining": "0",
+        },
+      },
+    );
   }
   const ctx = await verifyApiKey(db, token);
   if (!ctx) return NextResponse.json({ error: "invalid api key" }, { status: 401 });
-  return ctx;
+  return { ...ctx, rateLimitRemaining: limit.remaining };
 }
 
 export function isResponse(ctx: ApiContext | NextResponse): ctx is NextResponse {
