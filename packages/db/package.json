@@ -1,0 +1,30 @@
+{
+  "name": "@athena/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "push": "drizzle-kit push",
+    "seed": "tsx src/seed.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.38.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

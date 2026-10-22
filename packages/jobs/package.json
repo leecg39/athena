@@ -1,0 +1,26 @@
+{
+  "name": "@athena/jobs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./inngest": "./src/inngest.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athena/db": "*",
+    "@athena/core": "*",
+    "@athena/llm": "*",
+    "inngest": "^3.25.0",
+    "drizzle-orm": "^0.38.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.10.0"
+  }
+}

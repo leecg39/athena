@@ -1,0 +1,26 @@
+# deps & builds
+node_modules/
+.next/
+.turbo/
+dist/
+.astro/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# firecrawl cache
+.firecrawl/
+
+# misc
+.DS_Store
+*.log
+.vercel
+
+# local data
+.data/
+coverage/
+next-env.d.ts
+.commandcode/

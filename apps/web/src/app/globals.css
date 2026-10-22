@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #4f39f6;
+  --brand-light: #7c86ff;
+}
+
+body {
+  @apply bg-white text-gray-900 antialiased;
+}
+
+.metric-card {
+  @apply rounded-xl border border-gray-100 bg-white p-4 shadow-sm;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50;
+}
+
+.input {
+  @apply w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+}
+
+.table-base {
+  @apply w-full text-left text-sm;
+}
+
+.table-base th {
+  @apply border-b border-gray-100 px-3 py-2 font-medium text-gray-500;
+}
+
+.table-base td {
+  @apply border-b border-gray-50 px-3 py-2;
+}
+
+/* Ask Athena atmosphere background */
+@keyframes aura-drift {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+}
+
+.aura {
+  background:
+    radial-gradient(60% 50% at 30% 20%, rgba(124, 134, 255, 0.25), transparent 70%),
+    radial-gradient(50% 45% at 70% 60%, rgba(79, 57, 246, 0.18), transparent 70%),
+    radial-gradient(40% 40% at 50% 90%, rgba(124, 134, 255, 0.15), transparent 70%);
+  animation: aura-drift 14s ease-in-out infinite;
+}
+
+.aura.paused {
+  animation-play-state: paused;
+}
