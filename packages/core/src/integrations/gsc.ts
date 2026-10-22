@@ -176,3 +176,42 @@ export function readGscCredentials(row: { secret: string | null; config: Record<
   const { refreshToken } = JSON.parse(decryptSecret(row.secret, key)) as { refreshToken: string };
   return { refreshToken, property: row.config.property ?? "" };
 }
+
+export interface GscQueryRow {
+  query: string;
+  impressions: number;
+  clicks: number;
+}
+
+/** Top search queries for a property over the last `days` days (ending yesterday, UTC). */
+export async function fetchGscTopQueries(opts: {
+  accessToken: string;
+  property: string;
+  days?: number;
+  rowLimit?: number;
+  fetchImpl?: FetchLike;
+  now?: Date;
+}): Promise<GscQueryRow[]> {
+  const days = opts.days ?? 28;
+  const end = new Date((opts.now ?? new Date()).getTime() - 86_400_000);
+  const start = new Date(end.getTime() - (days - 1) * 86_400_000);
+  const res = await (opts.fetchImpl ?? fetch)(
+    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(opts.property)}/searchAnalytics/query`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${opts.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        startDate: start.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+        dimensions: ["query"],
+        rowLimit: opts.rowLimit ?? 250,
+      }),
+      signal: AbortSignal.timeout(20_000),
+    },
+  );
+  if (!res.ok) throw new DomainError(`Search Console query failed (${res.status})`);
+  const data = (await res.json()) as { rows?: { keys?: string[]; impressions?: number; clicks?: number }[] };
+  return (data.rows ?? [])
+    .filter((r) => r.keys?.[0])
+    .map((r) => ({ query: r.keys![0], impressions: Math.round(r.impressions ?? 0), clicks: Math.round(r.clicks ?? 0) }));
+}

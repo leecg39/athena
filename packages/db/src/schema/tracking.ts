@@ -16,7 +16,7 @@ export const topics = pgTable(
     createdAt: ts().notNull(),
     deletedAt: deletedAt(),
   },
-  (t) => [uniqueIndex("topics_ws_name_idx").on(t.websiteId, t.name)],
+  (t) => [uniqueIndex("topics_ws_name_live_idx").on(t.websiteId, sql`lower(${t.name})`).where(sql`${t.deletedAt} is null`)],
 );
 
 export const promptSchedules = pgTable("prompt_schedules", {
@@ -66,7 +66,7 @@ export const promptTags = pgTable(
     name: text().notNull(),
     color: text().default("#4f39f6"),
   },
-  (t) => [uniqueIndex("prompt_tags_ws_name_idx").on(t.websiteId, t.name)],
+  (t) => [uniqueIndex("prompt_tags_ws_name_ci_idx").on(t.websiteId, sql`lower(${t.name})`)],
 );
 
 export const promptTagLinks = pgTable(

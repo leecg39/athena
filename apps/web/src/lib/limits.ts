@@ -21,3 +21,6 @@ export function createLimiter(max: number, windowMs: number, maxKeys = 10_000) {
 
 /** Website analysis (crawl) during onboarding: 10 per user per 10 minutes. */
 export const crawlLimiter = createLimiter(10, 10 * 60_000);
+
+/** Prompt discovery (Search Console + LLM calls): 20 runs per user per 10 minutes. */
+export const discoveryLimiter = createLimiter(20, 10 * 60_000);

@@ -18,12 +18,12 @@ import {
 } from "@athena/db";
 import { requireWebsitePermission, type WebsiteRow } from "../tenancy/index";
 import { logActivity } from "../org/activity";
+import { cleanPromptText, defaultScheduleId, ensureTopic, isBrandedPrompt, lockWebsite, promptLimitFor } from "../prompts/shared";
 import { DomainError } from "../org/errors";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
-/** Maximum live tracked prompts per website, by plan. */
-export const PROMPT_LIMITS = { free: 50, starter: 500, enterprise: 5000 } as const;
+export { PROMPT_LIMITS, isBrandedPrompt } from "../prompts/shared";
 
 export const CADENCES = ["daily", "every_3_days", "weekly"] as const;
 export type Cadence = (typeof CADENCES)[number];
@@ -142,38 +142,27 @@ const promptInput = z.object({
     .max(30),
 });
 
-const cleanPrompt = (p: string) => p.trim().replace(/\s+/g, " ");
-
-export function isBrandedPrompt(text: string, brandName: string, domain: string): boolean {
-  const t = text.toLowerCase();
-  const label = domain.split(".")[0] ?? "";
-  return t.includes(brandName.toLowerCase()) || (label.length >= 4 && t.includes(label.toLowerCase()));
-}
 
 export async function addTrackedPrompts(db: Db, input: z.input<typeof promptInput>): Promise<{ created: number; skipped: number }> {
   const data = promptInput.parse(input);
   const site = await requireWebsitePermission(db, data.actorId, data.websiteId, "prompts:write");
   return db.transaction(async (tx) => {
     // serialise prompt writes per website so concurrent saves cannot exceed the plan limit
-    await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
-    const [org] = await tx.select({ plan: organizations.plan }).from(organizations).where(eq(organizations.id, site.organizationId));
-    const limit = PROMPT_LIMITS[org?.plan ?? "free"];
+    await lockWebsite(tx, site.id);
+    const limit = await promptLimitFor(tx, site.organizationId);
     const existing = await tx
       .select({ text: prompts.text })
       .from(prompts)
       .where(and(eq(prompts.websiteId, site.id), isNull(prompts.deletedAt)));
     const seen = new Set(existing.map((p) => p.text.toLowerCase()));
-    const [schedule] = await tx
-      .select({ id: promptSchedules.id })
-      .from(promptSchedules)
-      .where(and(eq(promptSchedules.websiteId, site.id), eq(promptSchedules.kind, "default"), isNull(promptSchedules.archivedAt)));
+    const scheduleId = await defaultScheduleId(tx, site.id);
 
     let skipped = 0;
     const plan: { topic: string; texts: string[] }[] = [];
     for (const t of data.topics) {
       const texts: string[] = [];
       for (const raw of t.prompts) {
-        const text = cleanPrompt(raw);
+        const text = cleanPromptText(raw);
         if (text.length < 5 || text.length > 500 || seen.has(text.toLowerCase())) {
           skipped++;
           continue;
@@ -188,18 +177,14 @@ export async function addTrackedPrompts(db: Db, input: z.input<typeof promptInpu
       throw new DomainError(`Prompt limit reached: your plan allows ${limit} tracked prompts per website`);
     }
     for (const p of plan) {
-      const [topic] = await tx
-        .insert(topics)
-        .values({ websiteId: site.id, name: p.topic })
-        .onConflictDoUpdate({ target: [topics.websiteId, topics.name], set: { deletedAt: null } })
-        .returning({ id: topics.id });
+      const topicId = await ensureTopic(tx, site.id, p.topic);
       await tx.insert(prompts).values(
         p.texts.map((text) => ({
           websiteId: site.id,
-          topicId: topic.id,
+          topicId,
           text,
           type: isBrandedPrompt(text, site.name, site.domain) ? ("branded" as const) : ("non_branded" as const),
-          scheduleId: schedule?.id ?? null,
+          scheduleId,
         })),
       );
     }

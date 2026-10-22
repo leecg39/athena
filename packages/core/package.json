@@ -12,7 +12,8 @@
     "./tenancy": "./src/tenancy/index.ts",
     "./org": "./src/org/index.ts",
     "./onboarding": "./src/onboarding/index.ts",
-    "./integrations": "./src/integrations/index.ts"
+    "./integrations": "./src/integrations/index.ts",
+    "./prompts": "./src/prompts/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

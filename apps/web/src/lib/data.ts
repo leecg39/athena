@@ -4,7 +4,7 @@
  * real data bindings and still renders in keyless/local environments.
  */
 import { db } from "@athena/db";
-import { prompts, topics, competitors } from "@athena/db";
+import { prompts, competitors } from "@athena/db";
 import { and, eq, isNull, desc } from "drizzle-orm";
 import {
   demoResponses,
@@ -24,28 +24,6 @@ import {
 } from "./demo";
 
 export { demoAds, demoShopping, demoInsights, demoHeatmap, demoSources, demoCompetitorSoV, demoActivity, demoOutreach };
-
-/** Prompts + topics of one website (tenant-scoped; empty when none exist). */
-export async function getPrompts(websiteId: string): Promise<{
-  prompts: { id: string; text: string; topic: string; type: string; status: string }[];
-  topics: { id: string; name: string }[];
-}> {
-  const rows = await db
-    .select({ id: prompts.id, text: prompts.text, type: prompts.type, status: prompts.status, topic: topics.name })
-    .from(prompts)
-    .leftJoin(topics, eq(prompts.topicId, topics.id))
-    .where(and(eq(prompts.websiteId, websiteId), isNull(prompts.deletedAt)))
-    .orderBy(desc(prompts.createdAt))
-    .limit(500);
-  const topicRows = await db
-    .select({ id: topics.id, name: topics.name })
-    .from(topics)
-    .where(and(eq(topics.websiteId, websiteId), isNull(topics.deletedAt)));
-  return {
-    prompts: rows.map((r) => ({ id: r.id, text: r.text, topic: r.topic ?? "Uncategorized", type: r.type, status: r.status })),
-    topics: topicRows,
-  };
-}
 
 export async function getResponses(filters?: { model?: string; promptType?: string }): Promise<DemoResponse[]> {
   let rows: DemoResponse[] = demoResponses(24);

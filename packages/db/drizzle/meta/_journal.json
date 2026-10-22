@@ -29,6 +29,13 @@
       "when": 1792668397161,
       "tag": "0003_integrations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792669335435,
+      "tag": "0004_taxonomy_ci",
+      "breakpoints": true
     }
   ]
 }

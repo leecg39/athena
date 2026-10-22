@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ActionState } from "@/lib/action-state";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -17,6 +17,7 @@ export function ActionForm({
   className,
   variant = "primary",
   confirm,
+  resetOnSuccess = false,
 }: {
   action: Action;
   submitLabel: string;
@@ -24,8 +25,14 @@ export function ActionForm({
   className?: string;
   variant?: "primary" | "secondary" | "danger";
   confirm?: string;
+  /** clear the fields after a successful submit (for "add" forms) */
+  resetOnSuccess?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, { ok: false });
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (resetOnSuccess && state.ok) formRef.current?.reset();
+  }, [state, resetOnSuccess]);
   const [copied, setCopied] = useState(false);
   const btn =
     variant === "danger"
@@ -35,6 +42,7 @@ export function ActionForm({
         : "btn-primary";
   return (
     <form
+      ref={formRef}
       className={className}
       onSubmit={(e) => {
         // Submit via a transition instead of the `action` prop: React resets
