@@ -1,0 +1,1 @@
+CREATE INDEX "outreach_ws_status_idx" ON "outreach_opportunities" USING btree ("website_id","status","citations");

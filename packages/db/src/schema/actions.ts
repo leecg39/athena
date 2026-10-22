@@ -4,23 +4,27 @@ import { insightStatusEnum, outreachStatusEnum, ts } from "./enums";
 import { websites } from "./tenancy";
 import { prompts } from "./tracking";
 
-export const outreachOpportunities = pgTable("outreach_opportunities", {
-  id: uuid().primaryKey().defaultRandom(),
-  websiteId: uuid()
-    .notNull()
-    .references(() => websites.id),
-  url: text().notNull(),
-  domain: text().notNull(),
-  status: outreachStatusEnum().notNull().default("new"),
-  citationPct: numeric({ precision: 5, scale: 2 }).notNull().default("0"),
-  estimatedImpressions: integer().notNull().default(0),
-  citations: integer().notNull().default(0),
-  authorName: text(),
-  authorEmail: text(),
-  emailDraft: text(),
-  notes: text(),
-  createdAt: ts().notNull(),
-});
+export const outreachOpportunities = pgTable(
+  "outreach_opportunities",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    websiteId: uuid()
+      .notNull()
+      .references(() => websites.id),
+    url: text().notNull(),
+    domain: text().notNull(),
+    status: outreachStatusEnum().notNull().default("new"),
+    citationPct: numeric({ precision: 5, scale: 2 }).notNull().default("0"),
+    estimatedImpressions: integer().notNull().default(0),
+    citations: integer().notNull().default(0),
+    authorName: text(),
+    authorEmail: text(),
+    emailDraft: text(),
+    notes: text(),
+    createdAt: ts().notNull(),
+  },
+  (t) => [index("outreach_ws_status_idx").on(t.websiteId, t.status, t.citations)],
+);
 
 export const insights = pgTable(
   "insights",

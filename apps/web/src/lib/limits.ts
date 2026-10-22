@@ -45,3 +45,6 @@ export const oracleLimiter = createLimiter(20, 10 * 60_000);
 
 /** Content Hub & Shopify Catalog AI drafts/mutations: 50 per user per 10 minutes. */
 export const contentLimiter = createLimiter(50, 10 * 60_000);
+
+/** Outreach opportunity discovery, author lookup & pitch drafts: 40 per user per 10 minutes. */
+export const outreachLimiter = createLimiter(40, 10 * 60_000);
