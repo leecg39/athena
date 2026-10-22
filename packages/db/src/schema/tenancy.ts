@@ -1,5 +1,5 @@
 /* Identity & tenancy */
-import { pgTable, uuid, text, timestamp, boolean, jsonb, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, integer, uuid, text, timestamp, boolean, jsonb, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { deletedAt, inviteStatusEnum, memberRoleEnum, orgRoleEnum, planEnum, ts } from "./enums";
 import { prompts } from "./tracking";
 
@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   name: text(),
   image: text(),
   emailVerified: timestamp({ withTimezone: true, mode: "date" }),
+  jobTitle: text(),
+  /** bumped to invalidate every outstanding session ("sign out everywhere") */
+  sessionVersion: integer().notNull().default(0),
   createdAt: ts().notNull(),
 });
 
@@ -127,19 +130,27 @@ export const websiteMembers = pgTable(
   (t) => [primaryKey({ columns: [t.websiteId, t.userId] })],
 );
 
-export const invites = pgTable("invites", {
-  id: uuid().primaryKey().defaultRandom(),
-  organizationId: uuid()
-    .notNull()
-    .references(() => organizations.id),
-  websiteId: uuid().references(() => websites.id),
-  email: text().notNull(),
-  role: orgRoleEnum().notNull().default("member"),
-  status: inviteStatusEnum().notNull().default("pending"),
-  inviterId: uuid().references(() => users.id),
-  createdAt: ts().notNull(),
-  expiresAt: timestamp({ withTimezone: true }),
-});
+export const invites = pgTable(
+  "invites",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    websiteId: uuid().references(() => websites.id),
+    groupId: uuid().references(() => groups.id),
+    email: text().notNull(),
+    role: orgRoleEnum().notNull().default("member"),
+    customRoleId: uuid().references(() => customRoles.id),
+    status: inviteStatusEnum().notNull().default("pending"),
+    /** sha256 of the invite token (the token itself is only shown/sent once) */
+    tokenHash: text().notNull().unique(),
+    inviterId: uuid().references(() => users.id),
+    createdAt: ts().notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (t) => [index("invites_org_idx").on(t.organizationId, t.status)],
+);
 
 export const activityLog = pgTable(
   "activity_log",

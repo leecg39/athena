@@ -3,7 +3,7 @@
  * All functions take an explicit `Db` so they run against Postgres or PGlite.
  */
 import { z } from "zod";
-import { and, eq, isNull, inArray } from "drizzle-orm";
+import { and, eq, isNull, inArray, or, exists, type SQL } from "drizzle-orm";
 import {
   type Db,
   users,
@@ -11,10 +11,14 @@ import {
   orgMembers,
   websites,
   websiteMembers,
+  groupMembers,
   creditBalances,
   creditLedger,
   subscriptions,
 } from "@athena/db";
+import { ORG_WIDE_ROLES } from "../org/rbac";
+import { requirePermission } from "../org/access";
+import { logActivity } from "../org/activity";
 
 export const FREE_PLAN_CREDITS = 300;
 
@@ -110,35 +114,52 @@ export async function ensureUserWithOrg(db: Db, input: z.input<typeof userInput>
 
 export type WebsiteRow = typeof websites.$inferSelect;
 
-async function orgIdsForUser(db: Db, userId: string): Promise<string[]> {
-  const rows = await db
-    .select({ id: orgMembers.organizationId })
+/**
+ * SQL condition selecting the websites a user may access:
+ * owner/admin/billing → every website of the org; member/custom → websites
+ * where they are a website member or a member of the website's group.
+ */
+async function accessibleWebsitesWhere(db: Db, userId: string): Promise<SQL | null> {
+  const memberships = await db
+    .select({ orgId: orgMembers.organizationId, role: orgMembers.role })
     .from(orgMembers)
     .innerJoin(organizations, eq(organizations.id, orgMembers.organizationId))
     .where(and(eq(orgMembers.userId, userId), isNull(organizations.deletedAt)));
-  return rows.map((r) => r.id);
+  if (!memberships.length) return null;
+  const wide = memberships.filter((m) => ORG_WIDE_ROLES.has(m.role)).map((m) => m.orgId);
+  const scoped = memberships.filter((m) => !ORG_WIDE_ROLES.has(m.role)).map((m) => m.orgId);
+  const viaWebsite = exists(
+    db
+      .select({ one: websiteMembers.userId })
+      .from(websiteMembers)
+      .where(and(eq(websiteMembers.websiteId, websites.id), eq(websiteMembers.userId, userId))),
+  );
+  const viaGroup = exists(
+    db
+      .select({ one: groupMembers.userId })
+      .from(groupMembers)
+      .where(and(eq(groupMembers.groupId, websites.groupId), eq(groupMembers.userId, userId))),
+  );
+  const parts: SQL[] = [];
+  if (wide.length) parts.push(inArray(websites.organizationId, wide));
+  if (scoped.length) parts.push(and(inArray(websites.organizationId, scoped), or(viaWebsite, viaGroup)) as SQL);
+  return and(isNull(websites.deletedAt), or(...parts)) as SQL;
 }
 
-/** Websites visible to the user: every non-deleted website in their organizations. */
+/** Websites visible to the user (role/website/group scoped, non-deleted). */
 export async function listWebsitesForUser(db: Db, userId: string): Promise<WebsiteRow[]> {
-  const orgIds = await orgIdsForUser(db, userId);
-  if (!orgIds.length) return [];
-  return db
-    .select()
-    .from(websites)
-    .where(and(inArray(websites.organizationId, orgIds), isNull(websites.deletedAt)))
-    .orderBy(websites.createdAt);
+  if (!isUuid(userId)) return [];
+  const where = await accessibleWebsitesWhere(db, userId);
+  if (!where) return [];
+  return db.select().from(websites).where(where).orderBy(websites.createdAt);
 }
 
 /** Returns the website only when the user may access it (else null). */
 export async function getWebsiteForUser(db: Db, userId: string, websiteId: string): Promise<WebsiteRow | null> {
   if (!isUuid(websiteId) || !isUuid(userId)) return null;
-  const orgIds = await orgIdsForUser(db, userId);
-  if (!orgIds.length) return null;
-  const [site] = await db
-    .select()
-    .from(websites)
-    .where(and(eq(websites.id, websiteId), inArray(websites.organizationId, orgIds), isNull(websites.deletedAt)));
+  const where = await accessibleWebsitesWhere(db, userId);
+  if (!where) return null;
+  const [site] = await db.select().from(websites).where(and(eq(websites.id, websiteId), where));
   return site ?? null;
 }
 
@@ -153,14 +174,22 @@ const websiteInput = z.object({
 export async function createWebsite(db: Db, input: z.input<typeof websiteInput>): Promise<WebsiteRow> {
   const data = websiteInput.parse(input);
   const domain = normalizeDomain(data.domain);
-  const allowed = await orgIdsForUser(db, data.userId);
-  if (!allowed.includes(data.organizationId)) throw new Error("Not a member of this organization");
+  await requirePermission(db, data.userId, data.organizationId, "websites:write");
   return db.transaction(async (tx) => {
     const [site] = await tx
       .insert(websites)
       .values({ organizationId: data.organizationId, groupId: data.groupId ?? null, domain, name: data.name })
       .returning();
     await tx.insert(websiteMembers).values({ websiteId: site.id, userId: data.userId, role: "owner" });
+    await logActivity(tx, {
+      organizationId: data.organizationId,
+      userId: data.userId,
+      websiteId: site.id,
+      entityType: "website",
+      entityId: site.id,
+      change: "created",
+      after: { name: site.name, domain: site.domain },
+    });
     return site;
   });
 }

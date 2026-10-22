@@ -5,7 +5,7 @@
  * Transport: stdio. Configure in the client:
  *   { "mcpServers": { "athenum": { "command": "node",
  *       "args": ["<repo>/apps/mcp/dist/index.js"],
- *       "env": { "ATHENUM_API_KEY": "ah_live_…", "ATHENUM_API_URL": "https://app.example.com" } } } }
+ *       "env": { "ATHENUM_API_KEY": "ath_…", "ATHENUM_API_URL": "https://app.example.com" } } } }
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";

@@ -49,6 +49,7 @@ export const authConfig = {
     },
     session({ session, token }) {
       if (typeof token.uid === "string" && session.user) session.user.id = token.uid;
+      session.sv = typeof token.sv === "number" ? token.sv : 0;
       return session;
     },
   },

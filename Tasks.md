@@ -23,7 +23,8 @@
 
 - [x] **1. 모노레포 스캐폴드** — Next.js 15 앱(`apps/web`) + Turborepo + Tailwind/shadcn 기본 셸(사이드바 + 워크스페이스 스위처) + Auth.js(Google/Microsoft/Email) + Neon Postgres + Drizzle 마이그레이션 기반 (`packages/db`)
   - 검증(R1): typecheck 11/11 · vitest 10/10 · `next build` 성공 · dev 로그인→조직/크레딧 생성, 미인증 302/401, 위조 워크스페이스 쿠키 차단, 테넌트 격리 스모크 통과. Google/Microsoft/Resend는 자격증명 부재로 설정만 검증(E2E 미실시).
-- [ ] **2. 조직/웹사이트 모델 + RBAC** — 조직/그룹/웹사이트 멤버, 커스텀 롤, 액티비티 로그, Settings 화면 8종(일반/프로필/유저/보안/API/통합/빌링/액티비티)
+- [x] **2. 조직/웹사이트 모델 + RBAC** — 조직/그룹/웹사이트 멤버, 커스텀 롤, 액티비티 로그, Settings 화면 8종(일반/프로필/유저/보안/API/통합/빌링/액티비티)
+  - 검증(R2): vitest 26/26 · typecheck 11/11 · build 성공 · 브라우저 E2E(초대→수락, API 키, 세션 일괄 폐기, member 권한 차단). 상세 `docs/review/2026-10-22-task2-review.md`
 
 ## Phase 1 — 온보딩 & 프롬프트
 

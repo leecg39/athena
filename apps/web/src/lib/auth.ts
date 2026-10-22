@@ -7,6 +7,7 @@ import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db, getDb, users, accounts, sessions, verificationTokens } from "@athena/db";
 import { ensureUserWithOrg } from "@athena/core/tenancy";
+import { getSessionVersion } from "@athena/core/org";
 import { authConfig } from "./auth.config";
 
 /** Passwordless developer login: requires AUTH_DEV_LOGIN=true AND a non-production runtime. */
@@ -74,6 +75,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
     verificationTokensTable: verificationTokens,
   } as never),
   providers: built.providers,
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.uid = user.id;
+        // remember the session generation; bumping it revokes this token
+        token.sv = (await getSessionVersion(db, user.id)) ?? 0;
+      }
+      return token;
+    },
+  },
   events: {
     async signIn({ user }) {
       // OAuth/email users are created by the adapter; guarantee an owned organization.
