@@ -88,7 +88,7 @@
   - 검증(R22): vitest 267/267(47 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/observability`에서 PostHog 이벤트·마스킹된 세션 리플레이·서베이 제출 `9.7/10`, `/api/otel/traces` 스팬 수집 및 진단 트레이스 실행, `/api/csp-report` URI 토큰 제거 리포트 수집, `@athena/emails` 5종 템플릿 미리보기/발송, `/landing` 페이지 검증, `psql` `activity_log` 교차 검증). 상세 `docs/review/2026-10-23-task22-review.md`
 - [x] **23. 마케팅 사이트 + 배포** — Astro 마케팅 사이트(홈/플랫폼/가격/산업/비교/케이스스터디/블로그 구조 재현, 자체 브랜딩) + Vercel 프로덕션 배포(앱/마케팅/문서/MCP 4개 프로젝트) + E2E 검증
   - 검증(R23): vitest 270/270(48 files) · typecheck 11/11 · 전체 모노레포 build 성공(`@athena/web`, `@athena/marketing` 7페이지, `@athena/docs` 7페이지, `@athena/mcp`) · 4개 프로젝트 `vercel.json` 검증 · 브라우저 E2E(`127.0.0.1:4321` 마케팅 7대 라우트 `/`, `/platform`, `/pricing`, `/industries`, `/comparison`, `/case-studies`, `/blog` 및 `127.0.0.1:4322` 문서 사이트 실브라우저 검증). M6 충족(과금/API/마케팅/프로덕션 배포). 상세 `docs/review/2026-10-23-task23-review.md`
-  - 적대적 검토 Round 2 (R2 무결성 강화): Tasks 12–23 전 구간 허구/시드 데이터 제거, SSRF 안전 실네트워크 크롤·CMS/Shopify API 연동, `actorId` 필수 RBAC 강제 및 GET 시 쓰기 부작용 제거, 128비트 공유 토큰 상향 및 정리 마이그레이션(`0018`~`0022`) 완료. 상세 `docs/review/2026-10-24-adversarial-review-r2.md`
+  - 적대적 검토 Round 2 (R2 무결성 강화): Tasks 12–23 전 구간 허구/시드 데이터 제거, SSRF 안전 실네트워크 크롤·CMS/Shopify API 연동, `actorId` 필수 RBAC 강제 및 GET 시 쓰기 부작용 제거, 128비트 공유 토큰 상향 및 정리 마이그레이션(`0018`~`0022`) 완료 · vitest 299/299(54 files) · typecheck 11/11 · build 성공(exit 0). 상세 `docs/review/2026-10-24-adversarial-review-r2.md`
 
 ---
 
