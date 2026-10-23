@@ -2,7 +2,6 @@ import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
 import {
   listInsights,
-  generateInsights,
   INSIGHT_KINDS,
   INSIGHT_STATUSES,
   type InsightKind,
@@ -35,7 +34,7 @@ export default async function InsightsPage({
   const currentStatus = parseStatus(sp.status);
   const currentKind = parseKind(sp.kind);
 
-  const [membership, initial] = await Promise.all([
+  const [membership, data] = await Promise.all([
     getMembership(db, ws.user.id, ws.organizationId),
     listInsights(db, {
       actorId: ws.user.id,
@@ -45,21 +44,6 @@ export default async function InsightsPage({
     }),
   ]);
   const canWrite = membership?.permissions.includes("prompts:write") ?? false;
-
-  // If this workspace has never had insights generated yet, evaluate once from stored metrics
-  let data = initial;
-  if (initial.counts.total === 0) {
-    await generateInsights(db, {
-      actorId: canWrite ? ws.user.id : undefined,
-      websiteId: ws.websiteId,
-    });
-    data = await listInsights(db, {
-      actorId: ws.user.id,
-      websiteId: ws.websiteId,
-      status: currentStatus === "all" ? undefined : currentStatus,
-      kind: currentKind === "all" ? undefined : currentKind,
-    });
-  }
 
   return (
     <div>

@@ -7,7 +7,7 @@ import { createPrompt, createTopic } from "../prompts";
 import { createCompetitor } from "../competitors";
 import { citationRow } from "../sources";
 import { ForbiddenError, NotFoundError } from "../org/errors";
-import { generateInsights, listInsights, updateInsightStatus } from "./index";
+import { generateInsights, generateInsightsForSite, listInsights, updateInsightStatus } from "./index";
 
 describe("insights engine", () => {
   let t: TestDb;
@@ -177,7 +177,7 @@ describe("insights engine", () => {
 
   it("is idempotent on re-run and updates active insights in place without duplicating rows", async () => {
     const before = await t.db.select().from(insights).where(eq(insights.websiteId, c.websiteId));
-    const rerun = await generateInsights(t.db, { websiteId: c.websiteId, now: NOW }); // also tests background mode without actorId
+    const rerun = await generateInsightsForSite(t.db, { websiteId: c.websiteId, now: NOW }); // background job entrypoint
     expect(rerun.created).toBe(0);
     expect(rerun.updated).toBe(before.length);
     const after = await t.db.select().from(insights).where(eq(insights.websiteId, c.websiteId));

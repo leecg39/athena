@@ -17,8 +17,8 @@ import {
 import { extract } from "@athena/core/extract";
 import { citationRow } from "@athena/core/sources";
 import { refundCredits } from "@athena/core/billing";
-import { generateInsights } from "@athena/core/insights";
-import { runOracleScan } from "@athena/core/knowledge";
+import { generateInsightsForSite } from "@athena/core/insights";
+import { runOracleScanForSite } from "@athena/core/knowledge";
 import { discoverOutreachForSite } from "@athena/core/outreach";
 import { syncShoppingProductsForSite, captureSponsoredAdsForSite } from "@athena/core/commerce";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
@@ -224,8 +224,8 @@ export async function executeRun(db: Db, runId: string, opts: ExecuteOptions): P
 /** Recomputes data derived from answers after a run; each step runs (and fails) on its own. */
 async function refreshDerivedData(db: Db, site: typeof websites.$inferSelect): Promise<void> {
   const steps: [string, () => Promise<unknown>][] = [
-    ["insights", () => generateInsights(db, { websiteId: site.id })],
-    ["oracle", () => runOracleScan(db, { websiteId: site.id })],
+    ["insights", () => generateInsightsForSite(db, { websiteId: site.id })],
+    ["oracle", () => runOracleScanForSite(db, { websiteId: site.id })],
     ["outreach", () => discoverOutreachForSite(db, site)],
     ["shopping", () => syncShoppingProductsForSite(db, site)],
     ["ads", () => captureSponsoredAdsForSite(db, site)],

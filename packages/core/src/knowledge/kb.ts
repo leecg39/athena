@@ -700,16 +700,9 @@ function classifyPillarForClaim(claim: string, brandName: string): { name: strin
 
 export async function extractKnowledgeFacts(
   db: Db,
-  rawInput: { actorId?: string; websiteId: string },
+  rawInput: { actorId: string; websiteId: string },
 ): Promise<{ createdPillars: number; createdFacts: number }> {
-  let site: WebsiteRow;
-  if (rawInput.actorId) {
-    site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-  } else {
-    const [row] = await db.select().from(websites).where(and(eq(websites.id, rawInput.websiteId), isNull(websites.deletedAt)));
-    if (!row) throw new NotFoundError("Website not found");
-    site = row;
-  }
+  const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
 
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
@@ -732,9 +725,8 @@ export async function extractKnowledgeFacts(
     ]);
 
     const candidates: ExtractedCandidate[] = [];
-    const baseUrl = `https://${site.domain}`;
 
-    // 1. Verified facts from Brand Profile
+    // 1. Candidate claims from Brand Profile — queued as pending_review with no invented sourceUrl
     const profile = site.profile ?? {};
     if (profile.description && profile.description.trim().length >= 10) {
       const p = classifyPillarForClaim(profile.description, site.name);
@@ -742,9 +734,9 @@ export async function extractKnowledgeFacts(
         pillarName: p.name,
         pillarDoc: p.doc,
         claim: profile.description.trim(),
-        sourceUrl: `${baseUrl}/`,
-        status: "confirmed",
-        confidence: "0.98",
+        sourceUrl: null,
+        status: "pending_review",
+        confidence: "0.90",
       });
     }
 
@@ -754,9 +746,9 @@ export async function extractKnowledgeFacts(
           pillarName: "Company & Brand",
           pillarDoc: `# Company & Brand\nCore company background, positioning, and target audience for ${site.name}.`,
           claim: `${site.name} is designed for ${aud.trim()}.`,
-          sourceUrl: `${baseUrl}/`,
-          status: "confirmed",
-          confidence: "0.96",
+          sourceUrl: null,
+          status: "pending_review",
+          confidence: "0.85",
         });
       }
     }
@@ -768,9 +760,9 @@ export async function extractKnowledgeFacts(
           pillarName: p.name,
           pillarDoc: p.doc,
           claim,
-          sourceUrl: `${baseUrl}/features`,
-          status: "confirmed",
-          confidence: "0.95",
+          sourceUrl: null,
+          status: "pending_review",
+          confidence: "0.85",
         });
       }
     }
@@ -779,10 +771,10 @@ export async function extractKnowledgeFacts(
         candidates.push({
           pillarName: "Product & Features",
           pillarDoc: `# Product & Features\nVerified product capabilities, workflows, and differentiators for ${site.name}.`,
-          claim: `${site.name} offers ${prod.trim()} for collaborative teams.`,
-          sourceUrl: `${baseUrl}/features`,
-          status: "confirmed",
-          confidence: "0.94",
+          claim: `${site.name} offers ${prod.trim()}.`,
+          sourceUrl: null,
+          status: "pending_review",
+          confidence: "0.85",
         });
       }
     }
@@ -807,7 +799,7 @@ export async function extractKnowledgeFacts(
           pillarName: p.name,
           pillarDoc: p.doc,
           claim: s,
-          sourceUrl: p.name === "Pricing & Plans" ? `${baseUrl}/pricing` : `${baseUrl}/`,
+          sourceUrl: null,
           status: "pending_review",
           confidence: hasNumber ? "0.76" : "0.68",
         });
@@ -815,34 +807,6 @@ export async function extractKnowledgeFacts(
       }
       if (candidates.length >= 18) break;
     }
-
-    // Ensure baseline confirmed & pending_review candidate claims exist for review workflow
-    candidates.push(
-      {
-        pillarName: "Product & Features",
-        pillarDoc: `# Product & Features\nVerified product capabilities and workflows for ${site.name}.`,
-        claim: `${site.name} provides AI-assisted workflows and real-time collaboration for teams.`,
-        sourceUrl: `${baseUrl}/features`,
-        status: "confirmed",
-        confidence: "0.95",
-      },
-      {
-        pillarName: "Pricing & Plans",
-        pillarDoc: `# Pricing & Plans\nOfficial pricing tiers and workspace limits for ${site.name}.`,
-        claim: `${site.name} Pro pricing starts at $29 per month and includes a free tier for small teams.`,
-        sourceUrl: `${baseUrl}/pricing`,
-        status: "pending_review",
-        confidence: "0.76",
-      },
-      {
-        pillarName: "Security & Enterprise",
-        pillarDoc: `# Security & Enterprise\nEnterprise security certifications, access controls, and compliance facts for ${site.name}.`,
-        claim: `${site.name} supports enterprise SSO, role-based access control, and workspace audit logs.`,
-        sourceUrl: `${baseUrl}/security`,
-        status: "pending_review",
-        confidence: "0.72",
-      },
-    );
 
     const pillarByKey = new Map(existingPillars.map((p) => [normKey(p.name), p]));
     const factKeys = new Set(existingFacts.map((f) => normKey(f.claim)));
@@ -1044,16 +1008,9 @@ function inferTitleAndKeywords(url: string, brandName: string): { title: string;
 
 export async function syncInternalLinks(
   db: Db,
-  rawInput: { actorId?: string; websiteId: string },
+  rawInput: { actorId: string; websiteId: string },
 ): Promise<{ created: number }> {
-  let site: WebsiteRow;
-  if (rawInput.actorId) {
-    site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-  } else {
-    const [row] = await db.select().from(websites).where(and(eq(websites.id, rawInput.websiteId), isNull(websites.deletedAt)));
-    if (!row) throw new NotFoundError("Website not found");
-    site = row;
-  }
+  const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
 
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
@@ -1090,13 +1047,6 @@ export async function syncInternalLinks(
       }
     }
 
-    // Standard canonical pages on the brand domain if none were cited yet
-    if (discovered.size === 0 && seen.size === 0) {
-      discovered.add(`https://${site.domain}/`);
-      discovered.add(`https://${site.domain}/pricing`);
-      discovered.add(`https://${site.domain}/features`);
-    }
-
     let created = 0;
     for (const url of discovered) {
       if (seen.has(url)) continue;
@@ -1105,11 +1055,11 @@ export async function syncInternalLinks(
         websiteId: site.id,
         url,
         title: meta.title,
-        statusCode: 200,
-        aiAccessible: true,
-        inSitemap: true,
-        keywords: meta.keywords,
-        lastCheckedAt: new Date(),
+        statusCode: 0,
+        aiAccessible: false,
+        inSitemap: false,
+        keywords: [],
+        lastCheckedAt: null,
       });
       seen.add(url);
       created++;

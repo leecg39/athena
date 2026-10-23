@@ -441,11 +441,14 @@ async function buildInsightCandidates(
   return { totalResponses: curVis.totals.responses, candidates };
 }
 
-const generateSchema = z.object({
-  actorId: z.string().uuid().optional(),
+const generateSiteSchema = z.object({
   websiteId: z.string().uuid(),
   days: z.number().int().min(7).max(90).default(30),
   now: z.date().optional(),
+});
+
+const generateSchema = generateSiteSchema.extend({
+  actorId: z.string().uuid(),
 });
 
 export interface GenerateInsightsResult {
@@ -455,27 +458,18 @@ export interface GenerateInsightsResult {
   insights: InsightRow[];
 }
 
-export async function generateInsights(
+async function executeGenerateInsights(
   db: Db,
-  rawInput: { actorId?: string; websiteId: string; days?: number; now?: Date },
+  site: WebsiteRow,
+  opts: { days: number; now: Date; actorId?: string },
 ): Promise<GenerateInsightsResult> {
-  const input = generateSchema.parse(rawInput);
-  let site: WebsiteRow;
-  if (input.actorId) {
-    site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:write");
-  } else {
-    const [row] = await db.select().from(websites).where(and(eq(websites.id, input.websiteId), isNull(websites.deletedAt)));
-    if (!row) throw new NotFoundError("Website not found");
-    site = row;
-  }
-
-  const now = input.now ?? new Date();
+  const { now } = opts;
 
   return db.transaction(async (tx) => {
     // Serialize concurrent insight generation and read consistent snapshot under website lock
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
 
-    const { totalResponses, candidates } = await buildInsightCandidates(tx, site, { days: input.days, now });
+    const { totalResponses, candidates } = await buildInsightCandidates(tx, site, { days: opts.days, now });
     if (totalResponses === 0) {
       return { created: 0, updated: 0, skipped: 0, insights: [] };
     }
@@ -549,10 +543,10 @@ export async function generateInsights(
       }
     }
 
-    if (input.actorId && (created > 0 || updated > 0)) {
+    if (opts.actorId && (created > 0 || updated > 0)) {
       await logActivity(tx, {
         organizationId: site.organizationId,
-        userId: input.actorId,
+        userId: opts.actorId,
         websiteId: site.id,
         entityType: "insight",
         change: "generated",
@@ -573,6 +567,25 @@ export async function generateInsights(
       insights: activeRows.map(toInsightRow),
     };
   });
+}
+
+export async function generateInsightsForSite(
+  db: Db,
+  rawInput: { websiteId: string; days?: number; now?: Date },
+): Promise<GenerateInsightsResult> {
+  const input = generateSiteSchema.parse(rawInput);
+  const [site] = await db.select().from(websites).where(and(eq(websites.id, input.websiteId), isNull(websites.deletedAt)));
+  if (!site) throw new NotFoundError("Website not found");
+  return executeGenerateInsights(db, site, { days: input.days, now: input.now ?? new Date() });
+}
+
+export async function generateInsights(
+  db: Db,
+  rawInput: { actorId: string; websiteId: string; days?: number; now?: Date },
+): Promise<GenerateInsightsResult> {
+  const input = generateSchema.parse(rawInput);
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:write");
+  return executeGenerateInsights(db, site, { days: input.days, now: input.now ?? new Date(), actorId: input.actorId });
 }
 
 const listSchema = z.object({

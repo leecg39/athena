@@ -2,9 +2,7 @@ import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
 import {
   listOracleFindings,
-  runOracleScan,
   listKnowledgeBase,
-  extractKnowledgeFacts,
   ORACLE_STATUSES,
   ORACLE_TYPES,
   type OracleFindingStatus,
@@ -37,7 +35,7 @@ export default async function OraclePage({
   const currentStatus = parseStatus(sp.status);
   const currentType = parseType(sp.type);
 
-  const [membership, initialKb, initialOracle] = await Promise.all([
+  const [membership, kb, oracle] = await Promise.all([
     getMembership(db, ws.user.id, ws.organizationId),
     listKnowledgeBase(db, { actorId: ws.user.id, websiteId: ws.websiteId }),
     listOracleFindings(db, {
@@ -48,29 +46,6 @@ export default async function OraclePage({
     }),
   ]);
   const canWrite = membership?.permissions.includes("content:write") ?? false;
-
-  let kb = initialKb;
-  let oracle = initialOracle;
-
-  if (initialOracle.counts.total === 0) {
-    if (kb.counts.pillars === 0) {
-      await extractKnowledgeFacts(db, {
-        actorId: canWrite ? ws.user.id : undefined,
-        websiteId: ws.websiteId,
-      });
-      kb = await listKnowledgeBase(db, { actorId: ws.user.id, websiteId: ws.websiteId });
-    }
-    await runOracleScan(db, {
-      actorId: canWrite ? ws.user.id : undefined,
-      websiteId: ws.websiteId,
-    });
-    oracle = await listOracleFindings(db, {
-      actorId: ws.user.id,
-      websiteId: ws.websiteId,
-      status: currentStatus === "all" ? undefined : currentStatus,
-      type: currentType === "all" ? undefined : currentType,
-    });
-  }
 
   return (
     <div>

@@ -259,7 +259,7 @@ describe("knowledge base & oracle", () => {
     await deleteFact(t.db, { ...c, factId: fEdit.id });
   });
 
-  it("extracts candidate facts from brand profile and AI responses without duplicating existing facts", async () => {
+  it("extracts candidate facts from brand profile and AI responses as pending_review without invented sourceUrls", async () => {
     const firstPass = await extractKnowledgeFacts(t.db, c);
     expect(firstPass.createdFacts).toBeGreaterThanOrEqual(2);
 
@@ -268,8 +268,9 @@ describe("knowledge base & oracle", () => {
 
     const kb = await listKnowledgeBase(t.db, c);
     expect(kb.pillars.length).toBeGreaterThanOrEqual(2);
-    expect(kb.counts.confirmed).toBeGreaterThanOrEqual(3);
-    expect(kb.counts.pendingReview).toBeGreaterThanOrEqual(1);
+    expect(kb.counts.confirmed).toBe(2);
+    expect(kb.counts.pendingReview).toBeGreaterThanOrEqual(4);
+    expect(kb.facts.filter((f) => f.status === "pending_review").every((f) => f.sourceUrl === null)).toBe(true);
   });
 
   it("manages internal link pages, syncs brand citations, and validates brand domain ownership", async () => {
@@ -384,6 +385,8 @@ describe("knowledge base & oracle", () => {
     await expect(listOracleFindings(t.db, { actorId: viewerId, websiteId: c.websiteId })).resolves.toBeTruthy();
 
     await expect(createPillar(t.db, { actorId: viewerId, websiteId: c.websiteId, name: "Blocked" })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(extractKnowledgeFacts(t.db, { actorId: viewerId, websiteId: c.websiteId })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(syncInternalLinks(t.db, { actorId: viewerId, websiteId: c.websiteId })).rejects.toBeInstanceOf(ForbiddenError);
     await expect(runOracleScan(t.db, { actorId: viewerId, websiteId: c.websiteId, now: NOW })).rejects.toBeInstanceOf(ForbiddenError);
 
     await expect(listKnowledgeBase(t.db, { actorId: outsider.actorId, websiteId: c.websiteId })).rejects.toBeInstanceOf(ForbiddenError);

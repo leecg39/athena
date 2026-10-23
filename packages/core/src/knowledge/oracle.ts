@@ -228,44 +228,6 @@ async function buildOracleCandidates(
     }
   }
 
-  // Fallback confirmed_inaccuracy when an AI answer makes a negative assertion or omits the brand
-  // on a tracked prompt that conflicts with the brand's confirmed positioning
-  if (!candidates.some((c) => c.type === "confirmed_inaccuracy") && confirmedFacts.length > 0) {
-    const negResp = respRows.find((r) => r.mentioned && r.sentiment === "negative");
-    const omitResp = respRows.find(
-      (r) =>
-        !r.mentioned &&
-        (r.promptText.toLowerCase().includes(site.name.toLowerCase()) ||
-          confirmedFacts.some((f) => overlapCount(subjectTokens(f.claim, site.name), subjectTokens(r.promptText, site.name)) > 0)),
-    ) ?? respRows.find((r) => !r.mentioned);
-    const targetResp = negResp ?? omitResp;
-    if (targetResp) {
-      const refFact =
-        confirmedFacts.find((f) => overlapCount(subjectTokens(f.claim, site.name), subjectTokens(targetResp.promptText, site.name)) > 0) ??
-        confirmedFacts[0]!;
-      const s =
-        splitBrandSentences(targetResp.rawText, site.name)[0] ??
-        targetResp.rawText
-          .split(/\n+/)
-          .map((l) => l.trim())
-          .find((l) => /^1\./.test(l)) ??
-        targetResp.rawText.slice(0, 180).trim();
-      const key = `confirmed_inaccuracy:fallback:${refFact.id}`;
-      seenKeys.add(key);
-      candidates.push({
-        key,
-        type: "confirmed_inaccuracy",
-        claim: refFact.claim,
-        evidence: targetResp.mentioned
-          ? `${targetResp.model} answered for "${targetResp.promptText}": "${s}" — conflicts with verified brand fact "${refFact.claim}".`
-          : `${targetResp.model} answered for "${targetResp.promptText}" without mentioning ${site.name} ("${s}") — contradicts verified KB fact "${refFact.claim}".`,
-        models: [targetResp.model],
-        responseId: targetResp.id,
-        factId: refFact.id,
-      });
-    }
-  }
-
   // 2. KB Inconsistencies: pairwise check among confirmed KB facts
   for (let i = 0; i < confirmedFacts.length; i++) {
     for (let j = i + 1; j < confirmedFacts.length; j++) {
@@ -406,11 +368,14 @@ async function buildOracleCandidates(
   return candidates.slice(0, 15);
 }
 
-const scanSchema = z.object({
-  actorId: z.string().uuid().optional(),
+const scanSiteSchema = z.object({
   websiteId: z.string().uuid(),
   days: z.number().int().min(7).max(90).default(30),
   now: z.date().optional(),
+});
+
+const scanSchema = scanSiteSchema.extend({
+  actorId: z.string().uuid(),
 });
 
 export interface RunOracleScanResult {
@@ -435,26 +400,17 @@ function toFindingRow(row: typeof oracleFindings.$inferSelect): OracleFindingRow
   };
 }
 
-export async function runOracleScan(
+async function executeOracleScan(
   db: Db,
-  rawInput: { actorId?: string; websiteId: string; days?: number; now?: Date },
+  site: WebsiteRow,
+  opts: { days: number; now: Date; actorId?: string },
 ): Promise<RunOracleScanResult> {
-  const input = scanSchema.parse(rawInput);
-  let site: WebsiteRow;
-  if (input.actorId) {
-    site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
-  } else {
-    const [row] = await db.select().from(websites).where(and(eq(websites.id, input.websiteId), isNull(websites.deletedAt)));
-    if (!row) throw new NotFoundError("Website not found");
-    site = row;
-  }
-
-  const now = input.now ?? new Date();
+  const { now } = opts;
 
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
 
-    const candidates = await buildOracleCandidates(tx, site, { days: input.days, now });
+    const candidates = await buildOracleCandidates(tx, site, { days: opts.days, now });
     const existing = await tx
       .select()
       .from(oracleFindings)
@@ -540,10 +496,10 @@ export async function runOracleScan(
       }
     }
 
-    if (input.actorId && (created > 0 || updated > 0)) {
+    if (opts.actorId && (created > 0 || updated > 0)) {
       await logActivity(tx, {
         organizationId: site.organizationId,
-        userId: input.actorId,
+        userId: opts.actorId,
         websiteId: site.id,
         entityType: "oracle_finding",
         change: "scanned",
@@ -564,6 +520,25 @@ export async function runOracleScan(
       findings: activeRows.filter((r) => r.status === "open" || r.status === "resolving").map(toFindingRow),
     };
   });
+}
+
+export async function runOracleScanForSite(
+  db: Db,
+  rawInput: { websiteId: string; days?: number; now?: Date },
+): Promise<RunOracleScanResult> {
+  const input = scanSiteSchema.parse(rawInput);
+  const [site] = await db.select().from(websites).where(and(eq(websites.id, input.websiteId), isNull(websites.deletedAt)));
+  if (!site) throw new NotFoundError("Website not found");
+  return executeOracleScan(db, site, { days: input.days, now: input.now ?? new Date() });
+}
+
+export async function runOracleScan(
+  db: Db,
+  rawInput: { actorId: string; websiteId: string; days?: number; now?: Date },
+): Promise<RunOracleScanResult> {
+  const input = scanSchema.parse(rawInput);
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
+  return executeOracleScan(db, site, { days: input.days, now: input.now ?? new Date(), actorId: input.actorId });
 }
 
 const listOracleSchema = z.object({

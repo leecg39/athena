@@ -3,7 +3,7 @@
  */
 import { and, eq, gte, isNull } from "drizzle-orm";
 import { type Db, websites, organizations, responses } from "@athena/db";
-import { generateInsights } from "@athena/core/insights";
+import { generateInsightsForSite } from "@athena/core/insights";
 
 const DAY = 86_400_000;
 
@@ -39,7 +39,7 @@ export async function generateAllInsights(
 
   for (const s of activeSites) {
     try {
-      const r = await generateInsights(db, { websiteId: s.id, days, now });
+      const r = await generateInsightsForSite(db, { websiteId: s.id, days, now });
       created += r.created;
       updated += r.updated;
       skipped += r.skipped;

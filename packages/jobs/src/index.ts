@@ -3,7 +3,7 @@
  * schedule dispatcher. Served by apps/web at /api/inngest.
  */
 import { getDb } from "@athena/db";
-import { generateInsights } from "@athena/core/insights";
+import { generateInsightsForSite } from "@athena/core/insights";
 import { configuredAdapters } from "@athena/llm/providers";
 import { inngest } from "./inngest";
 import { executeRun, planRun, dueSchedules, stalledRuns, reanalyzeResponses, generateAllInsights } from "./collection";
@@ -84,7 +84,7 @@ export const generateWebsiteInsightsFn = inngest.createFunction(
   { event: "website/insights.generate" },
   async ({ event, step }) =>
     step.run("generate-website-insights", () =>
-      generateInsights(getDb(), { websiteId: (event.data as { websiteId: string }).websiteId }),
+      generateInsightsForSite(getDb(), { websiteId: (event.data as { websiteId: string }).websiteId }),
     ),
 );
 

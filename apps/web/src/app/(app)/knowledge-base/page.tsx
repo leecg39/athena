@@ -1,6 +1,6 @@
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
-import { listKnowledgeBase, extractKnowledgeFacts, syncInternalLinks } from "@athena/core/knowledge";
+import { listKnowledgeBase } from "@athena/core/knowledge";
 import { PageHeader } from "@/components/page-header";
 import { KbWorkspace } from "@/components/kb-workspace";
 import { requireWorkspace } from "@/lib/workspace";
@@ -16,28 +16,11 @@ export default async function KnowledgeBasePage({
   const sp = await searchParams;
   const initialTab = sp.tab === "review" ? "review" : sp.tab === "links" ? "links" : "pillars";
 
-  const [membership, initial] = await Promise.all([
+  const [membership, data] = await Promise.all([
     getMembership(db, ws.user.id, ws.organizationId),
     listKnowledgeBase(db, { actorId: ws.user.id, websiteId: ws.websiteId }),
   ]);
   const canWrite = membership?.permissions.includes("content:write") ?? false;
-
-  let data = initial;
-  if (initial.counts.pillars === 0 || initial.counts.internalLinks === 0) {
-    if (initial.counts.pillars === 0) {
-      await extractKnowledgeFacts(db, {
-        actorId: canWrite ? ws.user.id : undefined,
-        websiteId: ws.websiteId,
-      });
-    }
-    if (initial.counts.internalLinks === 0) {
-      await syncInternalLinks(db, {
-        actorId: canWrite ? ws.user.id : undefined,
-        websiteId: ws.websiteId,
-      });
-    }
-    data = await listKnowledgeBase(db, { actorId: ws.user.id, websiteId: ws.websiteId });
-  }
 
   return (
     <div>
