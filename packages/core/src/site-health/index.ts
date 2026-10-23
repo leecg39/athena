@@ -1,27 +1,28 @@
 /**
- * Site Health Engine (Task 17):
- *  - Crawlability & Sitemap coverage (`site_health_pages`)
- *  - AI Crawler Accessibility Matrix (`OAI-SearchBot`, `ChatGPT-User`, `GPTBot`, `Claude-SearchBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended`, `Applebot-Extended`, `AthenaBot`)
- *  - Keywords & Rankings tracker across tracked pages
- *  - Staging Checks (Production vs Staging release comparison & regression detection)
- *  - Crawl Scope Properties grouping (`Marketing & Core`, `Documentation & Specs`, `Blog & Guides`)
- *  - Page Edit Optimization Board (`needs_edit` -> `staged` -> `verified_live`) + Live Content Verification
+ * Site Health Engine (Task 17 — R2 real crawl & verification):
+ *  - Real HTTP crawl via caller-injected SSRF-safe fetcher (`SiteHealthFetcher`)
+ *  - RFC 9309 `robots.txt` evaluation across 10 AI search & training crawlers
+ *  - Real `/sitemap.xml` and `/llms.txt` inspection + JSON-LD `@type` extraction
+ *  - Staging vs Production live comparison (`runStagingReleaseCheck`)
+ *  - Optimization Board (`needs_edit` -> `staged` -> `verified_live`) + live SHA-256 verification
  */
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import {
   type Db,
   type SiteHealthPageMeta,
   contentItems,
   kbFacts,
-  prompts,
   siteHealthPages,
   websites,
 } from "@athena/db";
 import { requireWebsitePermission, type WebsiteRow } from "../tenancy";
 import { logActivity } from "../org/activity";
 import { DomainError, NotFoundError } from "../org/errors";
+import { decodeEntities } from "../shared/html";
+
+export type SiteHealthFetcher = (url: string) => Promise<{ status: number; body: string } | null>;
 
 export const AI_CRAWLER_BOTS = [
   { bot: "OAI-SearchBot", owner: "OpenAI", purpose: "ChatGPT Search index" },
@@ -164,56 +165,128 @@ function isPrivateOrLoopbackHost(hostname: string): boolean {
 function normalizeSitePageUrl(rawUrl: string, siteDomain: string): { url: string; path: string } {
   const trimmed = rawUrl.trim();
   if (!trimmed) throw new DomainError("Page URL or path is required");
-
   if (/^(javascript|data|file|vbscript):/i.test(trimmed)) {
     throw new DomainError("Unsupported URL scheme");
   }
-
-  let parsed: URL;
-  if (trimmed.startsWith("/")) {
-    parsed = new URL(trimmed, `https://${siteDomain}`);
-  } else if (/^https?:\/\//i.test(trimmed)) {
-    parsed = new URL(trimmed);
-  } else {
-    parsed = new URL(`https://${trimmed}`);
-  }
-
+  const parsed = trimmed.startsWith("/")
+    ? new URL(trimmed, `https://${siteDomain}`)
+    : new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new DomainError("Only http and https URLs are allowed");
   }
-
   const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
   if (isPrivateOrLoopbackHost(host)) {
     throw new DomainError("Private, loopback, or internal URLs are not allowed");
   }
-
   const cleanSiteDomain = siteDomain.toLowerCase().replace(/^www\./, "");
   if (host !== cleanSiteDomain && !host.endsWith(`.${cleanSiteDomain}`)) {
     throw new DomainError(
       `Site Health URLs must belong to your workspace domain (${cleanSiteDomain}) or its subdomains`,
     );
   }
-
   const cleanPath = parsed.pathname === "/" ? "/" : parsed.pathname.replace(/\/+$/, "");
-  const normalizedUrl = `https://${host}${cleanPath}`;
-  return { url: normalizedUrl, path: cleanPath };
+  return { url: `https://${host}${cleanPath}`, path: cleanPath };
 }
 
-function defaultBotRules(
-  allowAll: boolean,
-  blockedBots: string[] = [],
+interface RobotsGroup {
+  agents: string[];
+  rules: { allow: boolean; pattern: string }[];
+}
+
+function parseRobotsTxt(body: string): { groups: RobotsGroup[]; sitemaps: string[] } {
+  const groups: RobotsGroup[] = [];
+  const sitemaps: string[] = [];
+  let current: RobotsGroup | null = null;
+  let lastWasAgent = false;
+  for (const rawLine of body.split(/\r?\n/)) {
+    const line = rawLine.replace(/#.*$/, "").trim();
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim().toLowerCase();
+    const val = line.slice(idx + 1).trim();
+    if (key === "user-agent") {
+      if (!current || !lastWasAgent) {
+        current = { agents: [], rules: [] };
+        groups.push(current);
+      }
+      current.agents.push(val.toLowerCase());
+      lastWasAgent = true;
+    } else {
+      lastWasAgent = false;
+      if (key === "sitemap" && val) sitemaps.push(val);
+      else if (current && (key === "allow" || key === "disallow") && val) {
+        current.rules.push({ allow: key === "allow", pattern: val });
+      }
+    }
+  }
+  return { groups, sitemaps };
+}
+
+function patternMatches(pattern: string, path: string): boolean {
+  const anchored = pattern.endsWith("$");
+  const body = (anchored ? pattern.slice(0, -1) : pattern)
+    .split("*")
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  return new RegExp(`^${body}${anchored ? "$" : ""}`).test(path);
+}
+
+function evaluatePageBots(
+  robots: { groups: RobotsGroup[] } | null,
+  path: string,
+  html: string,
 ): NonNullable<SiteHealthPageMeta["robotsBots"]> {
-  const blockedSet = new Set(blockedBots.map((b) => b.toLowerCase()));
+  const metaNoAi = /<meta[^>]+name=["']?(?:robots|ai-robots)["']?[^>]+content=["'][^"']*\b(?:noindex|noai)\b/i.test(html);
   return AI_CRAWLER_BOTS.map((b) => {
-    const isBlocked = !allowAll || blockedSet.has(b.bot.toLowerCase());
-    return {
-      bot: b.bot,
-      owner: b.owner,
-      purpose: b.purpose,
-      status: isBlocked ? "blocked" : "allowed",
-      rule: isBlocked ? `Disallow: / (User-agent: ${b.bot})` : `Allow: / (User-agent: ${b.bot})`,
-    };
+    if (metaNoAi) {
+      return { bot: b.bot, owner: b.owner, purpose: b.purpose, status: "blocked", rule: "Meta robots: noindex/noai" };
+    }
+    if (!robots) {
+      return { bot: b.bot, owner: b.owner, purpose: b.purpose, status: "allowed", rule: "No robots.txt restriction" };
+    }
+    const token = b.bot.toLowerCase();
+    let groups = robots.groups.filter((g) => g.agents.includes(token));
+    let groupName: string = b.bot;
+    if (!groups.length) {
+      groups = robots.groups.filter((g) => g.agents.includes("*"));
+      groupName = "*";
+    }
+    let best: { allow: boolean; pattern: string } | null = null;
+    for (const rule of groups.flatMap((g) => g.rules)) {
+      if (!patternMatches(rule.pattern, path)) continue;
+      const len = rule.pattern.replace(/\$$/, "").length;
+      const bestLen = best ? best.pattern.replace(/\$$/, "").length : -1;
+      if (len > bestLen || (len === bestLen && rule.allow && best && !best.allow)) best = rule;
+    }
+    const allowed = best ? best.allow : true;
+    const ruleText = best
+      ? `${best.allow ? "Allow" : "Disallow"}: ${best.pattern} (User-agent: ${groupName})`
+      : `Allow: / (User-agent: ${groupName})`;
+    return { bot: b.bot, owner: b.owner, purpose: b.purpose, status: allowed ? "allowed" : "blocked", rule: ruleText };
   });
+}
+
+function extractHtmlTitle(html: string): string | null {
+  const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  const t = m ? decodeEntities(m[1]).replace(/\s+/g, " ").trim() : "";
+  return t ? t.slice(0, 200) : null;
+}
+
+function extractJsonLdTypes(html: string): string[] {
+  const types = new Set<string>();
+  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  for (const m of html.matchAll(scriptRe)) {
+    for (const tm of m[1].matchAll(/"@type"\s*:\s*"([^"]{1,60})"/g)) {
+      types.add(tm[1]);
+    }
+  }
+  return [...types].slice(0, 10);
+}
+
+function inferProperty(path: string): string {
+  if (/^\/(docs|api|reference|sdk)(\/|$)/i.test(path)) return "Documentation & Specs";
+  if (/^\/(blog|guides|articles|learn|news)(\/|$)/i.test(path)) return "Blog & Guides";
+  return "Marketing & Core";
 }
 
 function deriveHealthStatus(row: {
@@ -222,6 +295,9 @@ function deriveHealthStatus(row: {
   inSitemap: boolean;
   meta: SiteHealthPageMeta;
 }): { healthStatus: "pass" | "warn" | "fail"; healthDetail: string } {
+  if (row.statusCode === 0) {
+    return { healthStatus: "fail", healthDetail: "Unreachable or not crawled yet" };
+  }
   if (row.statusCode >= 400) {
     return {
       healthStatus: "fail",
@@ -236,458 +312,205 @@ function deriveHealthStatus(row: {
     };
   }
   if (blockedBots.length > 0) {
-    return {
-      healthStatus: "warn",
-      healthDetail: `robots.txt blocks ${blockedBots.join(", ")}`,
-    };
+    return { healthStatus: "warn", healthDetail: `robots.txt blocks ${blockedBots.join(", ")}` };
   }
   if (!row.inSitemap) {
-    return {
-      healthStatus: "warn",
-      healthDetail: `${row.statusCode} OK · missing from /sitemap.xml`,
-    };
+    return { healthStatus: "warn", healthDetail: `${row.statusCode} OK · missing from /sitemap.xml` };
   }
   if (row.meta.llmsTxtPresent === false) {
-    return {
-      healthStatus: "warn",
-      healthDetail: `${row.statusCode} OK · missing from /llms.txt index`,
-    };
+    return { healthStatus: "warn", healthDetail: `${row.statusCode} OK · missing /llms.txt` };
   }
-  return {
-    healthStatus: "pass",
-    healthDetail: `${row.statusCode} OK · All AI search bots allowed · In sitemap.xml`,
-  };
+  return { healthStatus: "pass", healthDetail: `${row.statusCode} OK · All AI search bots allowed · In sitemap.xml` };
 }
 
-/**
- * Crawls & audits the website's core pages, sitemap coverage, AI crawler rules,
- * keyword rankings, staging release comparison, and optimization recommendations.
- */
-export async function runSiteHealthCrawl(
-  db: Db,
-  rawInput: { actorId?: string; websiteId: string },
-): Promise<{ created: number; updated: number; total: number }> {
-  let site: WebsiteRow;
-  if (rawInput.actorId) {
-    site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-  } else {
-    const [row] = await db
-      .select()
-      .from(websites)
-      .where(and(eq(websites.id, rawInput.websiteId), isNull(websites.deletedAt)));
-    if (!row) throw new NotFoundError("Website not found");
-    site = row;
+function recommendationFor(statusCode: number, inSitemap: boolean, llmsTxt: boolean, schemas: string[], blocked: string[]): string {
+  if (statusCode === 0) return "Crawl could not reach this URL — check DNS and HTTPS availability.";
+  if (statusCode >= 400) {
+    return inSitemap
+      ? `HTTP ${statusCode} — remove this broken URL from /sitemap.xml or restore the page.`
+      : `HTTP ${statusCode} — restore the page or configure a 301 redirect.`;
   }
+  if (blocked.length > 0) {
+    return `Unblock ${blocked.slice(0, 4).join(", ")} in /robots.txt so AI search engines can cite this page.`;
+  }
+  if (!inSitemap) return "Add this URL to /sitemap.xml so AI crawlers discover it reliably.";
+  if (!schemas.length) return "Add JSON-LD structured data (e.g. Article, FAQPage, Product) to improve citation accuracy.";
+  if (!llmsTxt) return "Publish /llms.txt at the domain root with a concise index of key pages.";
+  return "All crawlability, robots.txt, sitemap.xml, and structured data checks passed.";
+}
+
+async function discoverCandidatePaths(
+  db: Db,
+  site: WebsiteRow,
+  sitemapXml: string,
+): Promise<{ paths: string[]; sitemapSet: Set<string> }> {
+  const sitemapSet = new Set<string>();
+  const ordered: string[] = ["/"];
+  const seen = new Set<string>(["/"]);
+  const add = (raw: string, fromSitemap = false) => {
+    try {
+      const { path } = normalizeSitePageUrl(raw, site.domain);
+      if (fromSitemap) sitemapSet.add(path);
+      if (!seen.has(path) && ordered.length < 20) {
+        seen.add(path);
+        ordered.push(path);
+      }
+    } catch {
+      // ignore off-domain or malformed URLs
+    }
+  };
+  for (const m of sitemapXml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)) add(m[1], true);
+  const [existing, facts, items] = await Promise.all([
+    db.select({ url: siteHealthPages.url }).from(siteHealthPages).where(eq(siteHealthPages.websiteId, site.id)),
+    db.select({ url: kbFacts.sourceUrl }).from(kbFacts).where(and(eq(kbFacts.websiteId, site.id), isNull(kbFacts.deletedAt))).limit(10),
+    db.select({ url: contentItems.targetUrl }).from(contentItems).where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt))).limit(10),
+  ]);
+  for (const r of [...existing, ...facts, ...items]) if (r.url) add(r.url, false);
+  return { paths: ordered, sitemapSet };
+}
+
+export async function runSiteHealthCrawlForSite(
+  db: Db,
+  site: WebsiteRow,
+  fetchPage: SiteHealthFetcher,
+  actorId?: string,
+): Promise<{ created: number; updated: number; total: number }> {
+  const origin = `https://${site.domain}`;
+  const [robotsRes, llmsRes, sitemapRes] = await Promise.all([
+    fetchPage(`${origin}/robots.txt`),
+    fetchPage(`${origin}/llms.txt`),
+    fetchPage(`${origin}/sitemap.xml`),
+  ]);
+  const parsedRobots = robotsRes && robotsRes.status >= 200 && robotsRes.status < 300 ? parseRobotsTxt(robotsRes.body) : null;
+  const llmsTxtPresent = Boolean(llmsRes && llmsRes.status >= 200 && llmsRes.status < 300 && llmsRes.body.trim());
+  const sitemapXml = sitemapRes && sitemapRes.status >= 200 && sitemapRes.status < 300 ? sitemapRes.body : "";
+  const { paths, sitemapSet } = await discoverCandidatePaths(db, site, sitemapXml);
+  const fetched = await Promise.all(paths.map(async (p) => [p, await fetchPage(`${origin}${p}`)] as const));
 
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
-
-    const existing = await tx
-      .select()
-      .from(siteHealthPages)
-      .where(eq(siteHealthPages.websiteId, site.id));
-
+    const existing = await tx.select().from(siteHealthPages).where(eq(siteHealthPages.websiteId, site.id));
     const existingByUrl = new Map(existing.map((r) => [r.url.toLowerCase(), r]));
-
-    // Pull KB facts with sourceUrl & published Content Hub URLs so real workspace pages are included
-    const workspaceKbFacts = await tx
-      .select()
-      .from(kbFacts)
-      .where(and(eq(kbFacts.websiteId, site.id), isNull(kbFacts.deletedAt)))
-      .limit(10);
-
-    const publishedContent = await tx
-      .select()
-      .from(contentItems)
-      .where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt)))
-      .limit(10);
-
-    const activePrompts = await tx
-      .select({ text: prompts.text })
-      .from(prompts)
-      .where(and(eq(prompts.websiteId, site.id), eq(prompts.status, "active"), isNull(prompts.deletedAt)))
-      .orderBy(asc(prompts.createdAt))
-      .limit(8);
-
-    const promptKeywords = activePrompts.map((p) => p.text.toLowerCase().slice(0, 60));
-
-    interface SeedPage {
-      path: string;
-      title: string;
-      statusCode: number;
-      aiAccessible: boolean;
-      inSitemap: boolean;
-      keywords: { keyword: string; position: number; volume: number; change: number }[];
-      meta: SiteHealthPageMeta;
-    }
-
-    const candidates: SeedPage[] = [
-      {
-        path: "/",
-        title: `${site.name} — Collaborative AI Design & Product Platform`,
-        statusCode: 200,
-        aiAccessible: true,
-        inSitemap: true,
-        keywords: [
-          {
-            keyword: promptKeywords[0] ?? `${site.name.toLowerCase()} ai design platform`,
-            position: 2,
-            volume: 5400,
-            change: 1,
-          },
-          {
-            keyword: "collaborative ai design canvas",
-            position: 4,
-            volume: 3200,
-            change: 2,
-          },
-        ],
-        meta: {
-          property: "Marketing & Core",
-          robotsBots: defaultBotRules(true),
-          llmsTxtPresent: true,
-          schemaMarkup: ["Organization", "WebSite", "SoftwareApplication"],
-          stagingStatusCode: 200,
-          stagingAiAccessible: true,
-          stagingDiffSummary: "No regressions (200 OK · OAI-SearchBot & Claude-SearchBot allowed)",
-          optimizationStatus: "healthy",
-          optimizationRecommendation: "Healthy — maintain JSON-LD SoftwareApplication schema and /llms.txt summary.",
-          verifiedAt: new Date().toISOString(),
-          verificationHash: "sha256-core-home-v1",
-        },
-      },
-      {
-        path: "/pricing",
-        title: `${site.name} Pricing — Free, Pro ($29/mo) & Enterprise Plans`,
-        statusCode: 200,
-        aiAccessible: true,
-        inSitemap: true,
-        keywords: [
-          {
-            keyword: `${site.name.toLowerCase()} pricing per seat`,
-            position: 1,
-            volume: 2900,
-            change: 0,
-          },
-          {
-            keyword: "ai design tool enterprise pricing",
-            position: 5,
-            volume: 1850,
-            change: 3,
-          },
-        ],
-        meta: {
-          property: "Marketing & Core",
-          robotsBots: defaultBotRules(true),
-          llmsTxtPresent: true,
-          schemaMarkup: ["Product", "Offer", "FAQPage"],
-          stagingStatusCode: 200,
-          stagingAiAccessible: true,
-          stagingDiffSummary: "No regressions (Offer & FAQPage schema verified on staging)",
-          optimizationStatus: "healthy",
-          optimizationRecommendation: "Keep Offer price ($29/mo) synchronized with Knowledge Base facts.",
-          verifiedAt: new Date().toISOString(),
-          verificationHash: "sha256-core-pricing-v1",
-        },
-      },
-      {
-        path: "/blog/ai-design-tools-2026",
-        title: "Comparing Top AI Design Tools for Product Teams in 2026",
-        statusCode: 200,
-        aiAccessible: true,
-        inSitemap: true,
-        keywords: [
-          {
-            keyword: promptKeywords[1] ?? "best ai design tools for product teams",
-            position: 3,
-            volume: 6800,
-            change: 2,
-          },
-          {
-            keyword: `${site.name.toLowerCase()} vs figma comparison`,
-            position: 6,
-            volume: 4100,
-            change: -1,
-          },
-        ],
-        meta: {
-          property: "Blog & Guides",
-          robotsBots: defaultBotRules(true, ["ClaudeBot", "Claude-SearchBot"]),
-          llmsTxtPresent: true,
-          schemaMarkup: ["Article"],
-          stagingStatusCode: 200,
-          stagingAiAccessible: false,
-          stagingDiffSummary: "Regression warning: /blog/* robots.txt rule blocks Claude-SearchBot & ClaudeBot",
-          optimizationStatus: "needs_edit",
-          optimizationRecommendation:
-            "Update robots.txt to Allow Claude-SearchBot and Claude-User on /blog/* and add FAQPage JSON-LD.",
-          verifiedAt: null,
-          verificationHash: null,
-        },
-      },
-      {
-        path: "/docs/api",
-        title: `${site.name} REST API & Design Tokens Automation Reference`,
-        statusCode: 200,
-        aiAccessible: true,
-        inSitemap: true,
-        keywords: [
-          {
-            keyword: "design tokens automation rest api",
-            position: 4,
-            volume: 2100,
-            change: 1,
-          },
-        ],
-        meta: {
-          property: "Documentation & Specs",
-          robotsBots: defaultBotRules(true, ["PerplexityBot"]),
-          llmsTxtPresent: false,
-          schemaMarkup: ["TechArticle"],
-          stagingStatusCode: 200,
-          stagingAiAccessible: true,
-          stagingDiffSummary: "Warning: /docs/api is missing from /llms.txt developer section",
-          optimizationStatus: "staged",
-          optimizationRecommendation:
-            "Add /docs/api endpoint summary to /llms.txt and allow PerplexityBot for technical query citations.",
-          verifiedAt: null,
-          verificationHash: null,
-        },
-      },
-      {
-        path: "/old/features-legacy",
-        title: "Legacy Features Archive (Deprecated)",
-        statusCode: 404,
-        aiAccessible: false,
-        inSitemap: true,
-        keywords: [
-          {
-            keyword: `${site.name.toLowerCase()} legacy workflow`,
-            position: 19,
-            volume: 420,
-            change: -6,
-          },
-        ],
-        meta: {
-          property: "Marketing & Core",
-          robotsBots: defaultBotRules(false),
-          llmsTxtPresent: false,
-          schemaMarkup: [],
-          stagingStatusCode: 404,
-          stagingAiAccessible: false,
-          stagingDiffSummary: "Critical: Returns 404 Not Found while still listed in /sitemap.xml",
-          optimizationStatus: "needs_edit",
-          optimizationRecommendation:
-            "Remove /old/features-legacy from /sitemap.xml and configure a 301 redirect to /pricing.",
-          verifiedAt: null,
-          verificationHash: null,
-        },
-      },
-    ];
-
-    // Append KB fact source URLs if any belong to this domain
-    for (const kf of workspaceKbFacts.slice(0, 3)) {
-      if (!kf.sourceUrl) continue;
-      try {
-        const norm = normalizeSitePageUrl(kf.sourceUrl, site.domain);
-        if (!candidates.some((c) => c.path === norm.path)) {
-          candidates.push({
-            path: norm.path,
-            title: `${site.name} — ${norm.path.replace(/\//g, " ").trim() || "Verified Fact Page"}`,
-            statusCode: 200,
-            aiAccessible: true,
-            inSitemap: true,
-            keywords: [
-              {
-                keyword: kf.claim.toLowerCase().slice(0, 45),
-                position: 5,
-                volume: 1400,
-                change: 1,
-              },
-            ],
-            meta: {
-              property: "Documentation & Specs",
-              robotsBots: defaultBotRules(true),
-              llmsTxtPresent: true,
-              schemaMarkup: ["WebPage", "TechArticle"],
-              stagingStatusCode: 200,
-              stagingAiAccessible: true,
-              stagingDiffSummary: "No regressions (200 OK · KB linked page)",
-              optimizationStatus: "healthy",
-              optimizationRecommendation: "Linked in Knowledge Base internal link graph.",
-              verifiedAt: new Date().toISOString(),
-              verificationHash: `sha256-kb-${kf.id.slice(0, 8)}`,
-            },
-          });
-        }
-      } catch {
-        // Ignore external KB URLs
-      }
-    }
-
-    // Append published Content Hub pages if any belong to this domain
-    for (const ci of publishedContent) {
-      if (!ci.targetUrl) continue;
-      try {
-        const norm = normalizeSitePageUrl(ci.targetUrl, site.domain);
-        if (!candidates.some((c) => c.path === norm.path)) {
-          candidates.push({
-            path: norm.path,
-            title: ci.title,
-            statusCode: 200,
-            aiAccessible: true,
-            inSitemap: true,
-            keywords: [
-              {
-                keyword: ci.title.toLowerCase().slice(0, 50),
-                position: 3,
-                volume: 2200,
-                change: 2,
-              },
-            ],
-            meta: {
-              property: "Blog & Guides",
-              robotsBots: defaultBotRules(true),
-              llmsTxtPresent: true,
-              schemaMarkup: ["Article", "FAQPage"],
-              stagingStatusCode: 200,
-              stagingAiAccessible: true,
-              stagingDiffSummary: "No regressions (Published via Content Hub)",
-              optimizationStatus: "verified_live",
-              optimizationRecommendation: "Published via Content Hub with FAQ schema.",
-              verifiedAt: new Date().toISOString(),
-              verificationHash: `sha256-content-${ci.id.slice(0, 8)}`,
-            },
-          });
-        }
-      } catch {
-        // Ignore external CMS URLs
-      }
-    }
-
     let created = 0;
     let updated = 0;
     const now = new Date();
 
-    for (const cand of candidates) {
-      const fullUrl = `https://${site.domain}${cand.path}`;
-      const match = existingByUrl.get(fullUrl.toLowerCase()) ?? existingByUrl.get(cand.path.toLowerCase());
-
+    for (const [path, res] of fetched) {
+      const fullUrl = `${origin}${path}`;
+      const match = existingByUrl.get(fullUrl.toLowerCase()) ?? existingByUrl.get(path.toLowerCase());
+      const prevMeta = (match?.meta ?? {}) as SiteHealthPageMeta;
+      const statusCode = res?.status ?? 0;
+      const body = res?.body ?? "";
+      const robotsBots = evaluatePageBots(parsedRobots, path, body);
+      const blocked = robotsBots.filter((b) => b.status === "blocked").map((b) => b.bot);
+      const aiAccessible = statusCode >= 200 && statusCode < 400 && blocked.length < 4;
+      const inSitemap = sitemapSet.has(path);
+      const schemaMarkup = extractJsonLdTypes(body);
+      const title = extractHtmlTitle(body) ?? match?.title ?? `${site.name} (${path})`;
+      const rec = recommendationFor(statusCode, inSitemap, llmsTxtPresent, schemaMarkup, blocked);
+      const { healthStatus } = deriveHealthStatus({ statusCode, aiAccessible, inSitemap, meta: { robotsBots, llmsTxtPresent } });
+      const keepStage = prevMeta.optimizationStatus === "verified_live" || prevMeta.optimizationStatus === "staged";
+      const meta: SiteHealthPageMeta = {
+        ...prevMeta,
+        property: prevMeta.property ?? inferProperty(path),
+        robotsBots,
+        llmsTxtPresent,
+        schemaMarkup,
+        stagingStatusCode: prevMeta.stagingStatusCode,
+        stagingAiAccessible: prevMeta.stagingAiAccessible,
+        stagingDiffSummary: prevMeta.stagingDiffSummary ?? "Not checked against staging yet",
+        optimizationStatus: keepStage ? prevMeta.optimizationStatus : healthStatus === "pass" ? "healthy" : "needs_edit",
+        optimizationRecommendation: keepStage ? (prevMeta.optimizationRecommendation ?? rec) : rec,
+      };
       if (match) {
-        const prevMeta = (match.meta ?? {}) as SiteHealthPageMeta;
-        const preserveVerified =
-          prevMeta.optimizationStatus === "verified_live" || prevMeta.optimizationStatus === "staged";
-
-        const mergedMeta: SiteHealthPageMeta = {
-          ...cand.meta,
-          ...prevMeta,
-          robotsBots: preserveVerified ? (prevMeta.robotsBots ?? cand.meta.robotsBots) : cand.meta.robotsBots,
-          optimizationStatus: preserveVerified
-            ? prevMeta.optimizationStatus
-            : (prevMeta.optimizationStatus ?? cand.meta.optimizationStatus),
-        };
-
         await tx
           .update(siteHealthPages)
-          .set({
-            url: fullUrl,
-            title: match.title || cand.title,
-            statusCode: preserveVerified ? (match.statusCode ?? cand.statusCode) : cand.statusCode,
-            aiAccessible: preserveVerified ? (match.aiAccessible ?? cand.aiAccessible) : cand.aiAccessible,
-            inSitemap: preserveVerified ? (match.inSitemap ?? cand.inSitemap) : cand.inSitemap,
-            keywords: (match.keywords && match.keywords.length > 0 ? match.keywords : cand.keywords),
-            meta: mergedMeta,
-            lastCheckedAt: now,
-          })
+          .set({ url: fullUrl, title, statusCode, aiAccessible, inSitemap, meta, lastCheckedAt: now })
           .where(eq(siteHealthPages.id, match.id));
         updated++;
       } else {
         await tx.insert(siteHealthPages).values({
           websiteId: site.id,
           url: fullUrl,
-          title: cand.title,
-          statusCode: cand.statusCode,
-          aiAccessible: cand.aiAccessible,
-          inSitemap: cand.inSitemap,
-          keywords: cand.keywords,
-          meta: cand.meta,
+          title,
+          statusCode,
+          aiAccessible,
+          inSitemap,
+          keywords: [],
+          meta,
           lastCheckedAt: now,
         });
         created++;
       }
     }
-
-    if (rawInput.actorId) {
+    if (actorId) {
       await logActivity(tx, {
         organizationId: site.organizationId,
         websiteId: site.id,
-        userId: rawInput.actorId,
+        userId: actorId,
         entityType: "site_health",
         entityId: site.id,
         change: "crawled",
         after: { created, updated },
       });
     }
-
     return { created, updated, total: existing.length + created };
   });
 }
 
-/**
- * Runs a Staging vs Production release comparison across all tracked pages.
- */
+export async function runSiteHealthCrawl(
+  db: Db,
+  input: { actorId: string; websiteId: string; fetchPage: SiteHealthFetcher },
+): Promise<{ created: number; updated: number; total: number }> {
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
+  return runSiteHealthCrawlForSite(db, site, input.fetchPage, input.actorId);
+}
+
 export async function runStagingReleaseCheck(
   db: Db,
-  rawInput: { actorId: string; websiteId: string; stagingHost?: string },
+  rawInput: { actorId: string; websiteId: string; stagingHost?: string; fetchPage: SiteHealthFetcher },
 ): Promise<{ checked: number; regressions: number; stagingHost: string }> {
   const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-
   const rawHost = (rawInput.stagingHost ?? `staging.${site.domain}`).trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   if (!rawHost || isPrivateOrLoopbackHost(rawHost)) {
     throw new DomainError("Invalid or private staging hostname");
   }
+  const pages = await db.select().from(siteHealthPages).where(eq(siteHealthPages.websiteId, site.id));
+  const robotsRes = await rawInput.fetchPage(`https://${rawHost}/robots.txt`);
+  const stagingRobots = robotsRes && robotsRes.status >= 200 && robotsRes.status < 300 ? parseRobotsTxt(robotsRes.body) : null;
+  const checks = await Promise.all(
+    pages.map(async (p) => {
+      const path = new URL(p.url.startsWith("http") ? p.url : `https://${site.domain}${p.url}`).pathname || "/";
+      const res = await rawInput.fetchPage(`https://${rawHost}${path}`);
+      return { page: p, path, res };
+    }),
+  );
 
   return db.transaction(async (tx) => {
-    const pages = await tx
-      .select()
-      .from(siteHealthPages)
-      .where(eq(siteHealthPages.websiteId, site.id));
-
     let regressions = 0;
     const now = new Date();
-
-    for (const p of pages) {
-      const meta = (p.meta ?? {}) as SiteHealthPageMeta;
-      const isVerified = meta.optimizationStatus === "verified_live";
-      const stagingStatus = isVerified ? 200 : (meta.stagingStatusCode ?? p.statusCode ?? 200);
-      const stagingAi = isVerified ? true : (meta.stagingAiAccessible ?? p.aiAccessible ?? true);
-      const blockedBots = (meta.robotsBots ?? []).filter((b) => b.status === "blocked");
-
-      const hasRegression = stagingStatus >= 400 || !stagingAi || blockedBots.length > 0;
+    for (const { page, path, res } of checks) {
+      const meta = (page.meta ?? {}) as SiteHealthPageMeta;
+      const stagingStatus = res?.status ?? 0;
+      const bots = evaluatePageBots(stagingRobots, path, res?.body ?? "");
+      const blocked = bots.filter((b) => b.status === "blocked").map((b) => b.bot);
+      const stagingAi = stagingStatus >= 200 && stagingStatus < 400 && blocked.length < 4;
+      const hasRegression = stagingStatus === 0 || stagingStatus >= 400 || !stagingAi || blocked.length > 0;
       if (hasRegression) regressions++;
-
-      const diffSummary = hasRegression
-        ? `Staging (${rawHost}) check: HTTP ${stagingStatus} · ${
-            blockedBots.length > 0
-              ? `Blocked bots: ${blockedBots.map((b) => b.bot).join(", ")}`
-              : "AI access restricted"
-          }`
-        : `Staging (${rawHost}) verified: HTTP 200 OK · All 10 AI search crawlers allowed`;
-
+      const diffSummary =
+        stagingStatus === 0
+          ? `Staging (${rawHost}) unreachable`
+          : hasRegression
+            ? `Staging (${rawHost}): HTTP ${stagingStatus} · ${blocked.length ? `Blocked: ${blocked.join(", ")}` : "AI access restricted"}`
+            : `Staging (${rawHost}) OK: HTTP ${stagingStatus} · All 10 AI crawlers allowed`;
       await tx
         .update(siteHealthPages)
         .set({
-          meta: {
-            ...meta,
-            stagingStatusCode: stagingStatus,
-            stagingAiAccessible: stagingAi,
-            stagingDiffSummary: diffSummary,
-          },
+          meta: { ...meta, stagingStatusCode: stagingStatus, stagingAiAccessible: stagingAi, stagingDiffSummary: diffSummary },
           lastCheckedAt: now,
         })
-        .where(eq(siteHealthPages.id, p.id));
+        .where(eq(siteHealthPages.id, page.id));
     }
-
     await logActivity(tx, {
       organizationId: site.organizationId,
       websiteId: site.id,
@@ -697,7 +520,6 @@ export async function runStagingReleaseCheck(
       change: "staging_release_checked",
       after: { stagingHost: rawHost, checked: pages.length, regressions },
     });
-
     return { checked: pages.length, regressions, stagingHost: rawHost };
   });
 }
@@ -709,7 +531,7 @@ const createSiteHealthPageSchema = z.object({
   title: z.string().trim().min(2, "Page title is required").max(200),
   property: z.string().trim().min(2).max(100).default("Marketing & Core"),
   keyword: z.string().trim().max(120).optional(),
-  position: z.number().int().min(1).max(100).default(4),
+  position: z.number().int().min(1).max(100).optional(),
 });
 
 export async function createSiteHealthPage(
@@ -726,49 +548,38 @@ export async function createSiteHealthPage(
 
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
-
-    const existing = await tx
-      .select()
-      .from(siteHealthPages)
-      .where(eq(siteHealthPages.websiteId, site.id));
-
+    const existing = await tx.select().from(siteHealthPages).where(eq(siteHealthPages.websiteId, site.id));
     if (existing.some((r) => r.url.toLowerCase() === normalized.url.toLowerCase())) {
       throw new DomainError(`Page "${normalized.path}" is already tracked in Site Health`);
     }
-
     const keywords = input.keyword
-      ? [{ keyword: input.keyword, position: input.position, volume: 1600, change: 1 }]
-      : [{ keyword: `${site.name.toLowerCase()} ${normalized.path.replace(/\//g, " ").trim() || "home"}`, position: input.position, volume: 1200, change: 1 }];
-
+      ? [{ keyword: input.keyword, position: input.position ?? 0, volume: 0, change: 0 }]
+      : [];
     const meta: SiteHealthPageMeta = {
       property: input.property,
-      robotsBots: defaultBotRules(true),
-      llmsTxtPresent: true,
-      schemaMarkup: ["WebPage", "FAQPage"],
-      stagingStatusCode: 200,
-      stagingAiAccessible: true,
-      stagingDiffSummary: "No regressions (200 OK · AI accessible)",
-      optimizationStatus: "staged",
-      optimizationRecommendation: "Verify live content & JSON-LD schema on production.",
+      robotsBots: evaluatePageBots(null, normalized.path, ""),
+      llmsTxtPresent: false,
+      schemaMarkup: [],
+      stagingDiffSummary: "Not checked against staging yet",
+      optimizationStatus: "needs_edit",
+      optimizationRecommendation: "Run Crawl now or Live Verify to audit this page.",
       verifiedAt: null,
       verificationHash: null,
     };
-
     const [inserted] = await tx
       .insert(siteHealthPages)
       .values({
         websiteId: site.id,
         url: normalized.url,
         title: input.title,
-        statusCode: 200,
-        aiAccessible: true,
-        inSitemap: true,
+        statusCode: 0,
+        aiAccessible: false,
+        inSitemap: false,
         keywords,
         meta,
-        lastCheckedAt: new Date(),
+        lastCheckedAt: null,
       })
       .returning();
-
     await logActivity(tx, {
       organizationId: site.organizationId,
       websiteId: site.id,
@@ -778,15 +589,10 @@ export async function createSiteHealthPage(
       change: "created",
       after: { url: normalized.url, property: input.property },
     });
-
     return { id: inserted!.id, url: normalized.url };
   });
 }
 
-/**
- * Updates a page's optimization status (`needs_edit` | `staged` | `verified_live` | `healthy`)
- * or applies recommended robots.txt / sitemap / HTTP fixes.
- */
 export async function updatePageOptimization(
   db: Db,
   rawInput: {
@@ -798,41 +604,22 @@ export async function updatePageOptimization(
   },
 ): Promise<{ id: string; optimizationStatus: OptimizationStage }> {
   const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-
   const [existing] = await db
     .select()
     .from(siteHealthPages)
     .where(and(eq(siteHealthPages.id, rawInput.pageId), eq(siteHealthPages.websiteId, site.id)));
   if (!existing) throw new NotFoundError("Site Health page not found");
-
   const prevMeta = (existing.meta ?? {}) as SiteHealthPageMeta;
-  const isFixing = rawInput.optimizationStatus === "staged" || rawInput.optimizationStatus === "verified_live";
-
   const nextMeta: SiteHealthPageMeta = {
     ...prevMeta,
     optimizationStatus: rawInput.optimizationStatus,
     optimizationRecommendation:
-      rawInput.recommendation?.trim() || prevMeta.optimizationRecommendation || "Optimization updated.",
-    robotsBots: isFixing ? defaultBotRules(true) : prevMeta.robotsBots,
-    llmsTxtPresent: isFixing ? true : prevMeta.llmsTxtPresent,
-    stagingStatusCode: isFixing ? 200 : prevMeta.stagingStatusCode,
-    stagingAiAccessible: isFixing ? true : prevMeta.stagingAiAccessible,
-    stagingDiffSummary: isFixing
-      ? "Staged fix ready: HTTP 200 OK · All AI crawlers allowed · Sitemap & llms.txt synced"
-      : prevMeta.stagingDiffSummary,
+      rawInput.recommendation?.trim() || prevMeta.optimizationRecommendation || "Optimization status updated.",
   };
-
   await db
     .update(siteHealthPages)
-    .set({
-      statusCode: isFixing ? 200 : existing.statusCode,
-      aiAccessible: isFixing ? true : existing.aiAccessible,
-      inSitemap: isFixing && (existing.statusCode ?? 200) < 400 ? true : existing.inSitemap,
-      meta: nextMeta,
-      lastCheckedAt: new Date(),
-    })
+    .set({ meta: nextMeta, lastCheckedAt: new Date() })
     .where(and(eq(siteHealthPages.id, existing.id), eq(siteHealthPages.websiteId, site.id)));
-
   await logActivity(db, {
     organizationId: site.organizationId,
     websiteId: site.id,
@@ -842,64 +629,58 @@ export async function updatePageOptimization(
     change: "optimization_updated",
     after: { url: existing.url, optimizationStatus: rawInput.optimizationStatus },
   });
-
   return { id: existing.id, optimizationStatus: rawInput.optimizationStatus };
 }
 
-/**
- * Runs Live Content Verification on a page: confirms 200 OK, unblocks all 10 AI search
- * crawlers (including OAI-SearchBot, Claude-SearchBot, PerplexityBot), verifies JSON-LD
- * schema & llms.txt presence, and stamps a cryptographic verification hash.
- */
 export async function verifyLivePageContent(
   db: Db,
-  rawInput: { actorId: string; websiteId: string; pageId: string },
+  rawInput: { actorId: string; websiteId: string; pageId: string; fetchPage: SiteHealthFetcher },
 ): Promise<{ id: string; url: string; verificationHash: string; verifiedAt: string }> {
   const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-
   const [existing] = await db
     .select()
     .from(siteHealthPages)
     .where(and(eq(siteHealthPages.id, rawInput.pageId), eq(siteHealthPages.websiteId, site.id)));
   if (!existing) throw new NotFoundError("Site Health page not found");
 
-  const nowIso = new Date().toISOString();
-  const hash =
-    "sha256-" +
-    createHash("sha256")
-      .update(`${site.id}:${existing.url}:${nowIso}`)
-      .digest("hex")
-      .slice(0, 16);
+  const path = new URL(existing.url.startsWith("http") ? existing.url : `https://${site.domain}${existing.url}`).pathname || "/";
+  const [pageRes, robotsRes] = await Promise.all([
+    rawInput.fetchPage(existing.url),
+    rawInput.fetchPage(`https://${site.domain}/robots.txt`),
+  ]);
+  if (!pageRes || pageRes.status < 200 || pageRes.status >= 400) {
+    throw new DomainError(`Live page returned HTTP ${pageRes?.status ?? "unreachable"} — fix the live URL before marking it verified`);
+  }
+  const parsedRobots = robotsRes && robotsRes.status >= 200 && robotsRes.status < 300 ? parseRobotsTxt(robotsRes.body) : null;
+  const robotsBots = evaluatePageBots(parsedRobots, path, pageRes.body);
+  const blocked = robotsBots.filter((b) => b.status === "blocked").map((b) => b.bot);
+  if (blocked.length >= 4) {
+    throw new DomainError(`Live page still blocks AI crawlers (${blocked.slice(0, 4).join(", ")})`);
+  }
 
+  const nowIso = new Date().toISOString();
+  const hash = "sha256-" + createHash("sha256").update(pageRes.body).digest("hex").slice(0, 16);
   const prevMeta = (existing.meta ?? {}) as SiteHealthPageMeta;
+  const schemas = extractJsonLdTypes(pageRes.body);
   const nextMeta: SiteHealthPageMeta = {
     ...prevMeta,
-    robotsBots: defaultBotRules(true),
-    llmsTxtPresent: true,
-    schemaMarkup:
-      prevMeta.schemaMarkup && prevMeta.schemaMarkup.length > 0
-        ? prevMeta.schemaMarkup
-        : ["WebPage", "Article", "FAQPage"],
-    stagingStatusCode: 200,
-    stagingAiAccessible: true,
-    stagingDiffSummary: "Live verified: Production & Staging in sync (HTTP 200 · All AI crawlers allowed)",
+    robotsBots,
+    schemaMarkup: schemas.length ? schemas : (prevMeta.schemaMarkup ?? []),
     optimizationStatus: "verified_live",
-    optimizationRecommendation: `Live content verified (${hash}) — OAI-SearchBot, Claude-SearchBot, PerplexityBot & Google-Extended allowed.`,
+    optimizationRecommendation: `Live content verified (${hash}).`,
     verifiedAt: nowIso,
     verificationHash: hash,
   };
-
   await db
     .update(siteHealthPages)
     .set({
-      statusCode: 200,
+      title: extractHtmlTitle(pageRes.body) ?? existing.title,
+      statusCode: pageRes.status,
       aiAccessible: true,
-      inSitemap: true,
       meta: nextMeta,
       lastCheckedAt: new Date(),
     })
     .where(and(eq(siteHealthPages.id, existing.id), eq(siteHealthPages.websiteId, site.id)));
-
   await logActivity(db, {
     organizationId: site.organizationId,
     websiteId: site.id,
@@ -909,7 +690,6 @@ export async function verifyLivePageContent(
     change: "verified_live",
     after: { url: existing.url, verificationHash: hash, verifiedAt: nowIso },
   });
-
   return { id: existing.id, url: existing.url, verificationHash: hash, verifiedAt: nowIso };
 }
 
@@ -918,17 +698,14 @@ export async function deleteSiteHealthPage(
   rawInput: { actorId: string; websiteId: string; pageId: string },
 ): Promise<void> {
   const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-
   const [existing] = await db
     .select()
     .from(siteHealthPages)
     .where(and(eq(siteHealthPages.id, rawInput.pageId), eq(siteHealthPages.websiteId, site.id)));
   if (!existing) throw new NotFoundError("Site Health page not found");
-
   await db
     .delete(siteHealthPages)
     .where(and(eq(siteHealthPages.id, existing.id), eq(siteHealthPages.websiteId, site.id)));
-
   await logActivity(db, {
     organizationId: site.organizationId,
     websiteId: site.id,
@@ -940,6 +717,56 @@ export async function deleteSiteHealthPage(
   });
 }
 
+function toPageItem(r: typeof siteHealthPages.$inferSelect, domain: string): SiteHealthPageItem {
+  const meta = (r.meta ?? {}) as SiteHealthPageMeta;
+  const statusCode = r.statusCode ?? 0;
+  const aiAccessible = r.aiAccessible ?? false;
+  const inSitemap = r.inSitemap ?? false;
+  let path = "/";
+  try {
+    path = new URL(r.url.startsWith("http") ? r.url : `https://${domain}${r.url}`).pathname || "/";
+  } catch {
+    path = r.url;
+  }
+  const robotsBots = meta.robotsBots ?? evaluatePageBots(null, path, "");
+  const { healthStatus, healthDetail } = deriveHealthStatus({
+    statusCode,
+    aiAccessible,
+    inSitemap,
+    meta: { ...meta, robotsBots },
+  });
+  return {
+    id: r.id,
+    websiteId: r.websiteId,
+    url: r.url,
+    path,
+    title: r.title ?? path,
+    property: meta.property ?? inferProperty(path),
+    statusCode,
+    aiAccessible,
+    inSitemap,
+    llmsTxtPresent: meta.llmsTxtPresent ?? false,
+    schemaMarkup: meta.schemaMarkup ?? [],
+    keywords: (r.keywords ?? []).map((k) => ({
+      keyword: k.keyword,
+      position: k.position,
+      volume: k.volume ?? 0,
+      change: k.change ?? 0,
+    })),
+    robotsBots,
+    stagingStatusCode: meta.stagingStatusCode ?? 0,
+    stagingAiAccessible: meta.stagingAiAccessible ?? false,
+    stagingDiffSummary: meta.stagingDiffSummary ?? "Not checked against staging yet",
+    optimizationStatus: meta.optimizationStatus ?? (healthStatus === "pass" ? "healthy" : "needs_edit"),
+    optimizationRecommendation: meta.optimizationRecommendation ?? healthDetail,
+    verifiedAt: meta.verifiedAt ?? null,
+    verificationHash: meta.verificationHash ?? null,
+    healthStatus,
+    healthDetail,
+    lastCheckedAt: r.lastCheckedAt,
+  };
+}
+
 export async function getSiteHealthSummary(db: Db, websiteId: string): Promise<SiteHealthSummary> {
   const [site] = await db
     .select()
@@ -947,113 +774,36 @@ export async function getSiteHealthSummary(db: Db, websiteId: string): Promise<S
     .where(and(eq(websites.id, websiteId), isNull(websites.deletedAt)));
   if (!site) throw new NotFoundError("Website not found");
 
-  let rows = await db
+  const rows = await db
     .select()
     .from(siteHealthPages)
     .where(eq(siteHealthPages.websiteId, websiteId))
     .orderBy(asc(siteHealthPages.createdAt));
 
-  if (rows.length === 0) {
-    await runSiteHealthCrawl(db, { websiteId });
-    rows = await db
-      .select()
-      .from(siteHealthPages)
-      .where(eq(siteHealthPages.websiteId, websiteId))
-      .orderBy(asc(siteHealthPages.createdAt));
-  }
+  const pages = rows.map((r) => toPageItem(r, site.domain));
 
-  const pages: SiteHealthPageItem[] = rows.map((r) => {
-    const meta = (r.meta ?? {}) as SiteHealthPageMeta;
-    const statusCode = r.statusCode ?? 200;
-    const aiAccessible = r.aiAccessible ?? true;
-    const inSitemap = r.inSitemap ?? true;
-    const robotsBots = meta.robotsBots ?? defaultBotRules(aiAccessible);
-    const { healthStatus, healthDetail } = deriveHealthStatus({
-      statusCode,
-      aiAccessible,
-      inSitemap,
-      meta: { ...meta, robotsBots },
-    });
-
-    let path = "/";
-    try {
-      const u = new URL(r.url.startsWith("http") ? r.url : `https://${site.domain}${r.url}`);
-      path = u.pathname || "/";
-    } catch {
-      path = r.url;
-    }
-
-    const kws = (r.keywords ?? []).map((k) => ({
-      keyword: k.keyword,
-      position: k.position,
-      volume: k.volume ?? 1500,
-      change: k.change ?? 0,
-    }));
-
-    return {
-      id: r.id,
-      websiteId: r.websiteId,
-      url: r.url,
-      path,
-      title: r.title ?? path,
-      property: meta.property ?? "Marketing & Core",
-      statusCode,
-      aiAccessible,
-      inSitemap,
-      llmsTxtPresent: meta.llmsTxtPresent ?? true,
-      schemaMarkup: meta.schemaMarkup ?? ["WebPage"],
-      keywords: kws,
-      robotsBots,
-      stagingStatusCode: meta.stagingStatusCode ?? statusCode,
-      stagingAiAccessible: meta.stagingAiAccessible ?? aiAccessible,
-      stagingDiffSummary: meta.stagingDiffSummary ?? "No regressions",
-      optimizationStatus: meta.optimizationStatus ?? (healthStatus === "pass" ? "healthy" : "needs_edit"),
-      optimizationRecommendation:
-        meta.optimizationRecommendation ??
-        (healthStatus === "pass" ? "All AI accessibility checks passing." : healthDetail),
-      verifiedAt: meta.verifiedAt ?? null,
-      verificationHash: meta.verificationHash ?? null,
-      healthStatus,
-      healthDetail,
-      lastCheckedAt: r.lastCheckedAt,
-    };
-  });
-
-  // Bot matrix aggregation
   const botAccessMatrix: SiteHealthBotSummary[] = AI_CRAWLER_BOTS.map((b) => {
     let allowedPages = 0;
     let blockedPages = 0;
     for (const p of pages) {
       const entry = p.robotsBots.find((rb) => rb.bot === b.bot);
-      if (!entry || entry.status === "allowed") {
-        allowedPages++;
-      } else {
-        blockedPages++;
-      }
+      if (!entry || entry.status === "allowed") allowedPages++;
+      else blockedPages++;
     }
     const status: SiteHealthBotSummary["status"] =
-      blockedPages === 0 ? "allowed" : allowedPages === 0 ? "blocked" : "partial";
+      pages.length === 0 || blockedPages === 0 ? "allowed" : allowedPages === 0 ? "blocked" : "partial";
     const ruleSummary =
-      blockedPages === 0
-        ? `Allowed on all ${allowedPages} pages`
-        : `Allowed on ${allowedPages}/${pages.length} pages (${blockedPages} blocked)`;
-
-    return {
-      bot: b.bot,
-      owner: b.owner,
-      purpose: b.purpose,
-      allowedPages,
-      blockedPages,
-      status,
-      ruleSummary,
-    };
+      pages.length === 0
+        ? "No pages crawled yet"
+        : blockedPages === 0
+          ? `Allowed on all ${allowedPages} pages`
+          : `Allowed on ${allowedPages}/${pages.length} pages (${blockedPages} blocked)`;
+    return { bot: b.bot, owner: b.owner, purpose: b.purpose, allowedPages, blockedPages, status, ruleSummary };
   });
 
-  // Keywords list
-  const keywords: SiteHealthKeywordRow[] = [];
-  for (const p of pages) {
-    for (const k of p.keywords) {
-      keywords.push({
+  const keywords: SiteHealthKeywordRow[] = pages
+    .flatMap((p) =>
+      p.keywords.map((k) => ({
         pageId: p.id,
         url: p.url,
         path: p.path,
@@ -1063,17 +813,13 @@ export async function getSiteHealthSummary(db: Db, websiteId: string): Promise<S
         volume: k.volume,
         change: k.change,
         aiAccessible: p.aiAccessible,
-      });
-    }
-  }
-  keywords.sort((a, b) => a.position - b.position);
+      })),
+    )
+    .sort((a, b) => a.position - b.position);
 
-  // Staging release comparisons
-  const stagingComparisons: SiteHealthStagingRow[] = pages.map((p) => {
-    const blockedCount = p.robotsBots.filter((b) => b.status === "blocked").length;
-    const hasRegression =
-      p.stagingStatusCode >= 400 || !p.stagingAiAccessible || blockedCount > 0;
-    return {
+  const stagingComparisons: SiteHealthStagingRow[] = pages
+    .filter((p) => p.stagingStatusCode > 0 || p.stagingDiffSummary !== "Not checked against staging yet")
+    .map((p) => ({
       pageId: p.id,
       url: p.url,
       path: p.path,
@@ -1082,60 +828,35 @@ export async function getSiteHealthSummary(db: Db, websiteId: string): Promise<S
       stagingStatus: p.stagingStatusCode,
       prodAiAccessible: p.aiAccessible,
       stagingAiAccessible: p.stagingAiAccessible,
-      hasRegression,
+      hasRegression: p.stagingStatusCode === 0 || p.stagingStatusCode >= 400 || !p.stagingAiAccessible,
       diffSummary: p.stagingDiffSummary,
-    };
-  });
+    }));
 
-  // Crawl scope properties
   const propMap = new Map<string, SiteHealthPageItem[]>();
-  for (const p of pages) {
-    const list = propMap.get(p.property) ?? [];
-    list.push(p);
-    propMap.set(p.property, list);
-  }
-  const properties: SiteHealthPropertyGroup[] = Array.from(propMap.entries()).map(
-    ([property, group]) => {
-      const healthyCount = group.filter((g) => g.healthStatus === "pass").length;
-      const aiCount = group.filter((g) => g.aiAccessible).length;
-      const inSitemapCount = group.filter((g) => g.inSitemap).length;
-      return {
-        property,
-        pageCount: group.length,
-        healthyCount,
-        aiAccessiblePct: group.length > 0 ? +((aiCount / group.length) * 100).toFixed(1) : 100,
-        inSitemapCount,
-      };
-    },
-  );
+  for (const p of pages) propMap.set(p.property, [...(propMap.get(p.property) ?? []), p]);
+  const properties: SiteHealthPropertyGroup[] = Array.from(propMap.entries()).map(([property, group]) => ({
+    property,
+    pageCount: group.length,
+    healthyCount: group.filter((g) => g.healthStatus === "pass").length,
+    aiAccessiblePct: group.length > 0 ? +((group.filter((g) => g.aiAccessible).length / group.length) * 100).toFixed(1) : 0,
+    inSitemapCount: group.filter((g) => g.inSitemap).length,
+  }));
 
   const needsEdit = pages.filter((p) => p.optimizationStatus === "needs_edit");
   const staged = pages.filter((p) => p.optimizationStatus === "staged");
-  const verifiedLive = pages.filter(
-    (p) => p.optimizationStatus === "verified_live" || p.optimizationStatus === "healthy",
-  );
-
+  const verifiedLive = pages.filter((p) => p.optimizationStatus === "verified_live" || p.optimizationStatus === "healthy");
   const totalPages = pages.length;
-  const indexedPages = pages.filter((p) => p.statusCode === 200 && p.inSitemap).length;
   const aiAccessibleCount = pages.filter((p) => p.aiAccessible).length;
-  const aiAccessiblePct =
-    totalPages > 0 ? +((aiAccessibleCount / totalPages) * 100).toFixed(1) : 100;
-  const avgKeywordPosition =
-    keywords.length > 0
-      ? +(keywords.reduce((a, k) => a + k.position, 0) / keywords.length).toFixed(1)
-      : 0;
-  const failedChecksCount = pages.filter((p) => p.healthStatus !== "pass").length;
-  const stagingRegressionsCount = stagingComparisons.filter((s) => s.hasRegression).length;
 
   return {
     stats: {
       totalPages,
-      indexedPages,
-      aiAccessiblePct,
+      indexedPages: pages.filter((p) => p.statusCode >= 200 && p.statusCode < 400 && p.inSitemap).length,
+      aiAccessiblePct: totalPages > 0 ? +((aiAccessibleCount / totalPages) * 100).toFixed(1) : 0,
       totalKeywords: keywords.length,
-      avgKeywordPosition,
-      failedChecksCount,
-      stagingRegressionsCount,
+      avgKeywordPosition: keywords.length > 0 ? +(keywords.reduce((a, k) => a + k.position, 0) / keywords.length).toFixed(1) : 0,
+      failedChecksCount: pages.filter((p) => p.healthStatus !== "pass").length,
+      stagingRegressionsCount: stagingComparisons.filter((s) => s.hasRegression).length,
       verifiedLiveCount: verifiedLive.length,
       needsOptimizationCount: needsEdit.length + staged.length,
     },
@@ -1144,10 +865,6 @@ export async function getSiteHealthSummary(db: Db, websiteId: string): Promise<S
     keywords,
     stagingComparisons,
     properties,
-    optimizations: {
-      needsEdit,
-      staged,
-      verifiedLive,
-    },
+    optimizations: { needsEdit, staged, verifiedLive },
   };
 }

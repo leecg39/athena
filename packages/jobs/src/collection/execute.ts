@@ -21,7 +21,6 @@ import { generateInsights } from "@athena/core/insights";
 import { runOracleScan } from "@athena/core/knowledge";
 import { discoverOutreachForSite } from "@athena/core/outreach";
 import { syncShoppingProductsForSite, captureSponsoredAdsForSite } from "@athena/core/commerce";
-import { runSiteHealthCrawl } from "@athena/core/site-health";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
 
 /** Upper bound on stored answer text (providers occasionally return huge payloads). */
@@ -230,7 +229,6 @@ async function refreshDerivedData(db: Db, site: typeof websites.$inferSelect): P
     ["outreach", () => discoverOutreachForSite(db, site)],
     ["shopping", () => syncShoppingProductsForSite(db, site)],
     ["ads", () => captureSponsoredAdsForSite(db, site)],
-    ["site-health", () => runSiteHealthCrawl(db, { websiteId: site.id })],
   ];
   for (const [name, run] of steps) {
     try {

@@ -13,6 +13,7 @@ import {
   deleteSiteHealthPage,
 } from "@athena/core/site-health";
 import { getSettingsContext } from "@/lib/settings-context";
+import { fetchSiteResource } from "@/lib/page-fetch";
 import { siteHealthLimiter } from "@/lib/limits";
 import type { ActionState } from "@/lib/action-state";
 
@@ -40,6 +41,7 @@ export async function runSiteHealthCrawlAction(_prev: ActionState, _formData: Fo
     const res = await runSiteHealthCrawl(db, {
       actorId: s.user.id,
       websiteId: s.websiteId,
+      fetchPage: fetchSiteResource,
     });
 
     revalidatePath("/site-health");
@@ -63,6 +65,7 @@ export async function runStagingReleaseCheckAction(_prev: ActionState, formData:
       actorId: s.user.id,
       websiteId: s.websiteId,
       stagingHost,
+      fetchPage: fetchSiteResource,
     });
 
     revalidatePath("/site-health");
@@ -150,6 +153,7 @@ export async function verifyLivePageContentAction(_prev: ActionState, formData: 
       actorId: s.user.id,
       websiteId: s.websiteId,
       pageId,
+      fetchPage: fetchSiteResource,
     });
 
     revalidatePath("/site-health");

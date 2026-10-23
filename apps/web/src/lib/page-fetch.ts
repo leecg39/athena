@@ -12,3 +12,14 @@ export async function fetchPageHtml(url: string): Promise<{ html: string } | nul
     return null;
   }
 }
+
+/** Status and body of a public resource (HTML, robots.txt, sitemap.xml, llms.txt) via the SSRF-safe fetcher. */
+export async function fetchSiteResource(url: string): Promise<{ status: number; body: string } | null> {
+  try {
+    const r = await safeFetch(url, { timeoutMs: 8_000, maxBytes: 1_500_000 });
+    return { status: r.status, body: r.body };
+  } catch (err) {
+    console.warn("[page-fetch] could not fetch resource", url, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
