@@ -1,6 +1,6 @@
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
-import { listOutreachOpportunities, discoverOutreachOpportunities } from "@athena/core/outreach";
+import { listOutreachOpportunities } from "@athena/core/outreach";
 import { PageHeader } from "@/components/page-header";
 import { OutreachKanban } from "@/components/outreach-kanban";
 import { requireWorkspace } from "@/lib/workspace";
@@ -9,20 +9,12 @@ export const metadata = { title: "Outreach" };
 
 export default async function OutreachPage() {
   const ws = await requireWorkspace();
-  const [membership, initial] = await Promise.all([
+  // viewing never writes: discovery runs after each collection and from the Discover button
+  const [membership, data] = await Promise.all([
     getMembership(db, ws.user.id, ws.organizationId),
     listOutreachOpportunities(db, { actorId: ws.user.id, websiteId: ws.websiteId }),
   ]);
   const canWrite = membership?.permissions.includes("content:write") ?? false;
-
-  let data = initial;
-  if (initial.counts.total === 0) {
-    await discoverOutreachOpportunities(db, {
-      actorId: canWrite ? ws.user.id : undefined,
-      websiteId: ws.websiteId,
-    });
-    data = await listOutreachOpportunities(db, { actorId: ws.user.id, websiteId: ws.websiteId });
-  }
 
   return (
     <div>
@@ -40,7 +32,7 @@ export default async function OutreachPage() {
             </div>
           </div>
           <div className="metric-card">
-            <div className="text-xs font-medium text-gray-500">Est. Monthly AI Impressions</div>
+            <div className="text-xs font-medium text-gray-500" title="Monthly searches for the prompts whose AI answers cite these pages">Search Demand Behind Cited Pages</div>
             <div className="mt-1 text-2xl font-semibold text-brand-600">
               {data.stats.totalEstimatedImpressions.toLocaleString()}
             </div>
@@ -49,7 +41,7 @@ export default async function OutreachPage() {
           <div className="metric-card">
             <div className="text-xs font-medium text-gray-500">Authors Identified</div>
             <div className="mt-1 text-2xl font-semibold text-gray-900">{data.stats.withAuthorCount}</div>
-            <div className="mt-1 text-xs text-gray-400">Editorial contacts verified</div>
+            <div className="mt-1 text-xs text-gray-400">Found on the pages or added by you</div>
           </div>
           <div className="metric-card">
             <div className="text-xs font-medium text-gray-500">Pitch Drafts Ready</div>

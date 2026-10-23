@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { auth, signIn, providerInfo } from "@/lib/auth";
+import { signIn, providerInfo } from "@/lib/auth";
+import { getUser } from "@/lib/session";
 import { safeRedirect } from "@/lib/auth.config";
 
 export const metadata = { title: "Sign in" };
@@ -48,7 +49,8 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const redirectTo = safeRedirect(params.redirect ?? params.callbackUrl);
-  if ((await auth())?.user?.id) redirect(redirectTo);
+  // same check as protected pages (user exists, session not revoked): a stale token must not bounce back and forth
+  if (await getUser()) redirect(redirectTo);
 
   const error = typeof params.error === "string" ? params.error : null;
   const oauth = providerInfo.filter((p) => p.id === "google" || p.id === "microsoft-entra-id");

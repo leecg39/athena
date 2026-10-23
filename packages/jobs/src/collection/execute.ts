@@ -19,7 +19,7 @@ import { citationRow } from "@athena/core/sources";
 import { refundCredits } from "@athena/core/billing";
 import { generateInsights } from "@athena/core/insights";
 import { runOracleScan } from "@athena/core/knowledge";
-import { discoverOutreachOpportunities } from "@athena/core/outreach";
+import { discoverOutreachForSite } from "@athena/core/outreach";
 import { syncShoppingInsights, captureSponsoredAds } from "@athena/core/commerce";
 import { runSiteHealthCrawl } from "@athena/core/site-health";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
@@ -218,19 +218,27 @@ export async function executeRun(db: Db, runId: string, opts: ExecuteOptions): P
   await finalizeRun(db, runId);
   const [after] = await db.select({ state: runs.state }).from(runs).where(eq(runs.id, runId));
   const done = after?.state !== "running";
-  if (done && after?.state === "completed" && processed > 0) {
+  if (done && after?.state === "completed" && processed > 0) await refreshDerivedData(db, site);
+  return { processed, done };
+}
+
+/** Recomputes data derived from answers after a run; each step runs (and fails) on its own. */
+async function refreshDerivedData(db: Db, site: typeof websites.$inferSelect): Promise<void> {
+  const steps: [string, () => Promise<unknown>][] = [
+    ["insights", () => generateInsights(db, { websiteId: site.id })],
+    ["oracle", () => runOracleScan(db, { websiteId: site.id })],
+    ["outreach", () => discoverOutreachForSite(db, site)],
+    ["shopping", () => syncShoppingInsights(db, { websiteId: site.id })],
+    ["ads", () => captureSponsoredAds(db, { websiteId: site.id })],
+    ["site-health", () => runSiteHealthCrawl(db, { websiteId: site.id })],
+  ];
+  for (const [name, run] of steps) {
     try {
-      await generateInsights(db, { websiteId: site.id });
-      await runOracleScan(db, { websiteId: site.id });
-      await discoverOutreachOpportunities(db, { websiteId: site.id });
-      await syncShoppingInsights(db, { websiteId: site.id });
-      await captureSponsoredAds(db, { websiteId: site.id });
-      await runSiteHealthCrawl(db, { websiteId: site.id });
+      await run();
     } catch (err) {
-      console.warn("[insights/oracle] post-run refresh failed", site.id, err instanceof Error ? err.message : err);
+      console.warn(`[post-run] ${name} refresh failed`, site.id, err instanceof Error ? err.message : err);
     }
   }
-  return { processed, done };
 }
 
 export interface RunProgress {

@@ -255,7 +255,7 @@ export function OutreachKanban(props: {
                             Citation <strong className="text-gray-800">{i.citationPct.toFixed(1)}%</strong>
                           </span>
                           <span>
-                            Est. Impr. <strong className="text-gray-800">{(i.estimatedImpressions / 1000).toFixed(1)}k</strong>
+                            <span title="Monthly searches for the prompts whose AI answers cite this page">Search demand</span> <strong className="text-gray-800">{i.estimatedImpressions ? `${(i.estimatedImpressions / 1000).toFixed(1)}k` : "—"}</strong>
                           </span>
                           <span>
                             Citations <strong className="text-gray-800">{i.citations}</strong>
@@ -360,7 +360,7 @@ export function OutreachKanban(props: {
                 <th>Opportunity Page</th>
                 <th>Domain</th>
                 <th>Citation Rate</th>
-                <th>Est. Impressions</th>
+                <th title="Monthly searches for the prompts whose AI answers cite this page">Search demand</th>
                 <th>AI Citations</th>
                 <th>Author / Contact</th>
                 <th>Stage</th>
@@ -383,7 +383,7 @@ export function OutreachKanban(props: {
                     <span className="badge bg-gray-100 text-gray-700">{i.domain}</span>
                   </td>
                   <td className="font-medium text-gray-900">{i.citationPct.toFixed(1)}%</td>
-                  <td className="text-gray-600">{i.estimatedImpressions.toLocaleString()}</td>
+                  <td className="text-gray-600">{i.estimatedImpressions ? i.estimatedImpressions.toLocaleString() : "—"}</td>
                   <td className="text-gray-600">{i.citations}</td>
                   <td>
                     {i.authorName ? (
@@ -441,13 +441,13 @@ export function OutreachKanban(props: {
                 <form action={authorAct} onSubmit={() => setLastKey("author")}>
                   <input type="hidden" name="opportunityId" value={selectedItem.id} />
                   <button type="submit" disabled={authorPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                    🔍 Find Author Contact
+                    🔍 Find author on page
                   </button>
                 </form>
                 <form action={draftAct} onSubmit={() => setLastKey("draft")}>
                   <input type="hidden" name="opportunityId" value={selectedItem.id} />
                   <button type="submit" disabled={draftPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                    ✉ Generate AI Pitch Email
+                    ✉ Draft pitch email
                   </button>
                 </form>
                 <form action={deleteAct} onSubmit={() => setLastKey("delete")}>
@@ -473,7 +473,7 @@ export function OutreachKanban(props: {
                 <input
                   name="authorName"
                   defaultValue={selectedItem.authorName ?? ""}
-                  placeholder="Click 'Find Author Contact' or enter name"
+                  placeholder="Click 'Find author on page' or enter the name"
                   readOnly={!props.canWrite}
                   className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs"
                 />
@@ -508,7 +508,7 @@ export function OutreachKanban(props: {
                 name="emailDraft"
                 defaultValue={selectedItem.emailDraft ?? ""}
                 rows={9}
-                placeholder="Click 'Generate AI Pitch Email' to draft a personalized pitch citing your verified brand facts…"
+                placeholder="Click 'Draft pitch email' to start from your verified Knowledge Base facts…"
                 readOnly={!props.canWrite}
                 className="mt-1 w-full rounded-xl border border-gray-200 p-3 font-sans text-xs leading-relaxed text-gray-800"
               />

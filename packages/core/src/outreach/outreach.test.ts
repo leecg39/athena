@@ -1,31 +1,28 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestDb, type TestDb } from "@athena/db/testing";
-import {
-  users,
-  orgMembers,
-  websiteMembers,
-  customRoles,
-  prompts,
-  responses,
-  responseCitations,
-  kbPillars,
-  kbFacts,
-  competitors,
-} from "@athena/db";
+import { users, orgMembers, websiteMembers, customRoles, prompts, responses, responseCitations, kbPillars, kbFacts, competitors, outreachOpportunities } from "@athena/db";
+import { eq } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "../tenancy";
 import { DomainError, ForbiddenError } from "../org/errors";
 import {
   discoverOutreachOpportunities,
   listOutreachOpportunities,
   createOutreachOpportunity,
+  getOutreachOpportunity,
   findOutreachAuthor,
   generateOutreachEmailDraft,
+  outreachPitchContext,
+  templatePitchEmail,
+  saveOutreachEmailDraft,
   updateOutreachStatus,
   updateOutreachOpportunity,
   deleteOutreachOpportunity,
 } from "./index";
 
-describe("outreach opportunity discovery, author finder, email draft generator & kanban pipeline", () => {
+const FORBES = "https://forbes.com/advisor/business/software/best-design-software";
+const G2_CATEGORY = "https://g2.com/categories/ai-design-tools";
+
+describe("outreach: discovery from real citations, author finder, pitch drafts and kanban", () => {
   let t: TestDb;
   let c: { actorId: string; websiteId: string };
   let viewerId: string;
@@ -33,95 +30,29 @@ describe("outreach opportunity discovery, author finder, email draft generator &
 
   beforeAll(async () => {
     t = await createTestDb();
-    const { user, organizationId } = await ensureUserWithOrg(t.db, {
-      email: "outreach-owner@example.com",
-      name: "Outreach Owner",
-    });
-    const site = await createWebsite(t.db, {
-      organizationId,
-      userId: user.id,
-      domain: "canvasly.io",
-      name: "Canvasly",
-    });
+    const { user, organizationId } = await ensureUserWithOrg(t.db, { email: "outreach-owner@example.com", name: "Outreach Owner" });
+    const site = await createWebsite(t.db, { organizationId, userId: user.id, domain: "canvasly.io", name: "Canvasly" });
     c = { actorId: user.id, websiteId: site.id };
+    await t.db.insert(competitors).values({ websiteId: site.id, domain: "figma.com", name: "Figma" });
 
-    // Seed KB fact & competitor for outreach email pitch grounding
-    const [pillar] = await t.db
-      .insert(kbPillars)
-      .values({
-        websiteId: site.id,
-        name: "Product & Pricing",
-        document: "# Product\nCanvasly Pro starts at $29/mo.",
-      })
-      .returning();
-    await t.db.insert(kbFacts).values({
-      websiteId: site.id,
-      pillarId: pillar.id,
-      claim: "Canvasly Pro starts at $29 per month and includes 50 free seats for product teams",
-      status: "confirmed",
-      confidence: "0.99",
-    });
-    await t.db.insert(competitors).values({
-      websiteId: site.id,
-      domain: "figma.com",
-      name: "Figma",
-    });
+    const [p1] = await t.db.insert(prompts).values({ websiteId: site.id, text: "best ai design tools for product teams", type: "non_branded", volumeEstimate: 2400 }).returning();
+    const [p2] = await t.db.insert(prompts).values({ websiteId: site.id, text: "figma alternatives", type: "non_branded", volumeEstimate: 800 }).returning();
+    const answer = async (promptId: string, urls: string[]) => {
+      const [r] = await t.db.insert(responses).values({ websiteId: site.id, promptId, model: "chatgpt", rawText: "1. Figma — popular choice.", mentioned: false, cited: false }).returning();
+      if (urls.length) {
+        await t.db.insert(responseCitations).values(urls.map((url, i) => ({ responseId: r.id, url, domain: new URL(url).hostname, rootDomain: new URL(url).hostname, normalizedUrl: url, rank: i, isBrand: false })));
+      }
+    };
+    await answer(p1.id, [FORBES, G2_CATEGORY]);
+    await answer(p1.id, [FORBES, FORBES]); // the same page twice in one answer counts once
+    await answer(p2.id, [FORBES, "https://canvasly.io/blog/x"]);
+    await answer(p2.id, ["https://g2.com/"]);
 
-    // Seed prompt + AI responses + third-party citations
-    const [pRow] = await t.db
-      .insert(prompts)
-      .values({
-        websiteId: site.id,
-        text: "best ai design tools for product teams",
-        type: "non_branded",
-        volumeEstimate: 2400,
-      })
-      .returning();
-
-    const [r1] = await t.db
-      .insert(responses)
-      .values({
-        websiteId: site.id,
-        promptId: pRow.id,
-        model: "chatgpt",
-        rawText: "1. Figma — popular choice.",
-        mentioned: false,
-        cited: false,
-      })
-      .returning();
-
-    await t.db.insert(responseCitations).values([
-      {
-        responseId: r1.id,
-        url: "https://forbes.com/advisor/business/software/best-design-software",
-        domain: "forbes.com",
-        rootDomain: "forbes.com",
-        normalizedUrl: "https://forbes.com/advisor/business/software/best-design-software",
-        rank: 1,
-        isBrand: false,
-      },
-      {
-        responseId: r1.id,
-        url: "https://g2.com/categories/ai-design-tools",
-        domain: "g2.com",
-        rootDomain: "g2.com",
-        normalizedUrl: "https://g2.com/categories/ai-design-tools",
-        rank: 2,
-        isBrand: false,
-      },
-    ]);
-
-    // Read-only viewer
     const [viewer] = await t.db.insert(users).values({ email: "outreach-viewer@example.com", name: "Viewer" }).returning();
-    const [role] = await t.db
-      .insert(customRoles)
-      .values({ organizationId, name: "Outreach Reader", permissions: ["websites:read", "content:read"] })
-      .returning();
+    const [role] = await t.db.insert(customRoles).values({ organizationId, name: "Outreach Reader", permissions: ["websites:read", "content:read"] }).returning();
     await t.db.insert(orgMembers).values({ organizationId, userId: viewer.id, role: "custom", customRoleId: role.id });
     await t.db.insert(websiteMembers).values({ websiteId: site.id, userId: viewer.id, role: "member" });
     viewerId = viewer.id;
-
-    // Outsider
     const o = await ensureUserWithOrg(t.db, { email: "outreach-outsider@example.com" });
     const oSite = await createWebsite(t.db, { organizationId: o.organizationId, userId: o.user.id, domain: "other.io", name: "Other" });
     outsider = { actorId: o.user.id, websiteId: oSite.id };
@@ -131,114 +62,84 @@ describe("outreach opportunity discovery, author finder, email draft generator &
     await t.close();
   });
 
-  it("discovers citation opportunities idempotently under concurrent runs and validates manual additions", async () => {
-    const [d1, d2] = await Promise.all([
-      discoverOutreachOpportunities(t.db, c),
-      discoverOutreachOpportunities(t.db, c),
-    ]);
-    expect(d1.created + d2.created).toBeGreaterThanOrEqual(5);
-
-    const list1 = await listOutreachOpportunities(t.db, c);
-    expect(list1.rows.length).toBeGreaterThanOrEqual(5);
-    expect(list1.rows.some((r) => r.domain === "forbes.com")).toBe(true);
-
-    // Rejects own-brand domain as outreach opportunity
-    await expect(
-      createOutreachOpportunity(t.db, { ...c, url: "https://canvasly.io/blog/post" }),
-    ).rejects.toBeInstanceOf(DomainError);
-
-    // Rejects unsafe URL scheme and private/loopback IPs
-    await expect(
-      createOutreachOpportunity(t.db, { ...c, url: "javascript:alert(1)" }),
-    ).rejects.toBeInstanceOf(DomainError);
-    await expect(
-      createOutreachOpportunity(t.db, { ...c, url: "http://127.0.0.1:8080/internal" }),
-    ).rejects.toBeInstanceOf(DomainError);
-
-    // Creates manual external opportunity
-    const manual = await createOutreachOpportunity(t.db, {
-      ...c,
-      url: "https://smashingmagazine.com/2026/09/design-systems-tools",
-      citationPct: 18.4,
-      estimatedImpressions: 29500,
-      citations: 14,
-      notes: "High authority design engineering roundup",
-    });
-    expect(manual.domain).toBe("smashingmagazine.com");
-    expect(manual.status).toBe("new");
-
-    // Duplicate URL rejected
-    await expect(
-      createOutreachOpportunity(t.db, { ...c, url: "https://smashingmagazine.com/2026/09/design-systems-tools/" }),
-    ).rejects.toBeInstanceOf(DomainError);
-  });
-
-  it("finds authors, generates KB-grounded pitch email drafts, and transitions Kanban status (new -> todo -> done)", async () => {
+  it("creates opportunities only from pages AI answers actually cite, with real rates", async () => {
+    const [d1, d2] = await Promise.all([discoverOutreachOpportunities(t.db, c), discoverOutreachOpportunities(t.db, c)]);
+    expect(d1.created + d2.created).toBe(3);
     const list = await listOutreachOpportunities(t.db, c);
-    const target = list.rows.find((r) => r.domain === "forbes.com") ?? list.rows[0]!;
-    expect(target.status).toBe("new");
-
-    // Step 1: Author Finder
-    const withAuthor = await findOutreachAuthor(t.db, {
-      ...c,
-      opportunityId: target.id,
-    });
-    expect(withAuthor.authorName).toBeTruthy();
-    expect(withAuthor.authorEmail).toContain("@");
-
-    // Step 2: Generate Email Draft grounded in KB facts & competitors (automatically moves new -> todo)
-    const withDraft = await generateOutreachEmailDraft(t.db, {
-      ...c,
-      opportunityId: target.id,
-      angle: "Offer interactive benchmark dataset for 2026 update",
-    });
-    expect(withDraft.emailDraft).toContain("Canvasly Pro starts at $29 per month");
-    expect(withDraft.emailDraft).toContain("Figma");
-    expect(withDraft.status).toBe("todo");
-
-    // Step 3: Move Todo -> Done on Kanban board
-    const doneRow = await updateOutreachStatus(t.db, {
-      ...c,
-      opportunityId: target.id,
-      status: "done",
-    });
-    expect(doneRow.status).toBe("done");
-
-    // Step 4: Edit notes & custom author email
-    const edited = await updateOutreachOpportunity(t.db, {
-      ...c,
-      opportunityId: target.id,
-      notes: "Sent pitch email on Oct 23; editor replied positivamente",
-    });
-    expect(edited.notes).toContain("Sent pitch email");
-
-    // Re-running discovery preserves status ('done'), author, emailDraft, and notes!
-    await discoverOutreachOpportunities(t.db, c);
-    const afterRediscover = await listOutreachOpportunities(t.db, { ...c, status: "done" });
-    const preserved = afterRediscover.rows.find((r) => r.id === target.id);
-    expect(preserved).toBeTruthy();
-    expect(preserved!.emailDraft).toContain("Canvasly Pro starts at $29 per month");
-
-    // Delete temporary opportunity
-    const temp = await createOutreachOpportunity(t.db, {
-      ...c,
-      url: "https://venturebeat.com/ai/design-tools-comparison",
-    });
-    await deleteOutreachOpportunity(t.db, { ...c, opportunityId: temp.id });
-    const afterDel = await listOutreachOpportunities(t.db, c);
-    expect(afterDel.rows.map((r) => r.id)).not.toContain(temp.id);
+    const byUrl = new Map(list.rows.map((r) => [r.url, r]));
+    expect([...byUrl.keys()].sort()).toEqual([FORBES, "https://g2.com/", G2_CATEGORY].sort());
+    // 3 of 4 answers cite the Forbes page; its prompts have 2,400 + 800 monthly searches
+    expect(byUrl.get(FORBES)).toMatchObject({ citations: 3, citationPct: 75, estimatedImpressions: 3200 });
+    expect(byUrl.get(G2_CATEGORY)).toMatchObject({ citations: 1, citationPct: 25, estimatedImpressions: 2400 });
+    // a cited homepage stays a homepage (no invented article URLs)
+    expect(byUrl.get("https://g2.com/")).toMatchObject({ citations: 1, estimatedImpressions: 800 });
   });
 
-  it("enforces tenant isolation and RBAC across Outreach", async () => {
+  it("validates manual additions and fills stats only from stored citations", async () => {
+    await expect(createOutreachOpportunity(t.db, { ...c, url: "https://canvasly.io/blog/post" })).rejects.toBeInstanceOf(DomainError);
+    await expect(createOutreachOpportunity(t.db, { ...c, url: "javascript:alert(1)" })).rejects.toBeInstanceOf(DomainError);
+    await expect(createOutreachOpportunity(t.db, { ...c, url: "http://127.0.0.1:8080/internal" })).rejects.toBeInstanceOf(DomainError);
+    const manual = await createOutreachOpportunity(t.db, { ...c, url: "https://smashingmagazine.com/2026/09/design-systems-tools", notes: "Design engineering roundup" });
+    expect(manual).toMatchObject({ domain: "smashingmagazine.com", status: "new", citations: 0, citationPct: 0, estimatedImpressions: 0 });
+    await expect(createOutreachOpportunity(t.db, { ...c, url: "https://smashingmagazine.com/2026/09/design-systems-tools/" })).rejects.toBeInstanceOf(DomainError);
+  });
+
+  it("finds authors only where the page publishes them, otherwise asks for manual entry", async () => {
+    const forbes = (await listOutreachOpportunities(t.db, c)).rows.find((r) => r.url === FORBES)!;
+    expect((await getOutreachOpportunity(t.db, { ...c, opportunityId: forbes.id })).url).toBe(FORBES);
+    // nothing to read: no guessed "editorial@" address, no directory of made-up people
+    await expect(findOutreachAuthor(t.db, { ...c, opportunityId: forbes.id, page: null })).rejects.toThrow(/could not be loaded/i);
+    await expect(findOutreachAuthor(t.db, { ...c, opportunityId: forbes.id, page: { html: "<html><body>No byline</body></html>" } })).rejects.toThrow(/no author/i);
+    expect((await getOutreachOpportunity(t.db, { ...c, opportunityId: forbes.id })).authorName).toBeNull();
+
+    const html = `<script type="application/ld+json">{"@type":"Article","author":{"@type":"Person","name":"Dana Lee","email":"dana@forbes.example"}}</script>`;
+    const found = await findOutreachAuthor(t.db, { ...c, opportunityId: forbes.id, page: { html } });
+    expect(found).toMatchObject({ source: "json-ld", opportunity: { authorName: "Dana Lee", authorEmail: "dana@forbes.example" } });
+    const manual = await findOutreachAuthor(t.db, { ...c, opportunityId: forbes.id, authorName: "Dana Lee", authorEmail: "dana.lee@forbes.example" });
+    expect(manual).toMatchObject({ source: "manual", opportunity: { authorEmail: "dana.lee@forbes.example" } });
+    await expect(findOutreachAuthor(t.db, { ...c, opportunityId: forbes.id, authorEmail: "not-an-email" })).rejects.toThrow(/email/i);
+  });
+
+  it("drafts pitches from verified data only and never invents brand claims", async () => {
+    const g2 = (await listOutreachOpportunities(t.db, c)).rows.find((r) => r.url === G2_CATEGORY)!;
+    const ctx = await outreachPitchContext(t.db, { ...c, opportunityId: g2.id });
+    expect(ctx).toMatchObject({ brand: "Canvasly", brandDomain: "canvasly.io", facts: [], competitors: ["Figma"], opportunity: { citationPct: 25 } });
+    const bare = templatePitchEmail(ctx, "");
+    expect(bare).toContain("Hi there,");
+    expect(bare).toContain("cited in 25% of the AI answers we track");
+    expect(bare).toMatch(/\[Add 2-3 verified facts about Canvasly/);
+    expect(bare).not.toMatch(/verified enterprise security|AI-native workflows|press sandbox/i);
+
+    const [pillar] = await t.db.insert(kbPillars).values({ websiteId: c.websiteId, name: "Pricing", document: "# Pricing" }).returning();
+    await t.db.insert(kbFacts).values({ websiteId: c.websiteId, pillarId: pillar.id, claim: "Canvasly Pro starts at $29 per month", status: "confirmed", confidence: "0.99" });
+    const drafted = await generateOutreachEmailDraft(t.db, { ...c, opportunityId: g2.id, angle: "We just published 2026 benchmark data" });
+    expect(drafted.emailDraft).toContain("- Canvasly Pro starts at $29 per month");
+    expect(drafted.emailDraft).toContain("We just published 2026 benchmark data");
+    expect(drafted).toMatchObject({ status: "todo", authorName: null, authorEmail: null });
+
+    const saved = await saveOutreachEmailDraft(t.db, { ...c, opportunityId: g2.id, emailDraft: "Subject: Hello\n\nHi Dana, …" });
+    expect(saved.emailDraft).toBe("Subject: Hello\n\nHi Dana, …");
+    await expect(saveOutreachEmailDraft(t.db, { ...c, opportunityId: g2.id, emailDraft: "   " })).rejects.toBeInstanceOf(DomainError);
+  });
+
+  it("moves cards across the kanban and keeps work when discovery re-runs", async () => {
+    const g2 = (await listOutreachOpportunities(t.db, c)).rows.find((r) => r.url === G2_CATEGORY)!;
+    expect((await updateOutreachStatus(t.db, { ...c, opportunityId: g2.id, status: "done" })).status).toBe("done");
+    expect((await updateOutreachOpportunity(t.db, { ...c, opportunityId: g2.id, notes: "Pitched on Oct 23" })).notes).toBe("Pitched on Oct 23");
+    await discoverOutreachOpportunities(t.db, c);
+    const kept = (await listOutreachOpportunities(t.db, { ...c, status: "done" })).rows.find((r) => r.id === g2.id)!;
+    expect(kept).toMatchObject({ notes: "Pitched on Oct 23", emailDraft: "Subject: Hello\n\nHi Dana, …" });
+    const temp = await createOutreachOpportunity(t.db, { ...c, url: "https://venturebeat.com/ai/design-tools-comparison" });
+    await deleteOutreachOpportunity(t.db, { ...c, opportunityId: temp.id });
+    expect((await t.db.select().from(outreachOpportunities).where(eq(outreachOpportunities.id, temp.id))).length).toBe(0);
+  });
+
+  it("enforces tenant isolation and RBAC", async () => {
     await expect(listOutreachOpportunities(t.db, { actorId: viewerId, websiteId: c.websiteId })).resolves.toBeTruthy();
-
-    await expect(
-      discoverOutreachOpportunities(t.db, { actorId: viewerId, websiteId: c.websiteId }),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(
-      createOutreachOpportunity(t.db, { actorId: viewerId, websiteId: c.websiteId, url: "https://wired.com/story/ai" }),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-
+    await expect(discoverOutreachOpportunities(t.db, { actorId: viewerId, websiteId: c.websiteId })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(createOutreachOpportunity(t.db, { actorId: viewerId, websiteId: c.websiteId, url: "https://wired.com/story/ai" })).rejects.toBeInstanceOf(ForbiddenError);
     await expect(listOutreachOpportunities(t.db, { actorId: outsider.actorId, websiteId: c.websiteId })).rejects.toBeInstanceOf(ForbiddenError);
+    const any = (await listOutreachOpportunities(t.db, c)).rows[0]!;
+    await expect(getOutreachOpportunity(t.db, { ...outsider, opportunityId: any.id })).rejects.toThrow();
   });
 });
