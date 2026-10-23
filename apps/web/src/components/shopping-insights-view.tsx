@@ -154,7 +154,7 @@ export function ShoppingInsightsView(props: Props) {
                 disabled={syncPending}
                 className="btn-primary !px-3 !py-1.5 text-xs"
               >
-                {syncPending ? "Syncing…" : "Sync AI shopping carousel"}
+                {syncPending ? "Syncing…" : "Sync from collected answers"}
               </button>
             </form>
           </div>

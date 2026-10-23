@@ -158,7 +158,7 @@ export function AdsCaptureView(props: Props) {
                 disabled={scanPending}
                 className="btn-primary !px-3 !py-1.5 text-xs"
               >
-                {scanPending ? "Scanning…" : "Scan AI surfaces for ads"}
+                {scanPending ? "Scanning…" : "Scan collected answers"}
               </button>
             </form>
           </div>

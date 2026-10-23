@@ -1,284 +1,111 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestDb, type TestDb } from "@athena/db/testing";
-import {
-  users,
-  orgMembers,
-  websiteMembers,
-  customRoles,
-  prompts,
-  competitors,
-  shoppingProducts,
-} from "@athena/db";
+import { users, orgMembers, websiteMembers, customRoles, prompts, competitors, responses, shoppingProducts, adsImpressions } from "@athena/db";
 import { eq } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "../tenancy";
+import { detectShoppingCard } from "../extract";
 import { DomainError, ForbiddenError, NotFoundError } from "../org/errors";
 import {
   syncShoppingInsights,
   getShoppingInsightsSummary,
   createShoppingProduct,
   deleteShoppingProduct,
+  detectSponsoredAds,
   captureSponsoredAds,
   getAdsSummary,
   recordAdImpression,
   deleteAdImpression,
 } from "./index";
 
-describe("shopping insights (carousel analytics, brand comparison, retailer distribution) & sponsored ads capture", () => {
+const day = (offset: number) => new Date(Date.now() - offset * 86_400_000);
+
+describe("commerce: shopping cards and sponsored placements from collected answers", () => {
   let t: TestDb;
-  let c: { actorId: string; websiteId: string; promptId: string };
+  let c: { actorId: string; websiteId: string };
+  let promptId: string;
   let viewerId: string;
   let outsider: { actorId: string; websiteId: string; promptId: string };
 
   beforeAll(async () => {
     t = await createTestDb();
-    const { user, organizationId } = await ensureUserWithOrg(t.db, {
-      email: "commerce-owner@example.com",
-      name: "Commerce Owner",
-    });
-    const site = await createWebsite(t.db, {
-      organizationId,
-      userId: user.id,
-      domain: "canvasly.io",
-      name: "Canvasly",
-    });
+    const { user, organizationId } = await ensureUserWithOrg(t.db, { email: "commerce-owner@example.com", name: "Commerce Owner" });
+    const site = await createWebsite(t.db, { organizationId, userId: user.id, domain: "canvasly.io", name: "Canvasly" });
+    c = { actorId: user.id, websiteId: site.id };
+    await t.db.insert(competitors).values([{ websiteId: site.id, domain: "figma.com", name: "Figma" }]);
+    const [p] = await t.db.insert(prompts).values({ websiteId: site.id, text: "best drawing kit", type: "non_branded" }).returning();
+    promptId = p.id;
+    const answer = async (model: string, rawText: string, ranAt: Date) => {
+      await t.db.insert(responses).values({ websiteId: site.id, promptId, model, rawText, ranAt, shoppingCard: detectShoppingCard(rawText) });
+    };
+    await answer("chatgpt", "1. **Canvasly Sketch Kit** — $49 at Amazon\n2. **Figma Tablet Stand** — $35 at Best Buy\n3. Wacom Pen — $79 at Amazon", day(3));
+    await answer("chatgpt", "1. **Figma Tablet Stand** — $33 at Amazon\n2. **Canvasly Sketch Kit** — $49 at Amazon", day(2));
+    await answer("chatgpt", "Canvasly is a good choice for teams.", day(1));
+    await answer("ai_overview", "Sponsored · canva.com — Canva Teams: design together\nOther text", day(1));
+    await answer("perplexity", "Sponsored · miro.com — Miro boards", day(1));
 
-    await t.db.insert(competitors).values([
-      { websiteId: site.id, domain: "figma.com", name: "Figma" },
-      { websiteId: site.id, domain: "canva.com", name: "Canva" },
-    ]);
-
-    const [pRow] = await t.db
-      .insert(prompts)
-      .values({
-        websiteId: site.id,
-        text: "best ai design software for product teams",
-        type: "non_branded",
-        volumeEstimate: 3200,
-      })
-      .returning();
-
-    c = { actorId: user.id, websiteId: site.id, promptId: pRow!.id };
-
-    // Viewer user
-    const [vUser] = await t.db
-      .insert(users)
-      .values({ email: "commerce-viewer@example.com", name: "Commerce Viewer" })
-      .returning();
-    const [vRole] = await t.db
-      .insert(customRoles)
-      .values({
-        organizationId,
-        name: "CommerceViewerRole",
-        permissions: ["websites:read", "content:read"],
-      })
-      .returning();
-    await t.db.insert(orgMembers).values({
-      organizationId,
-      userId: vUser!.id,
-      role: "custom",
-      customRoleId: vRole!.id,
-    });
-    await t.db.insert(websiteMembers).values({
-      websiteId: site.id,
-      userId: vUser!.id,
-      role: "member",
-    });
-    viewerId = vUser!.id;
-
-    // Outsider tenant
-    const outOrg = await ensureUserWithOrg(t.db, {
-      email: "commerce-outsider@example.com",
-      name: "Outsider",
-    });
-    const outSite = await createWebsite(t.db, {
-      organizationId: outOrg.organizationId,
-      userId: outOrg.user.id,
-      domain: "outsider.io",
-      name: "OutsiderBrand",
-    });
-    const [outPrompt] = await t.db
-      .insert(prompts)
-      .values({
-        websiteId: outSite.id,
-        text: "confidential outsider prompt",
-        type: "branded",
-      })
-      .returning();
-    outsider = { actorId: outOrg.user.id, websiteId: outSite.id, promptId: outPrompt!.id };
+    const [viewer] = await t.db.insert(users).values({ email: "commerce-viewer@example.com", name: "Viewer" }).returning();
+    const [role] = await t.db.insert(customRoles).values({ organizationId, name: "Commerce Reader", permissions: ["websites:read", "content:read"] }).returning();
+    await t.db.insert(orgMembers).values({ organizationId, userId: viewer.id, role: "custom", customRoleId: role.id });
+    await t.db.insert(websiteMembers).values({ websiteId: site.id, userId: viewer.id, role: "member" });
+    viewerId = viewer.id;
+    const o = await ensureUserWithOrg(t.db, { email: "commerce-outsider@example.com" });
+    const oSite = await createWebsite(t.db, { organizationId: o.organizationId, userId: o.user.id, domain: "outsider.io", name: "Outsider" });
+    const [oPrompt] = await t.db.insert(prompts).values({ websiteId: oSite.id, text: "confidential outsider prompt", type: "branded" }).returning();
+    outsider = { actorId: o.user.id, websiteId: oSite.id, promptId: oPrompt.id };
   });
 
   afterAll(async () => {
     await t.close();
   });
 
-  it("syncs shopping insights while preserving catalog-optimized product titles and computes brand + retailer analytics", async () => {
-    // Seed an already-optimized own product (` — Verified AI Collaborative Suite`)
-    await t.db.insert(shoppingProducts).values({
-      websiteId: c.websiteId,
-      title: "Canvasly AI Design Canvas Pro — Verified AI Collaborative Suite",
-      retailer: "Shopify",
-      price: "29.00",
-      appearances: 18,
-      avgPosition: "1.40",
-      isOwn: true,
-    });
-
-    const syncRes = await syncShoppingInsights(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-    });
-    expect(syncRes.updated).toBeGreaterThanOrEqual(1);
-    expect(syncRes.created).toBeGreaterThanOrEqual(4);
-
-    const summary = await getShoppingInsightsSummary(t.db, c.websiteId);
-    expect(summary.stats.ownProductCount).toBeGreaterThanOrEqual(4);
-    expect(summary.stats.competitorProductCount).toBeGreaterThanOrEqual(4);
-    expect(summary.stats.retailerCoverageCount).toBeGreaterThanOrEqual(3);
-
-    // Ensure the optimized title was preserved and not duplicated
-    const proMatches = summary.products.filter((p) =>
-      p.title.toLowerCase().includes("ai design canvas pro"),
-    );
-    expect(proMatches.length).toBe(1);
-    expect(proMatches[0]!.title).toContain("Verified AI Collaborative Suite");
-
-    // Verify brandComparison includes Canvasly (own) and Figma/Canva (competitors)
-    expect(summary.brandComparison.some((b) => b.isOwn && b.brand === "Canvasly")).toBe(true);
-    expect(summary.brandComparison.some((b) => !b.isOwn && b.brand === "Figma")).toBe(true);
-
-    // Verify retailerDistribution sums to totalAppearances
-    const distSum = summary.retailerDistribution.reduce((a, r) => a + r.totalAppearances, 0);
-    expect(distSum).toBe(summary.stats.totalAppearances);
+  it("never writes while viewing and starts empty", async () => {
+    const empty = await getShoppingInsightsSummary(t.db, c);
+    expect(empty.products).toEqual([]);
+    expect((await getAdsSummary(t.db, c)).impressions).toEqual([]);
+    expect(await t.db.select().from(shoppingProducts).where(eq(shoppingProducts.websiteId, c.websiteId))).toHaveLength(0);
+    expect(await t.db.select().from(adsImpressions).where(eq(adsImpressions.websiteId, c.websiteId))).toHaveLength(0);
   });
 
-  it("supports manual shopping product CRUD, prevents duplicates, and enforces RBAC & tenant isolation", async () => {
-    const added = await createShoppingProduct(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-      title: "Canvasly Starter Pack",
-      retailer: "Amazon",
-      price: 9.5,
-      appearances: 220,
-      avgPosition: 1.5,
-      isOwn: true,
-    });
-    expect(added.title).toBe("Canvasly Starter Pack");
-
-    // Duplicate check
-    await expect(
-      createShoppingProduct(t.db, {
-        actorId: c.actorId,
-        websiteId: c.websiteId,
-        title: "Canvasly Starter Pack",
-        retailer: "Amazon",
-        price: 9.5,
-        appearances: 220,
-        avgPosition: 1.5,
-        isOwn: true,
-      }),
-    ).rejects.toThrow(DomainError);
-
-    // Viewer blocked
-    await expect(
-      deleteShoppingProduct(t.db, {
-        actorId: viewerId,
-        websiteId: c.websiteId,
-        productId: added.id,
-      }),
-    ).rejects.toThrow(ForbiddenError);
-
-    // Outsider blocked
-    await expect(
-      deleteShoppingProduct(t.db, {
-        actorId: outsider.actorId,
-        websiteId: c.websiteId,
-        productId: added.id,
-      }),
-    ).rejects.toThrow(ForbiddenError);
-
-    await deleteShoppingProduct(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-      productId: added.id,
-    });
+  it("builds shopping insights only from product cards in collected answers", async () => {
+    expect(await syncShoppingInsights(t.db, c)).toMatchObject({ created: 3, updated: 0 });
+    expect(await syncShoppingInsights(t.db, c)).toMatchObject({ created: 0, updated: 3 });
+    const summary = await getShoppingInsightsSummary(t.db, c);
+    const byTitle = new Map(summary.products.map((p) => [p.title, p]));
+    expect([...byTitle.keys()].sort()).toEqual(["Canvasly Sketch Kit", "Figma Tablet Stand", "Wacom Pen"]);
+    expect(byTitle.get("Canvasly Sketch Kit")).toMatchObject({ isOwn: true, appearances: 2, avgPosition: 1.5, price: 49, retailer: "Amazon" });
+    // latest answer wins for price and (on a tie) retailer
+    expect(byTitle.get("Figma Tablet Stand")).toMatchObject({ isOwn: false, appearances: 2, avgPosition: 1.5, price: 33, retailer: "Amazon" });
+    expect(byTitle.get("Wacom Pen")).toMatchObject({ isOwn: false, appearances: 1, avgPosition: 3, price: 79 });
+    expect(summary.stats).toMatchObject({ totalAppearances: 5, ownAppearances: 2, ownSharePct: 40 });
   });
 
-  it("captures sponsored ads across ChatGPT, AI Mode, and AI Overview, is idempotent, and blocks cross-tenant prompt linking", async () => {
-    const cap1 = await captureSponsoredAds(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-    });
-    expect(cap1.captured).toBeGreaterThanOrEqual(6);
+  it("supports manual products without invented numbers, with RBAC and tenant isolation", async () => {
+    const added = await createShoppingProduct(t.db, { ...c, title: "Canvasly Starter Pack", retailer: "Amazon", price: 9.5, isOwn: true });
+    expect(added).toMatchObject({ title: "Canvasly Starter Pack", appearances: 0 });
+    await expect(createShoppingProduct(t.db, { ...c, title: "Canvasly Starter Pack", retailer: "Amazon", price: 9.5, isOwn: true })).rejects.toThrow(DomainError);
+    await expect(syncShoppingInsights(t.db, { actorId: viewerId, websiteId: c.websiteId })).rejects.toThrow(ForbiddenError);
+    await expect(getShoppingInsightsSummary(t.db, { actorId: viewerId, websiteId: c.websiteId })).resolves.toBeTruthy();
+    await expect(getShoppingInsightsSummary(t.db, { actorId: outsider.actorId, websiteId: c.websiteId })).rejects.toThrow(ForbiddenError);
+    await expect(deleteShoppingProduct(t.db, { actorId: viewerId, websiteId: c.websiteId, productId: added.id })).rejects.toThrow(ForbiddenError);
+    await deleteShoppingProduct(t.db, { ...c, productId: added.id });
+  });
 
-    // Re-running is idempotent (updates seenAt without creating duplicates)
-    const cap2 = await captureSponsoredAds(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-    });
-    expect(cap2.captured).toBe(0);
-    expect(cap2.updated).toBe(cap1.captured);
+  it("detects explicitly labelled sponsored placements only", () => {
+    expect(detectSponsoredAds("Sponsored · canva.com — Canva Teams: design together")).toEqual([{ advertiser: "canva.com", adText: "canva.com — Canva Teams: design together" }]);
+    expect(detectSponsoredAds("[Sponsored] Framer AI — publish sites\nnormal line")).toEqual([{ advertiser: "Framer AI", adText: "Framer AI — publish sites" }]);
+    expect(detectSponsoredAds("Figma is sponsored by many teams and widely used.")).toEqual([]);
+  });
 
-    const ads = await getAdsSummary(t.db, c.websiteId);
-    expect(ads.stats.totalImpressions).toBe(cap1.captured);
-    expect(ads.stats.surfaceCounts.chatgpt).toBeGreaterThan(0);
-    expect(ads.stats.surfaceCounts.ai_mode).toBeGreaterThan(0);
-    expect(ads.stats.surfaceCounts.ai_overview).toBeGreaterThan(0);
+  it("captures sponsored placements from supported surfaces and keeps manual records", async () => {
+    expect(await captureSponsoredAds(t.db, c)).toMatchObject({ captured: 1 });
+    expect(await captureSponsoredAds(t.db, c)).toMatchObject({ captured: 0 });
+    const ads = await getAdsSummary(t.db, c);
+    expect(ads.impressions.map((i) => [i.surface, i.advertiser])).toEqual([["ai_overview", "canva.com"]]);
+    await expect(captureSponsoredAds(t.db, { actorId: viewerId, websiteId: c.websiteId })).rejects.toThrow(ForbiddenError);
 
-    // Surface filtering works
-    const chatgptOnly = await getAdsSummary(t.db, c.websiteId, { surface: "chatgpt" });
-    expect(chatgptOnly.impressions.every((i) => i.surface === "chatgpt")).toBe(true);
-
-    // Cross-tenant promptId injection must be rejected!
-    await expect(
-      recordAdImpression(t.db, {
-        actorId: c.actorId,
-        websiteId: c.websiteId,
-        promptId: outsider.promptId,
-        surface: "chatgpt",
-        advertiser: "Malicious Ad",
-        adText: "Trying to read outsider prompt via leftJoin",
-      }),
-    ).rejects.toThrow(NotFoundError);
-
-    // Valid manual ad capture + deletion
-    const manualAd = await recordAdImpression(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-      promptId: c.promptId,
-      surface: "ai_mode",
-      advertiser: "Sketch",
-      adText: "[Sponsored · AI Mode] Sketch for Mac & Web — Real-time collaboration",
-    });
-    expect(manualAd.id).toBeTruthy();
-
-    // Deleting a prompt referenced by ads_impressions sets promptId to NULL (no FK error)
-    const [tempPrompt] = await t.db
-      .insert(prompts)
-      .values({
-        websiteId: c.websiteId,
-        text: "temporary prompt for ad deletion test",
-        type: "non_branded",
-      })
-      .returning();
-    const linkedAd = await recordAdImpression(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-      promptId: tempPrompt!.id,
-      surface: "ai_overview",
-      advertiser: "Framer",
-      adText: "[Sponsored · AI Overview] Design and publish with Framer AI",
-    });
-    await t.db.delete(prompts).where(eq(prompts.id, tempPrompt!.id));
-
-    const afterPromptDel = await getAdsSummary(t.db, c.websiteId);
-    const survived = afterPromptDel.impressions.find((i) => i.id === linkedAd.id);
-    expect(survived).toBeDefined();
-    expect(survived?.promptId).toBeNull();
-
-    await deleteAdImpression(t.db, {
-      actorId: c.actorId,
-      websiteId: c.websiteId,
-      impressionId: manualAd.id,
-    });
+    await expect(recordAdImpression(t.db, { ...c, promptId: outsider.promptId, surface: "chatgpt", advertiser: "Malicious", adText: "cross-tenant prompt" })).rejects.toThrow(NotFoundError);
+    const manual = await recordAdImpression(t.db, { ...c, promptId, surface: "ai_mode", advertiser: "Sketch", adText: "Sketch for Mac & Web" });
+    expect((await getAdsSummary(t.db, { ...c, filters: { surface: "ai_mode" } })).impressions.map((i) => i.id)).toEqual([manual.id]);
+    await deleteAdImpression(t.db, { ...c, impressionId: manual.id });
   });
 });

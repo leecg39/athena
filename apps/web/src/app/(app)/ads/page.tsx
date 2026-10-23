@@ -9,14 +9,14 @@ export const metadata = { title: "Ads" };
 
 export default async function AdsPage() {
   const s = await getSettingsContext();
-  const summary = await getAdsSummary(db, s.websiteId);
+  const summary = await getAdsSummary(db, { actorId: s.user.id, websiteId: s.websiteId });
   const canWrite = s.membership.permissions.includes("content:write");
 
   return (
     <div>
       <PageHeader
         title="Ads"
-        subtitle="Sponsored ads captured across ChatGPT, Google AI Mode, and Google AI Overview responses to your tracked prompts"
+        subtitle="Sponsored placements labelled in collected answers plus the ones your team records. AI provider APIs rarely return ads, so most placements are recorded manually."
       />
       <div className="space-y-5 p-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -37,7 +37,7 @@ export default async function AdsPage() {
               {summary.stats.surfaceCounts.ai_overview} Overview
             </div>
             <div className="mt-1 text-xs text-gray-500">
-              Active across all 3 sponsored AI answer surfaces
+              Placements recorded on {Object.values(summary.stats.surfaceCounts).filter((n) => n > 0).length} of 3 surfaces
             </div>
           </div>
 

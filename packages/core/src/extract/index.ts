@@ -10,7 +10,7 @@ import { findAll, listItems, maskUrls, sentences, type Span } from "./text";
 
 export { findMentions, aliasesFor } from "./entities";
 export { extractCitations, domainOf, isBrandDomain, type ExtractedCitation } from "./citations";
-export { detectShoppingCard, type ShoppingCard } from "./shopping";
+export { detectShoppingCard, detectShoppingCards, type ShoppingCard } from "./shopping";
 export type { Sentiment } from "./sentiment";
 export { lockExtractedData } from "./lock";
 

@@ -43,7 +43,7 @@ export async function captureSponsoredAdsAction(_prev: ActionState, _formData: F
     revalidatePath("/ads");
     return {
       ok: true,
-      message: `Sponsored ad scan complete (${res.captured} new ads captured, ${res.updated} refreshed across ChatGPT, AI Mode & AI Overview).`,
+      message: res.captured ? `Found ${res.captured} new sponsored placements labelled in collected answers.` : "No labelled sponsored placements in recent collected answers. AI provider APIs rarely return ads — record the ones you see below.",
     };
   } catch (err) {
     return toActionError(err, "Failed to scan sponsored ads.");

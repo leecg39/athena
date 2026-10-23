@@ -20,7 +20,7 @@ import { refundCredits } from "@athena/core/billing";
 import { generateInsights } from "@athena/core/insights";
 import { runOracleScan } from "@athena/core/knowledge";
 import { discoverOutreachForSite } from "@athena/core/outreach";
-import { syncShoppingInsights, captureSponsoredAds } from "@athena/core/commerce";
+import { syncShoppingProductsForSite, captureSponsoredAdsForSite } from "@athena/core/commerce";
 import { runSiteHealthCrawl } from "@athena/core/site-health";
 import type { SearchAdapter, CollectedAnswer } from "@athena/llm/providers";
 
@@ -228,8 +228,8 @@ async function refreshDerivedData(db: Db, site: typeof websites.$inferSelect): P
     ["insights", () => generateInsights(db, { websiteId: site.id })],
     ["oracle", () => runOracleScan(db, { websiteId: site.id })],
     ["outreach", () => discoverOutreachForSite(db, site)],
-    ["shopping", () => syncShoppingInsights(db, { websiteId: site.id })],
-    ["ads", () => captureSponsoredAds(db, { websiteId: site.id })],
+    ["shopping", () => syncShoppingProductsForSite(db, site)],
+    ["ads", () => captureSponsoredAdsForSite(db, site)],
     ["site-health", () => runSiteHealthCrawl(db, { websiteId: site.id })],
   ];
   for (const [name, run] of steps) {

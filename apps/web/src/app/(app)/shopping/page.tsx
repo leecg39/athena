@@ -6,11 +6,15 @@ import { ShoppingInsightsView } from "@/components/shopping-insights-view";
 import { getSettingsContext } from "@/lib/settings-context";
 
 export const dynamic = "force-dynamic";
+/** positions and prices are unknown (not zero) until answers show products */
+const pos = (v: number) => (v > 0 ? `#${v.toFixed(2)}` : "—");
+const money = (v: number) => (v > 0 ? `$${v.toFixed(2)}` : "—");
+
 export const metadata = { title: "Shopping Insights" };
 
 export default async function ShoppingPage() {
   const s = await getSettingsContext();
-  const summary = await getShoppingInsightsSummary(db, s.websiteId);
+  const summary = await getShoppingInsightsSummary(db, { actorId: s.user.id, websiteId: s.websiteId });
   const canWrite = s.membership.permissions.includes("content:write");
 
   return (
@@ -25,6 +29,11 @@ export default async function ShoppingPage() {
         }
       />
       <div className="space-y-5 p-6">
+        {summary.stats.totalAppearances === 0 ? (
+          <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            No product cards in collected answers yet. They appear when AI answers list products with prices (for example, shopping prompts); syncing reads them from your collected answers.
+          </p>
+        ) : null}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <div className="metric-card">
             <div className="text-xs text-gray-400">Carousel Appearances</div>
@@ -40,21 +49,20 @@ export default async function ShoppingPage() {
           <div className="metric-card">
             <div className="text-xs text-gray-400">Own Avg Carousel Position</div>
             <div className="mt-1 text-2xl font-bold text-brand-700">
-              #{summary.stats.ownAvgPosition.toFixed(2)}
+              {pos(summary.stats.ownAvgPosition)}
             </div>
             <div className="mt-1 text-xs text-gray-500">
-              Competitor avg #{summary.stats.competitorAvgPosition.toFixed(2)} · Overall #
-              {summary.stats.overallAvgPosition.toFixed(2)}
+              Competitor avg {pos(summary.stats.competitorAvgPosition)} · Overall {pos(summary.stats.overallAvgPosition)}
             </div>
           </div>
 
           <div className="metric-card">
             <div className="text-xs text-gray-400">Avg Price Shown (Own vs Market)</div>
             <div className="mt-1 text-2xl font-bold text-gray-900">
-              ${summary.stats.ownAvgPrice.toFixed(2)}
+              {money(summary.stats.ownAvgPrice)}
             </div>
             <div className="mt-1 text-xs text-gray-500">
-              Market avg ${summary.stats.marketAvgPrice.toFixed(2)} (
+              Market avg {money(summary.stats.marketAvgPrice)} (
               {summary.stats.priceDeltaPct >= 0 ? "+" : ""}
               {summary.stats.priceDeltaPct.toFixed(1)}% vs comp)
             </div>

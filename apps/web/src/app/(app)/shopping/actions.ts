@@ -41,7 +41,7 @@ export async function syncShoppingInsightsAction(_prev: ActionState, _formData: 
     revalidatePath("/shopping");
     return {
       ok: true,
-      message: `Shopping carousel synced (${res.created} added, ${res.updated} refreshed across AI shopping surfaces).`,
+      message: `Synced from product cards in collected AI answers: ${res.created} new, ${res.updated} refreshed.`,
     };
   } catch (err) {
     return toActionError(err, "Failed to sync shopping carousel insights.");
@@ -55,27 +55,18 @@ export async function createShoppingProductAction(_prev: ActionState, formData: 
     if (limited) return limited;
 
     const title = String(formData.get("title") ?? "").trim();
-    const retailer = String(formData.get("retailer") ?? "").trim() || "Shopify";
-    const price = Number(formData.get("price") ?? 19);
-    const appearances = Number(formData.get("appearances") ?? 180) || 180;
-    const avgPosition = Number(formData.get("avgPosition") ?? 1.8) || 1.8;
+    const retailer = String(formData.get("retailer") ?? "").trim();
+    const price = Number(String(formData.get("price") ?? "").trim() || Number.NaN);
     const isOwn = String(formData.get("isOwn") ?? "true") !== "false";
+    if (!Number.isFinite(price)) return { ok: false, error: "Enter the product's price." };
 
-    const created = await createShoppingProduct(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      title,
-      retailer,
-      price,
-      appearances,
-      avgPosition,
-      isOwn,
-    });
+    // appearances and position start unknown; a sync fills them from collected answers
+    const created = await createShoppingProduct(db, { actorId: s.user.id, websiteId: s.websiteId, title, retailer, price, isOwn });
 
     revalidatePath("/shopping");
     return {
       ok: true,
-      message: `Added "${created.title}" (${retailer}) to AI Shopping Carousel tracker.`,
+      message: `Added "${created.title}" (${retailer}). Appearances update when collected answers show it.`,
     };
   } catch (err) {
     return toActionError(err, "Failed to add shopping product.");
