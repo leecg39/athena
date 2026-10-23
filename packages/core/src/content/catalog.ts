@@ -1,26 +1,37 @@
 /**
- * Shopify Catalog Optimization engine:
- *  - Syncs brand products into `shopping_products` (`isOwn = true`) and `publish_targets` (`provider = "shopify"`)
- *  - Evaluates Title Score, Description Score, and FAQ Schema coverage for AI Shopping surfaces
- *  - Generates AI-recommended product titles, descriptions, and FAQ schema grounded in `kb_facts`
- *  - Publishes optimized product copy & FAQ schema to the Shopify catalog
+ * Shopify catalog optimization on real store data: products come from the
+ * Shopify Admin API, scores are explainable rules on the actual title and
+ * description, recommendations are written by the caller (an AI writer) and
+ * "published" means Shopify accepted the product update.
  */
 import { z } from "zod";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import {
-  type Db,
-  shoppingProducts,
-  contentItems,
-  contentDrafts,
-  contentVersions,
-  publishTargets,
-  websites,
-  kbFacts,
-} from "@athena/db";
+import { type Db, shoppingProducts, contentItems, contentDrafts, contentVersions, publishTargets, websites, kbFacts } from "@athena/db";
 import { requireWebsitePermission, type WebsiteRow } from "../tenancy";
 import { logActivity } from "../org/activity";
 import { DomainError, NotFoundError } from "../org/errors";
-import { normKey, slugify } from "./shared";
+import { decodeEntities } from "../shared/html";
+import { normKey } from "./shared";
+import { markdownToHtml } from "./html";
+import { openTargetConfig } from "./cms-targets";
+import type { CmsRequest } from "./cms";
+
+const API = "2025-01";
+
+function htmlToText(html: string): string {
+  return decodeEntities(
+    html
+      .replace(/<li[^>]*>/gi, "\n- ")
+      .replace(/<\/(p|div|h[1-6]|li|ul|ol|tr)>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]*>/g, " "),
+  )
+    .split(/\r?\n/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 8000);
+}
 
 export interface CatalogProductItem {
   id: string;
@@ -28,6 +39,7 @@ export interface CatalogProductItem {
   title: string;
   retailer: string;
   price: string;
+  currentDescription: string;
   appearances: number;
   avgPosition: number;
   titleScore: number;
@@ -44,528 +56,200 @@ export interface CatalogSummary {
   products: CatalogProductItem[];
   shopifyConnected: boolean;
   storeDomain: string;
-  stats: {
-    totalProducts: number;
-    avgTitleScore: number;
-    avgDescScore: number;
-    faqCoveragePct: number;
-    optimizedCount: number;
-  };
+  stats: { totalProducts: number; avgTitleScore: number; avgDescScore: number; faqCoveragePct: number; optimizedCount: number };
 }
 
-function baselineScores(title: string,brandName: string, index: number): { titleScore: number; descScore: number; faqStatus: "ok" | "missing" } {
-  const lower = title.toLowerCase();
-  const hasBrand = lower.includes(brandName.toLowerCase());
-  const words = title.trim().split(/\s+/).length;
-  const baseTitle = Math.min(85, Math.max(35, (hasBrand ? 48 : 34) + words * 6 + ((index * 13) % 19)));
-  const baseDesc = Math.min(82, Math.max(38, baseTitle - 6 + ((index * 7) % 15)));
-  const faqStatus: "ok" | "missing" = baseTitle >= 78 ? "ok" : "missing";
-  return { titleScore: baseTitle, descScore: baseDesc, faqStatus };
+/**
+ * Rule-based listing quality (0-100 each): title — 30-70 characters, names the
+ * brand, carries a concrete attribute (number or variant), not shouting;
+ * description — length up to 600 characters, a list, numbers, use cases;
+ * FAQ present when at least two questions appear.
+ */
+export function catalogScores(title: string, description: string, brand: string): { titleScore: number; descScore: number; faqStatus: "ok" | "missing" } {
+  const t = title.trim();
+  const notShouting = (!/[a-z]/i.test(t) || t !== t.toUpperCase()) && !/[!?]{2,}/.test(t);
+  const titleScore = (t.length >= 30 && t.length <= 70 ? 40 : t.length >= 15 ? 20 : 0) + (brand && t.toLowerCase().includes(brand.toLowerCase()) ? 20 : 0) + (/\d|[—–]/.test(t) ? 20 : 0) + (notShouting ? 20 : 0);
+  const d = description.trim();
+  const descScore = Math.round((Math.min(d.length, 600) / 600) * 40) + (/^\s*[-*•]\s|<li>/m.test(d) ? 20 : 0) + (/\d/.test(d) ? 20 : 0) + (/\b(for|ideal|use|works with|compatible)\b/i.test(d) ? 20 : 0);
+  const questions = d.split(/\r?\n/).filter((l) => /^\s*Q:|\?\s*$/i.test(l)).length;
+  return { titleScore, descScore, faqStatus: questions >= 2 ? "ok" : "missing" };
 }
 
-export async function syncShopifyCatalog(
-  db: Db,
-  rawInput: { actorId?: string; websiteId: string; storeDomain?: string },
-): Promise<{ created: number; updated: number }> {
-  let site: WebsiteRow;
-  if (rawInput.actorId) {
-    site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
-  } else {
-    const [row] = await db.select().from(websites).where(and(eq(websites.id, rawInput.websiteId), isNull(websites.deletedAt)));
-    if (!row) throw new NotFoundError("Website not found");
-    site = row;
+const productSchema = z.object({
+  id: z.union([z.number(), z.string()]).transform(String),
+  title: z.string(),
+  body_html: z.string().nullable().optional(),
+  handle: z.string().optional(),
+  variants: z.array(z.object({ price: z.union([z.string(), z.number()]).nullable().optional() })).optional(),
+});
+
+async function shopifyConfig(db: Db, site: WebsiteRow, secretKey: string): Promise<Record<string, string>> {
+  const [target] = await db.select().from(publishTargets).where(and(eq(publishTargets.websiteId, site.id), eq(publishTargets.provider, "shopify")));
+  const cfg = target ? openTargetConfig(target, secretKey) : {};
+  if (!cfg.storeDomain || !cfg.accessToken) throw new DomainError("Connect Shopify (store domain and Admin API token) in CMS connections first");
+  return cfg;
+}
+
+async function shopifyCall(request: CmsRequest, cfg: Record<string, string>, method: "GET" | "PUT", path: string, body?: unknown) {
+  let res: { status: number; body: string };
+  try {
+    res = await request(`https://${cfg.storeDomain}/admin/api/${API}${path}`, { method, headers: { "x-shopify-access-token": cfg.accessToken, accept: "application/json", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  } catch {
+    throw new DomainError("Could not reach Shopify. Check the store domain.");
   }
+  let json: Record<string, unknown> = {};
+  try {
+    json = JSON.parse(res.body) as Record<string, unknown>;
+  } catch {
+    json = {};
+  }
+  if (res.status < 200 || res.status >= 300) {
+    const detail = json.errors ? `: ${JSON.stringify(json.errors).slice(0, 200)}` : "";
+    throw new DomainError(`Shopify rejected the ${method === "GET" ? "request" : "update"} (HTTP ${res.status})${detail}`);
+  }
+  return json;
+}
 
-  const storeDomain = rawInput.storeDomain?.trim().toLowerCase() || `shop.${site.domain}`;
+const catalogRows = (db: Db, siteId: string) =>
+  db.select().from(contentItems).where(and(eq(contentItems.websiteId, siteId), isNull(contentItems.deletedAt), sql`${contentItems.columns}->>'shopifyProductId' is not null`));
 
+export async function syncShopifyCatalog(db: Db, input: { actorId: string; websiteId: string; secretKey: string; request: CmsRequest }): Promise<{ created: number; updated: number; total: number }> {
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
+  const cfg = await shopifyConfig(db, site, input.secretKey);
+  const json = await shopifyCall(input.request, cfg, "GET", "/products.json?limit=250");
+  const rawProducts = Array.isArray(json.products) ? json.products : [];
+  const products = rawProducts.flatMap((p) => {
+    const r = productSchema.safeParse(p);
+    return r.success ? [r.data] : [];
+  });
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
-
-    // Ensure Shopify publish target exists
-    const [existingShopify] = await tx
-      .select()
-      .from(publishTargets)
-      .where(and(eq(publishTargets.websiteId, site.id), eq(publishTargets.provider, "shopify")));
-    if (!existingShopify) {
-      await tx.insert(publishTargets).values({
-        websiteId: site.id,
-        provider: "shopify",
-        config: {
-          storeDomain,
-          endpointUrl: `https://${storeDomain}/admin/api/2025-01/products.json`,
-        },
-      });
-    }
-
-    const existingProducts = await tx
-      .select()
-      .from(shoppingProducts)
-      .where(and(eq(shoppingProducts.websiteId, site.id), eq(shoppingProducts.isOwn, true)));
-
-    const byKey = new Map(existingProducts.map((p) => [normKey(p.title), p]));
-    const profileProducts = (site.profile?.products ?? []).filter((p): p is string => typeof p === "string" && p.trim().length >= 2);
-
-    const candidates: { title: string; price: string; appearances: number; avgPosition: string }[] = [
-      {
-        title: `${site.name} AI Design Canvas Pro`,
-        price: "29.00",
-        appearances: 18,
-        avgPosition: "1.40",
-      },
-      {
-        title: `${site.name} Collaborative Team Workspace`,
-        price: "12.00",
-        appearances: 11,
-        avgPosition: "1.80",
-      },
-      {
-        title: `Design Tokens Automation Engine`,
-        price: "19.00",
-        appearances: 6,
-        avgPosition: "2.50",
-      },
-    ];
-
-    for (const prod of profileProducts.slice(0, 4)) {
-      const fullTitle = prod.toLowerCase().includes(site.name.toLowerCase()) ? prod.trim() : `${site.name} ${prod.trim()}`;
-      if (!candidates.some((c) => normKey(c.title) === normKey(fullTitle))) {
-        candidates.push({
-          title: fullTitle,
-          price: "24.00",
-          appearances: 9,
-          avgPosition: "1.90",
-        });
-      }
-    }
-
+    const existing = await catalogRows(tx, site.id);
+    const byRemote = new Map(existing.map((r) => [String((r.columns ?? {}).shopifyProductId), r]));
     let created = 0;
     let updated = 0;
-    const now = new Date();
-
-    for (const cand of candidates) {
-      const key = normKey(cand.title);
-      const match = byKey.get(key);
+    for (const p of products) {
+      const facts = { shopifyProductId: p.id, handle: p.handle ?? "", price: String(p.variants?.[0]?.price ?? ""), currentDescription: htmlToText(p.body_html ?? "") };
+      const match = byRemote.get(p.id);
       if (match) {
-        await tx
-          .update(shoppingProducts)
-          .set({
-            retailer: "Shopify",
-            lastSeenAt: now,
-          })
-          .where(eq(shoppingProducts.id, match.id));
+        await tx.update(contentItems).set({ title: p.title, columns: { ...(match.columns ?? {}), ...facts } }).where(eq(contentItems.id, match.id));
         updated++;
       } else {
-        const [ins] = await tx
-          .insert(shoppingProducts)
-          .values({
-            websiteId: site.id,
-            title: cand.title,
-            retailer: "Shopify",
-            price: cand.price,
-            appearances: cand.appearances,
-            avgPosition: cand.avgPosition,
-            isOwn: true,
-            lastSeenAt: now,
-          })
-          .returning();
-        byKey.set(key, ins);
+        await tx.insert(contentItems).values({ websiteId: site.id, title: p.title, status: "idea", columns: { catalogProduct: true, agentStage: "idle", ...facts } });
         created++;
       }
     }
-
-    if (rawInput.actorId && (created > 0 || updated > 0)) {
-      await logActivity(tx, {
-        organizationId: site.organizationId,
-        userId: rawInput.actorId,
-        websiteId: site.id,
-        entityType: "shopify_catalog",
-        change: "synced",
-        after: { created, updated, storeDomain },
-      });
-    }
-
-    return { created, updated };
+    await logActivity(tx, { organizationId: site.organizationId, userId: input.actorId, websiteId: site.id, entityType: "shopify_catalog", entityId: site.id, change: "synced", after: { created, updated } });
+    return { created, updated, total: existing.length + created };
   });
 }
 
-export async function listCatalogProducts(
-  db: Db,
-  rawInput: { actorId: string; websiteId: string },
-): Promise<CatalogSummary> {
-  const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:read");
-
-  const [productRows, itemRows, shopifyTarget] = await Promise.all([
-    db
-      .select()
-      .from(shoppingProducts)
-      .where(and(eq(shoppingProducts.websiteId, site.id), eq(shoppingProducts.isOwn, true)))
-      .orderBy(desc(shoppingProducts.appearances), shoppingProducts.title),
-    db
-      .select()
-      .from(contentItems)
-      .where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt))),
-    db
-      .select()
-      .from(publishTargets)
-      .where(and(eq(publishTargets.websiteId, site.id), eq(publishTargets.provider, "shopify")))
-      .limit(1),
+export async function listCatalogProducts(db: Db, input: { actorId: string; websiteId: string }): Promise<CatalogSummary> {
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:read");
+  const [items, seen, [target]] = await Promise.all([
+    catalogRows(db, site.id),
+    db.select().from(shoppingProducts).where(eq(shoppingProducts.websiteId, site.id)),
+    db.select().from(publishTargets).where(and(eq(publishTargets.websiteId, site.id), eq(publishTargets.provider, "shopify"))),
   ]);
-
-  const catalogItems = itemRows.filter((r) => (r.columns ?? {}).catalogProduct === true);
-  const catalogIds = catalogItems.map((r) => r.id);
-  const versionRows =
-    catalogIds.length > 0
-      ? await db
-          .select()
-          .from(contentVersions)
-          .where(inArray(contentVersions.contentId, catalogIds))
-          .orderBy(desc(contentVersions.version))
-      : [];
-
-  const latestVerByContent = new Map<string, typeof contentVersions.$inferSelect>();
-  for (const v of versionRows) {
-    if (!latestVerByContent.has(v.contentId)) latestVerByContent.set(v.contentId, v);
-  }
-
-  const itemByProductId = new Map<string, typeof contentItems.$inferSelect>();
-  for (const ci of catalogItems) {
-    const pid = String((ci.columns ?? {}).catalogProductId ?? "");
-    if (pid && !itemByProductId.has(pid)) itemByProductId.set(pid, ci);
-  }
-
-  const products: CatalogProductItem[] = productRows.map((p, idx) => {
-    const linked = itemByProductId.get(p.id);
-    const cols = linked?.columns ?? {};
-    const ver = linked ? latestVerByContent.get(linked.id) : undefined;
-    const base = baselineScores(p.title, site.name, idx);
-
-    const titleScore = typeof cols.titleScore === "number" ? cols.titleScore : base.titleScore;
-    const descScore = typeof cols.descScore === "number" ? cols.descScore : base.descScore;
-    const faqStatus: "ok" | "missing" =
-      cols.faqStatus === "ok" || cols.faqStatus === "missing" ? cols.faqStatus : base.faqStatus;
-
-    const optimizationStatus: CatalogProductItem["optimizationStatus"] =
-      linked?.status === "published"
-        ? "published"
-        : linked
-          ? "draft_ready"
-          : "needs_optimization";
-
+  const versions = items.length ? await db.select().from(contentVersions).where(inArray(contentVersions.contentId, items.map((i) => i.id))).orderBy(desc(contentVersions.version)) : [];
+  const latest = new Map<string, (typeof versions)[number]>();
+  for (const v of versions) if (!latest.has(v.contentId)) latest.set(v.contentId, v);
+  const seenByTitle = new Map(seen.map((s) => [normKey(s.title), s]));
+  const products = items.map((item): CatalogProductItem => {
+    const cols = item.columns ?? {};
+    const ver = latest.get(item.id);
+    const ai = seenByTitle.get(normKey(item.title));
+    const currentDescription = String(cols.currentDescription ?? "");
+    const status: CatalogProductItem["optimizationStatus"] = ver && Number(cols.appliedVersion) === ver.version ? "published" : ver ? "draft_ready" : "needs_optimization";
     return {
-      id: p.id,
-      websiteId: p.websiteId,
-      title: p.title,
-      retailer: p.retailer || "Shopify",
-      price: p.price ? `$${Number(p.price).toFixed(2)}` : "$29.00",
-      appearances: p.appearances,
-      avgPosition: Number(p.avgPosition ?? 0),
-      titleScore,
-      descScore,
-      faqStatus,
-      optimizationStatus,
-      recommendedTitle: linked?.title ?? null,
+      id: item.id,
+      websiteId: item.websiteId,
+      title: item.title,
+      retailer: "Shopify",
+      price: cols.price ? String(cols.price) : "—",
+      currentDescription,
+      appearances: ai?.appearances ?? 0,
+      avgPosition: Number(ai?.avgPosition ?? 0),
+      ...catalogScores(item.title, currentDescription, site.name),
+      optimizationStatus: status,
+      recommendedTitle: typeof cols.recommendedTitle === "string" ? cols.recommendedTitle : null,
       recommendedDescription: ver?.body ?? null,
       recommendedFaq: typeof cols.faqBody === "string" ? cols.faqBody : null,
       version: ver?.version ?? 0,
     };
   });
-
-  const totalProducts = products.length;
-  const avgTitleScore =
-    totalProducts > 0 ? Math.round(products.reduce((s, p) => s + p.titleScore, 0) / totalProducts) : 0;
-  const avgDescScore =
-    totalProducts > 0 ? Math.round(products.reduce((s, p) => s + p.descScore, 0) / totalProducts) : 0;
-  const faqOkCount = products.filter((p) => p.faqStatus === "ok").length;
-  const faqCoveragePct = totalProducts > 0 ? Math.round((faqOkCount / totalProducts) * 100) : 0;
-  const optimizedCount = products.filter((p) => p.optimizationStatus !== "needs_optimization").length;
-
+  const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
   return {
     products,
-    shopifyConnected: shopifyTarget.length > 0,
-    storeDomain: shopifyTarget[0]?.config?.storeDomain || `shop.${site.domain}`,
+    shopifyConnected: Boolean(target?.config?.storeDomain && target?.config?.accessToken),
+    storeDomain: target?.config?.storeDomain ?? "",
     stats: {
-      totalProducts,
-      avgTitleScore,
-      avgDescScore,
-      faqCoveragePct,
-      optimizedCount,
+      totalProducts: products.length,
+      avgTitleScore: avg(products.map((p) => p.titleScore)),
+      avgDescScore: avg(products.map((p) => p.descScore)),
+      faqCoveragePct: products.length ? Math.round((products.filter((p) => p.faqStatus === "ok").length / products.length) * 100) : 0,
+      optimizedCount: products.filter((p) => p.optimizationStatus !== "needs_optimization").length,
     },
   };
 }
 
-export async function generateCatalogProductDraft(
-  db: Db,
-  rawInput: { actorId: string; websiteId: string; productId: string },
-) {
-  if (!z.string().uuid().safeParse(rawInput.productId).success) {
-    throw new DomainError("Invalid catalog product ID");
-  }
-  const site = await requireWebsitePermission(db, rawInput.actorId, rawInput.websiteId, "content:write");
+async function lockedCatalogItem(tx: Db, siteId: string, productId: string) {
+  if (!z.string().uuid().safeParse(productId).success) throw new DomainError("Invalid catalog product ID");
+  const [item] = await tx.select().from(contentItems).where(and(eq(contentItems.id, productId), eq(contentItems.websiteId, siteId), isNull(contentItems.deletedAt))).for("update");
+  if (!item || !(item.columns ?? {}).shopifyProductId) throw new NotFoundError("Catalog product not found");
+  return item;
+}
 
+/** What an AI writer may use to improve one listing (no write). */
+export async function catalogWritingContext(db: Db, input: { actorId: string; websiteId: string; productId: string }) {
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
+  const item = await lockedCatalogItem(db, site.id, input.productId);
+  const facts = await db.select({ claim: kbFacts.claim }).from(kbFacts).where(and(eq(kbFacts.websiteId, site.id), eq(kbFacts.status, "confirmed"), isNull(kbFacts.deletedAt))).orderBy(kbFacts.createdAt).limit(8);
+  const cols = item.columns ?? {};
+  return { brand: site.name, title: item.title, description: String(cols.currentDescription ?? ""), price: String(cols.price ?? ""), facts: facts.map((f) => f.claim) };
+}
+
+const draftSchema = z.object({
+  title: z.string().trim().min(1, "Add a title").max(255, "Shopify titles are limited to 255 characters"),
+  description: z.string().trim().min(1, "Add a description").max(20_000),
+  faq: z.string().trim().max(5_000).default(""),
+});
+
+export async function saveCatalogDraft(db: Db, input: { actorId: string; websiteId: string; productId: string; title: string; description: string; faq?: string; source?: string }) {
+  const parsed = draftSchema.safeParse(input);
+  if (!parsed.success) throw new DomainError(parsed.error.issues[0]?.message ?? "Invalid product copy");
+  const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
   return db.transaction(async (tx) => {
-    await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
-    const [product] = await tx
-      .select()
-      .from(shoppingProducts)
-      .where(
-        and(
-          eq(shoppingProducts.id, rawInput.productId),
-          eq(shoppingProducts.websiteId, site.id),
-          eq(shoppingProducts.isOwn, true),
-        ),
-      );
-    if (!product) throw new NotFoundError("Catalog product not found");
-
-    const factRows = await tx
-      .select({ claim: kbFacts.claim })
-      .from(kbFacts)
-      .where(and(eq(kbFacts.websiteId, site.id), eq(kbFacts.status, "confirmed"), isNull(kbFacts.deletedAt)))
-      .limit(5);
-
-    const facts =
-      factRows.length > 0
-        ? factRows.map((f) => f.claim)
-        : [`${site.name} delivers AI-assisted design and collaboration for modern teams.`];
-
-    const hasBrand = product.title.toLowerCase().includes(site.name.toLowerCase());
-    const recommendedTitle = hasBrand
-      ? `${product.title} — Verified AI Collaborative Suite`
-      : `${site.name} ${product.title} — AI Collaborative Suite`;
-
-    const priceDisplay = product.price ? `$${Number(product.price).toFixed(2)}` : "$29.00";
-    const recommendedDescription = [
-      `### ${recommendedTitle}`,
-      ``,
-      `**${recommendedTitle}** (${priceDisplay}) is purpose-built for product, design, and engineering teams seeking fast, citation-verified workflows on [${site.domain}](https://${site.domain}).`,
-      ``,
-      `#### Verified Capabilities & Specs`,
-      ...facts.map((f) => `- ${f}`),
-      `- **Pricing**: ${priceDisplay} with instant workspace provisioning`,
-    ].join("\n");
-
-    const recommendedFaq = [
-      `Q: What is included in ${recommendedTitle}?`,
-      `A: ${facts[0]}`,
-      ``,
-      `Q: How much does ${product.title} cost?`,
-      `A: Official pricing starts at ${priceDisplay} on https://${site.domain}/pricing.`,
-      ``,
-      `Q: Does ${product.title} integrate with team workflows?`,
-      `A: Yes — ${facts[1] ?? `it includes real-time multiplayer collaboration and enterprise access controls.`}`,
-    ].join("\n");
-
-    const existingItems = await tx
-      .select()
-      .from(contentItems)
-      .where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt)));
-    const linked = existingItems.find(
-      (r) => (r.columns ?? {}).catalogProduct === true && (r.columns ?? {}).catalogProductId === product.id,
-    );
-
-    const nextCols: Record<string, string | number | boolean> = {
-      ...(linked?.columns ?? {}),
-      catalogProduct: true,
-      catalogProductId: product.id,
-      titleScore: 94,
-      descScore: 92,
-      faqStatus: "ok",
-      faqBody: recommendedFaq,
-      agentStage: "draft_ready",
-    };
-
-    let contentId: string;
-    if (linked) {
-      await tx
-        .update(contentItems)
-        .set({
-          title: recommendedTitle,
-          status: "review",
-          columns: nextCols,
-        })
-        .where(eq(contentItems.id, linked.id));
-      contentId = linked.id;
-    } else {
-      const [created] = await tx
-        .insert(contentItems)
-        .values({
-          websiteId: site.id,
-          title: recommendedTitle,
-          targetUrl: `https://${site.domain}/products/${slugify(product.title)}`,
-          status: "review",
-          columns: nextCols,
-        })
-        .returning();
-      contentId = created.id;
+    const item = await lockedCatalogItem(tx, site.id, input.productId);
+    const cols = item.columns ?? {};
+    const [latest] = await tx.select().from(contentVersions).where(eq(contentVersions.contentId, item.id)).orderBy(desc(contentVersions.version)).limit(1);
+    if (latest && latest.body === parsed.data.description && cols.recommendedTitle === parsed.data.title && String(cols.faqBody ?? "") === parsed.data.faq) {
+      return { productId: item.id, version: latest.version };
     }
-
-    const [draft] = await tx
-      .insert(contentDrafts)
-      .values({
-        contentId,
-        body: recommendedDescription,
-      })
-      .returning();
-
-    const [maxVerRow] = await tx
-      .select({ maxV: sql<number>`coalesce(max(${contentVersions.version}), 0)::int` })
-      .from(contentVersions)
-      .where(eq(contentVersions.contentId, contentId));
-    const nextVersion = Number(maxVerRow?.maxV ?? 0) + 1;
-
-    await tx.insert(contentVersions).values({
-      contentId,
-      draftId: draft.id,
-      body: recommendedDescription,
-      version: nextVersion,
-    });
-
-    await logActivity(tx, {
-      organizationId: site.organizationId,
-      userId: rawInput.actorId,
-      websiteId: site.id,
-      entityType: "shopify_catalog",
-      entityId: product.id,
-      change: "generated_product_draft",
-      after: { productId: product.id, recommendedTitle, version: nextVersion },
-    });
-
-    return {
-      productId: product.id,
-      contentId,
-      recommendedTitle,
-      recommendedDescription,
-      recommendedFaq,
-      version: nextVersion,
-    };
+    const [draft] = await tx.insert(contentDrafts).values({ contentId: item.id, body: parsed.data.description }).returning();
+    const [version] = await tx.insert(contentVersions).values({ contentId: item.id, draftId: draft.id, body: parsed.data.description, version: (latest?.version ?? 0) + 1 }).returning();
+    await tx.update(contentItems).set({ status: "review", columns: { ...cols, recommendedTitle: parsed.data.title, faqBody: parsed.data.faq, agentStage: "draft_ready" } }).where(eq(contentItems.id, item.id));
+    await logActivity(tx, { organizationId: site.organizationId, userId: input.actorId, websiteId: site.id, entityType: "shopify_catalog", entityId: item.id, change: "generated_product_draft", after: { version: version.version, source: input.source ?? "manual" } });
+    return { productId: item.id, version: version.version };
   });
 }
 
-const applyCatalogSchema = z.object({
-  actorId: z.string().uuid(),
-  websiteId: z.string().uuid(),
-  productId: z.string().uuid(),
-  title: z.string().trim().min(3).max(220).optional(),
-  description: z.string().trim().min(10).max(20_000).optional(),
-  faq: z.string().trim().max(10_000).optional(),
-});
-
-export async function applyCatalogOptimizationToShopify(
-  db: Db,
-  rawInput: {
-    actorId: string;
-    websiteId: string;
-    productId: string;
-    title?: string;
-    description?: string;
-    faq?: string;
-  },
-) {
-  let input: z.infer<typeof applyCatalogSchema>;
-  try {
-    input = applyCatalogSchema.parse(rawInput);
-  } catch {
-    throw new DomainError("Invalid catalog optimization payload");
-  }
+/** Sends the latest recommendation to Shopify; the listing changes only if Shopify accepts it. */
+export async function applyCatalogOptimizationToShopify(db: Db, input: { actorId: string; websiteId: string; productId: string; secretKey: string; request: CmsRequest }) {
   const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
-
+  const cfg = await shopifyConfig(db, site, input.secretKey);
+  const item = await lockedCatalogItem(db, site.id, input.productId);
+  const [ver] = await db.select().from(contentVersions).where(eq(contentVersions.contentId, item.id)).orderBy(desc(contentVersions.version)).limit(1);
+  const cols = item.columns ?? {};
+  if (!ver || typeof cols.recommendedTitle !== "string") throw new DomainError("Generate or write recommended copy first");
+  const faq = String(cols.faqBody ?? "").trim();
+  const faqMd = faq.split(/\r?\n/).filter((l) => l.trim()).join("\n\n");
+  const html = [markdownToHtml(ver.body), faqMd ? `<h2>FAQ</h2>\n${markdownToHtml(faqMd)}` : ""].filter(Boolean).join("\n");
+  await shopifyCall(input.request, cfg, "PUT", `/products/${cols.shopifyProductId}.json`, { product: { id: Number(cols.shopifyProductId), title: cols.recommendedTitle, body_html: html } });
   return db.transaction(async (tx) => {
-    await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
-    const [product] = await tx
-      .select()
-      .from(shoppingProducts)
-      .where(
-        and(
-          eq(shoppingProducts.id, input.productId),
-          eq(shoppingProducts.websiteId, site.id),
-          eq(shoppingProducts.isOwn, true),
-        ),
-      )
-      .for("update");
-    if (!product) throw new NotFoundError("Catalog product not found");
-
-    const existingItems = await tx
-      .select()
-      .from(contentItems)
-      .where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt)));
-    const linked = existingItems.find(
-      (r) => (r.columns ?? {}).catalogProduct === true && (r.columns ?? {}).catalogProductId === product.id,
-    );
-
-    const nextTitle = input.title?.trim() || linked?.title || product.title;
-    const nextFaq = input.faq?.trim() || String((linked?.columns ?? {}).faqBody ?? "Q: Official specs?\nA: Verified in KB.");
-
-    await tx
-      .update(shoppingProducts)
-      .set({
-        title: nextTitle,
-        lastSeenAt: new Date(),
-      })
-      .where(eq(shoppingProducts.id, product.id));
-
-    const nextCols: Record<string, string | number | boolean> = {
-      ...(linked?.columns ?? {}),
-      catalogProduct: true,
-      catalogProductId: product.id,
-      titleScore: 96,
-      descScore: 95,
-      faqStatus: "ok",
-      faqBody: nextFaq,
-      agentStage: "published",
-      publishedProvider: "shopify",
-      publishedAt: new Date().toISOString(),
-    };
-
-    if (linked) {
-      await tx
-        .update(contentItems)
-        .set({
-          title: nextTitle,
-          status: "published",
-          columns: nextCols,
-        })
-        .where(eq(contentItems.id, linked.id));
-
-      if (input.description?.trim()) {
-        const [maxVerRow] = await tx
-          .select({ maxV: sql<number>`coalesce(max(${contentVersions.version}), 0)::int` })
-          .from(contentVersions)
-          .where(eq(contentVersions.contentId, linked.id));
-        const nextVersion = Number(maxVerRow?.maxV ?? 0) + 1;
-        await tx.insert(contentVersions).values({
-          contentId: linked.id,
-          body: input.description.trim(),
-          version: nextVersion,
-        });
-      }
-    } else {
-      const [created] = await tx
-        .insert(contentItems)
-        .values({
-          websiteId: site.id,
-          title: nextTitle,
-          targetUrl: `https://${site.domain}/products/${slugify(nextTitle)}`,
-          status: "published",
-          columns: nextCols,
-        })
-        .returning();
-
-      await tx.insert(contentVersions).values({
-        contentId: created.id,
-        body: input.description?.trim() || `### ${nextTitle}\nOptimized for AI Shopping.`,
-        version: 1,
-      });
-    }
-
-    await logActivity(tx, {
-      organizationId: site.organizationId,
-      userId: input.actorId,
-      websiteId: site.id,
-      entityType: "shopify_catalog",
-      entityId: product.id,
-      change: "published_shopify_optimization",
-      after: { productId: product.id, title: nextTitle },
-    });
-
-    return { productId: product.id, title: nextTitle, status: "published" as const };
+    const columns = { ...cols, currentDescription: htmlToText(html), appliedVersion: ver.version, appliedAt: new Date().toISOString(), agentStage: "published" };
+    const [updated] = await tx.update(contentItems).set({ title: cols.recommendedTitle as string, status: "published", columns }).where(eq(contentItems.id, item.id)).returning();
+    await logActivity(tx, { organizationId: site.organizationId, userId: input.actorId, websiteId: site.id, entityType: "shopify_catalog", entityId: item.id, change: "applied_to_shopify", after: { version: ver.version, shopifyProductId: cols.shopifyProductId } });
+    return { productId: updated.id, version: ver.version };
   });
 }

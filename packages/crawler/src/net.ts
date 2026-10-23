@@ -114,6 +114,19 @@ export interface SafeFetchOptions {
   maxBytes?: number;
   maxRedirects?: number;
   accept?: string;
+  /** write requests are sent once and never follow redirects */
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  headers?: Record<string, string>;
+  body?: string;
+}
+
+/** Caller headers: no Host override, no CR/LF (header injection). */
+function checkHeaders(headers: Record<string, string>): Record<string, string> {
+  for (const [k, v] of Object.entries(headers)) {
+    if (k.toLowerCase() === "host") throw new BlockedUrlError("The host header cannot be set");
+    if (/[\r\n]/.test(k) || /[\r\n]/.test(v)) throw new BlockedUrlError(`Invalid header: ${k}`);
+  }
+  return headers;
 }
 
 export interface SafeResponse {
@@ -205,13 +218,15 @@ function getOnce(url: URL, cfg: Required<FetcherConfig>, opts: Required<SafeFetc
     const req = lib.request(
       url,
       {
-        method: "GET",
+        method: opts.method,
         lookup: guardedLookup(cfg.allowAddress),
         agent: false,
         headers: {
           "user-agent": CRAWLER_UA,
           accept: opts.accept,
           "accept-encoding": "gzip, deflate, br",
+          ...opts.headers,
+          ...(opts.body ? { "content-length": String(Buffer.byteLength(opts.body)) } : {}),
         },
       },
       (res) => {
@@ -250,7 +265,7 @@ function getOnce(url: URL, cfg: Required<FetcherConfig>, opts: Required<SafeFetc
       });
     }, remaining);
     req.on("error", (e) => done(() => reject(e)));
-    req.end();
+    req.end(opts.body || undefined);
   });
 }
 
@@ -265,9 +280,17 @@ export function createSafeFetcher(config: FetcherConfig = {}) {
       maxBytes: options.maxBytes ?? 2_000_000,
       maxRedirects: options.maxRedirects ?? 5,
       accept: options.accept ?? "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
+      method: options.method ?? "GET",
+      headers: checkHeaders(options.headers ?? {}),
+      body: options.body ?? "",
     };
     const deadline = Date.now() + opts.timeoutMs;
     let url = validateUrl(raw, cfg);
+    if (opts.method !== "GET") {
+      // a write is sent exactly once: redirects are returned, never re-sent
+      const r = await getOnce(url, cfg, opts, deadline);
+      return { status: r.status, url: url.toString(), contentType: r.contentType, body: r.body };
+    }
     for (let hop = 0; hop <= opts.maxRedirects; hop++) {
       const r = await getOnce(url, cfg, opts, deadline);
       if (r.location === undefined) return { status: r.status, url: url.toString(), contentType: r.contentType, body: r.body };

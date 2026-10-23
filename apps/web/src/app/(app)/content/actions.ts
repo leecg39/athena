@@ -20,8 +20,16 @@ import {
   upsertPublishTarget,
   deletePublishTarget,
   publishContentItem,
+  markContentPublished,
+  contentWritingContext,
+  CMS_FIELDS,
+  isDirect,
 } from "@athena/core/content";
 import { getSettingsContext } from "@/lib/settings-context";
+import { fetchPageHtml } from "@/lib/page-fetch";
+import { integrationKey } from "@/lib/integrations";
+import { cmsRequest } from "@/lib/cms-request";
+import { writeBrief, writeDraft, writeRevision, writtenBy } from "@/lib/content-writer";
 import { contentLimiter } from "@/lib/limits";
 import type { ActionState } from "@/lib/action-state";
 
@@ -80,21 +88,13 @@ export async function importContentUrlAction(_prev: ActionState, formData: FormD
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
     const url = String(formData.get("url") ?? "").trim();
     const title = String(formData.get("title") ?? "").trim() || undefined;
     const targetKeyword = String(formData.get("targetKeyword") ?? "").trim() || undefined;
-
-    const imported = await importContentFromUrl(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      url,
-      title,
-      targetKeyword,
-    });
-
+    // the page's own text becomes v1 (fetched with the SSRF-safe fetcher)
+    const imported = await importContentFromUrl(db, { actorId: s.user.id, websiteId: s.websiteId, url, title, targetKeyword, page: await fetchPageHtml(url) });
     revalidatePath("/content");
-    return { ok: true, message: `Imported "${imported.title}" with baseline brief & v1 draft.` };
+    return { ok: true, message: `Imported "${imported.title}" — the page's text is saved as v1.` };
   } catch (err) {
     return toActionError(err, "Failed to import URL.");
   }
@@ -166,19 +166,12 @@ export async function generateBriefAction(_prev: ActionState, formData: FormData
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
-    const contentId = String(formData.get("contentId") ?? "").trim();
+    const ids = { actorId: s.user.id, websiteId: s.websiteId, contentId: String(formData.get("contentId") ?? "").trim() };
     const focusNotes = String(formData.get("focusNotes") ?? "").trim() || undefined;
-
-    await generateContentBrief(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      contentId,
-      focusNotes,
-    });
-
+    const ai = await writeBrief(await contentWritingContext(db, ids), focusNotes);
+    await generateContentBrief(db, { ...ids, focusNotes, body: ai.ok ? ai.text : undefined, source: ai.ok ? ai.provider : "template" });
     revalidatePath("/content");
-    return { ok: true, message: "AI Content Brief generated from verified KB facts and internal links." };
+    return { ok: true, message: writtenBy(ai, "Brief") };
   } catch (err) {
     return toActionError(err, "Failed to generate content brief.");
   }
@@ -211,21 +204,13 @@ export async function generateDraftAction(_prev: ActionState, formData: FormData
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
-    const contentId = String(formData.get("contentId") ?? "").trim();
+    const ids = { actorId: s.user.id, websiteId: s.websiteId, contentId: String(formData.get("contentId") ?? "").trim() };
     const briefId = String(formData.get("briefId") ?? "").trim() || undefined;
     const instructions = String(formData.get("instructions") ?? "").trim() || undefined;
-
-    const res = await generateContentDraft(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      contentId,
-      briefId,
-      instructions,
-    });
-
+    const ai = await writeDraft(await contentWritingContext(db, ids), instructions);
+    const res = await generateContentDraft(db, { ...ids, briefId, instructions, body: ai.ok ? ai.text : undefined, source: ai.ok ? ai.provider : "template" });
     revalidatePath("/content");
-    return { ok: true, message: `AI Draft generated and saved as Version v${res.version.version}.` };
+    return { ok: true, message: `${writtenBy(ai, "Draft")} Saved as v${res.version.version}.` };
   } catch (err) {
     return toActionError(err, "Failed to generate content draft.");
   }
@@ -236,21 +221,18 @@ export async function reviseWithAthenaAction(_prev: ActionState, formData: FormD
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
-    const contentId = String(formData.get("contentId") ?? "").trim();
-    const instruction = String(formData.get("instruction") ?? "").trim() || undefined;
-    const body = formData.has("body") ? String(formData.get("body") ?? "").trim() || undefined : undefined;
-
-    const res = await reviseWithAthena(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      contentId,
-      instruction,
-      body,
-    });
-
+    const ids = { actorId: s.user.id, websiteId: s.websiteId, contentId: String(formData.get("contentId") ?? "").trim() };
+    const instruction = String(formData.get("instruction") ?? "").trim() || "Improve clarity and structure";
+    const ctx = await contentWritingContext(db, ids);
+    const current = (formData.has("body") ? String(formData.get("body") ?? "").trim() : "") || ctx.latestBody;
+    if (!current) return { ok: false, error: "Write or generate a draft first, then ask Athena to revise it." };
+    const ai = await writeRevision(ctx, current, instruction);
+    if (!ai.ok) {
+      return { ok: false, error: ai.reason === "unavailable" ? "Revisions need an AI provider, and none is configured. Edit the draft directly instead." : "The AI provider failed. Please try again." };
+    }
+    const res = await reviseWithAthena(db, { ...ids, instruction, body: ai.text, source: ai.provider });
     revalidatePath("/content");
-    return { ok: true, message: `Athena revised content to v${res.version.version} (status: ${res.status}).` };
+    return { ok: true, message: `${ai.provider} revised the draft to v${res.version.version} (status: ${res.status}) — review it before publishing.` };
   } catch (err) {
     return toActionError(err, "Failed to revise content with Athena.");
   }
@@ -287,33 +269,16 @@ export async function saveVersionAction(_prev: ActionState, formData: FormData):
 export async function upsertPublishTargetAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const s = await getSettingsContext();
-    const limited = checkRate(s.user.id);
-    if (limited) return limited;
-
     const rawProvider = String(formData.get("provider") ?? "").trim().toLowerCase();
-    if (!(CMS_PROVIDERS as readonly string[]).includes(rawProvider)) {
-      return { ok: false, error: "Invalid CMS provider" };
-    }
+    if (!(CMS_PROVIDERS as readonly string[]).includes(rawProvider)) return { ok: false, error: "Invalid CMS provider" };
     const provider = rawProvider as CmsProvider;
-    const endpointUrl = String(formData.get("endpointUrl") ?? "").trim();
-    const apiToken = String(formData.get("apiToken") ?? "").trim();
-    const collection = String(formData.get("collection") ?? "").trim();
-
-    const config: Record<string, string> = {};
-    if (endpointUrl) config.endpointUrl = endpointUrl;
-    if (apiToken) config.apiToken = apiToken;
-    if (collection) config.collection = collection;
-
-    const saved = await upsertPublishTarget(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      provider,
-      config,
-    });
-
+    // only the fields this CMS needs; empty or masked values keep what is stored
+    const fields = isDirect(provider) ? CMS_FIELDS[provider] : [];
+    const config = Object.fromEntries(fields.map((f) => [f.key, String(formData.get(f.key) ?? "").trim()]).filter(([, v]) => v));
+    const saved = await upsertPublishTarget(db, { actorId: s.user.id, websiteId: s.websiteId, provider, config, secretKey: integrationKey() });
     revalidatePath("/content");
     revalidatePath("/settings/integrations");
-    return { ok: true, message: `${saved.label} CMS connector configured.` };
+    return { ok: true, message: saved.configured ? `${saved.label} connected — secrets are stored encrypted.` : `${saved.label} saved; add the remaining fields to publish.` };
   } catch (err) {
     return toActionError(err, "Failed to save CMS connector.");
   }
@@ -342,30 +307,29 @@ export async function publishContentItemAction(_prev: ActionState, formData: For
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
     const contentId = String(formData.get("contentId") ?? "").trim();
-    const rawProvider = String(formData.get("provider") ?? "wordpress").trim().toLowerCase();
-    if (!(CMS_PROVIDERS as readonly string[]).includes(rawProvider)) {
-      return { ok: false, error: "Unsupported CMS provider" };
-    }
-    const provider = rawProvider as CmsProvider;
-    const targetUrl = String(formData.get("targetUrl") ?? "").trim() || null;
-
-    const res = await publishContentItem(db, {
-      actorId: s.user.id,
-      websiteId: s.websiteId,
-      contentId,
-      provider,
-      targetUrl,
-    });
-
+    const rawProvider = String(formData.get("provider") ?? "").trim().toLowerCase();
+    if (!(CMS_PROVIDERS as readonly string[]).includes(rawProvider)) return { ok: false, error: "Unsupported CMS provider" };
+    const res = await publishContentItem(db, { actorId: s.user.id, websiteId: s.websiteId, contentId, provider: rawProvider as CmsProvider, secretKey: integrationKey(), request: cmsRequest });
     revalidatePath("/content");
-    revalidatePath("/settings/integrations");
-    return {
-      ok: true,
-      message: `Published v${res.publishedVersion} to ${res.providerLabel} (${res.publishedUrl}).`,
-    };
+    return { ok: true, message: res.publishedUrl ? `Published v${res.publishedVersion} to ${res.providerLabel}: ${res.publishedUrl}` : `Published v${res.publishedVersion} to ${res.providerLabel}.` };
   } catch (err) {
     return toActionError(err, "Failed to publish content item.");
   }
 }
+
+export async function markPublishedAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const s = await getSettingsContext();
+    const limited = checkRate(s.user.id);
+    if (limited) return limited;
+    const contentId = String(formData.get("contentId") ?? "").trim();
+    const url = String(formData.get("url") ?? "").trim();
+    await markContentPublished(db, { actorId: s.user.id, websiteId: s.websiteId, contentId, url, page: url ? await fetchPageHtml(url) : null });
+    revalidatePath("/content");
+    return { ok: true, message: "The live page shows this content — marked as published." };
+  } catch (err) {
+    return toActionError(err, "Failed to verify the live page.");
+  }
+}
+

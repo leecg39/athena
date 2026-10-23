@@ -63,6 +63,19 @@ describe("safeFetch", () => {
       if (req.url === "/slow") {
         return setTimeout(() => res.end("late"), 2_000);
       }
+      if (req.url === "/echo") {
+        let body = "";
+        req.on("data", (c) => (body += c));
+        req.on("end", () => {
+          res.writeHead(201, { "content-type": "application/json" });
+          res.end(JSON.stringify({ method: req.method, contentType: req.headers["content-type"], auth: req.headers.authorization, body }));
+        });
+        return;
+      }
+      if (req.url === "/post-redirect") {
+        res.writeHead(307, { location: "/echo" });
+        return res.end();
+      }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       res.end("<html><title>ok</title></html>");
     });
@@ -105,6 +118,19 @@ describe("safeFetch", () => {
   it("enforces size limits, including after decompression", async () => {
     await expect(testFetch(`${base}/big`, { maxBytes: 100_000 })).rejects.toThrow(/too large/i);
     await expect(testFetch(`${base}/gzip-bomb`, { maxBytes: 1_000_000 })).rejects.toThrow(/too large/i);
+  });
+
+  it("sends write requests with headers and a body", async () => {
+    const r = await testFetch(`${base}/echo`, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer t0k" }, body: '{"title":"Hi"}' });
+    expect(r.status).toBe(201);
+    expect(JSON.parse(r.body)).toEqual({ method: "POST", contentType: "application/json", auth: "Bearer t0k", body: '{"title":"Hi"}' });
+  });
+
+  it("never follows redirects for write requests and rejects header injection", async () => {
+    const r = await testFetch(`${base}/post-redirect`, { method: "POST", body: "x" });
+    expect(r.status).toBe(307);
+    await expect(testFetch(`${base}/echo`, { method: "POST", headers: { "x-evil": "a\r\nhost: other" }, body: "x" })).rejects.toThrow();
+    await expect(testFetch(`${base}/echo`, { method: "POST", headers: { host: "other.example" }, body: "x" })).rejects.toThrow(/host/i);
   });
 
   it("times out slow servers", async () => {

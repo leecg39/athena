@@ -12,12 +12,11 @@ import {
   generateBriefAction,
   approveBriefAction,
   generateDraftAction,
-  reviseWithAthenaAction,
   saveVersionAction,
-  upsertPublishTargetAction,
-  deletePublishTargetAction,
-  publishContentItemAction,
 } from "@/app/(app)/content/actions";
+import { CmsPanel, type SerializedPublishTarget } from "@/components/content/cms-panel";
+import { PublishTab } from "@/components/content/publish-tab";
+import { ReviseTab } from "@/components/content/revise-tab";
 
 const idle: ActionState = { ok: false };
 
@@ -73,11 +72,7 @@ export interface SerializedContentItem {
   createdAt: string;
 }
 
-export interface SerializedPublishTarget {
-  id: string;
-  provider: string;
-  config: Record<string, string>;
-}
+export type { SerializedPublishTarget };
 
 export function ContentGrid(props: {
   websiteDomain: string;
@@ -99,12 +94,9 @@ export function ContentGrid(props: {
   const [search, setSearch] = useState("");
   const [activePanel, setActivePanel] = useState<"new" | "import" | "cms" | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(props.items[0]?.id ?? null);
-  const [drawerTab, setDrawerTab] = useState<"brief" | "draft" | "revise">("draft");
+  const [drawerTab, setDrawerTab] = useState<"brief" | "draft" | "revise" | "publish">("draft");
   const [selectedVersionNum, setSelectedVersionNum] = useState<number | null>(null);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
-  const [revisePreset, setRevisePreset] = useState(
-    "Add structured comparison table, cite verified KB pricing facts, and reinforce internal links",
-  );
   const [lastKey, setLastKey] = useState<string>("revise");
 
   const [createState, createAct, createPending] = useActionState(createContentItemAction, idle);
@@ -114,11 +106,7 @@ export function ContentGrid(props: {
   const [briefState, briefAct, briefPending] = useActionState(generateBriefAction, idle);
   const [approveBriefState, approveBriefAct, approveBriefPending] = useActionState(approveBriefAction, idle);
   const [draftState, draftAct, draftPending] = useActionState(generateDraftAction, idle);
-  const [reviseState, reviseAct, revisePending] = useActionState(reviseWithAthenaAction, idle);
   const [saveVerState, saveVerAct, saveVerPending] = useActionState(saveVersionAction, idle);
-  const [cmsState, cmsAct, cmsPending] = useActionState(upsertPublishTargetAction, idle);
-  const [delCmsState, delCmsAct, delCmsPending] = useActionState(deletePublishTargetAction, idle);
-  const [publishState, publishAct, publishPending] = useActionState(publishContentItemAction, idle);
 
   const stateMap: Record<string, ActionState> = {
     create: createState,
@@ -128,11 +116,7 @@ export function ContentGrid(props: {
     brief: briefState,
     approveBrief: approveBriefState,
     draft: draftState,
-    revise: reviseState,
     saveVer: saveVerState,
-    cms: cmsState,
-    delCms: delCmsState,
-    publish: publishState,
   };
   const orderedStates = [
     stateMap[lastKey] ?? idle,
@@ -157,7 +141,6 @@ export function ContentGrid(props: {
   const activeVersion =
     selectedItem?.versions.find((v) => v.version === selectedVersionNum) ?? selectedItem?.versions[0] ?? null;
 
-  const connectedProviders = new Set(props.publishTargets.map((t) => t.provider));
 
   const statusTabs: { key: ContentStatus | "all"; label: string; count: number }[] = [
     { key: "all", label: "All", count: props.counts.total },
@@ -360,75 +343,7 @@ export function ContentGrid(props: {
         </form>
       ) : null}
 
-      {/* Expandable Panel: CMS Publishing Connectors (8 Providers) */}
-      {activePanel === "cms" && props.canWrite ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                CMS Publishing Integrations (WordPress · Webflow · Contentful · Sanity · Wix · Framer · Payload · Shopify)
-              </div>
-              <p className="mt-0.5 text-xs text-gray-500">
-                Configure REST/Webhook endpoints and API tokens for direct one-click publishing from the Content Hub grid.
-              </p>
-            </div>
-            <button type="button" onClick={() => setActivePanel(null)} className="text-xs text-gray-400 hover:text-gray-600">
-              Close
-            </button>
-          </div>
-
-          <form
-            action={cmsAct}
-            onSubmit={() => setLastKey("cms")}
-            className="grid gap-3 md:grid-cols-4"
-          >
-            <select name="provider" defaultValue="wordpress" className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
-              {CMS_OPTIONS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label} {connectedProviders.has(c.value) ? "(Connected)" : ""}
-                </option>
-              ))}
-            </select>
-            <input
-              name="endpointUrl"
-              placeholder={`https://cms.${props.websiteDomain}/wp-json/wp/v2/posts`}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            />
-            <input
-              name="apiToken"
-              placeholder="API key / bearer token (encrypted at rest)"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            />
-            <button type="submit" disabled={cmsPending} className="btn-primary !px-3 !py-2 text-xs">
-              {cmsPending ? "Saving…" : "Save CMS Connector"}
-            </button>
-          </form>
-
-          {props.publishTargets.length > 0 ? (
-            <div className="grid gap-2 md:grid-cols-4">
-              {props.publishTargets.map((t) => {
-                const label = CMS_OPTIONS.find((c) => c.value === t.provider)?.label ?? t.provider;
-                return (
-                  <div key={t.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2 text-xs">
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-800">{label}</div>
-                      <div className="truncate text-[11px] text-gray-400">
-                        {t.config.endpointUrl || t.config.storeDomain || "Connected"}
-                      </div>
-                    </div>
-                    <form action={delCmsAct} onSubmit={() => setLastKey("delCms")}>
-                      <input type="hidden" name="targetId" value={t.id} />
-                      <button type="submit" disabled={delCmsPending} className="text-red-500 hover:underline">
-                        Disconnect
-                      </button>
-                    </form>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      {activePanel === "cms" && props.canWrite ? <CmsPanel targets={props.publishTargets} onClose={() => setActivePanel(null)} /> : null}
 
       {/* Spreadsheet-style Content Hub Grid */}
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -449,7 +364,6 @@ export function ContentGrid(props: {
               const isSelected = selectedItem?.id === r.id;
               const isEditingRow = editingRowId === r.id;
               const latestVerNum = r.versions[0]?.version ?? 0;
-              const defaultCms = (String(r.columns.publishedProvider || "wordpress") as CmsProvider);
 
               return (
                 <tr
@@ -615,61 +529,13 @@ export function ContentGrid(props: {
                   <td className="text-gray-600">{r.citations30d || "—"}</td>
 
                   <td>
-                    {props.canWrite ? (
-                      <form
-                        action={publishAct}
-                        onSubmit={() => setLastKey("publish")}
-                        className="flex items-center gap-1.5"
-                      >
-                        <input type="hidden" name="contentId" value={r.id} />
-                        <select
-                          name="provider"
-                          defaultValue={CMS_OPTIONS.some((c) => c.value === defaultCms) ? defaultCms : "wordpress"}
-                          className="input max-w-32 !py-1 text-xs"
-                        >
-                          {CMS_OPTIONS.map((c) => (
-                            <option key={c.value} value={c.value}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="submit"
-                          data-testid="content-publish-btn"
-                          disabled={publishPending}
-                          className="btn-secondary !px-2.5 !py-1 text-xs"
-                        >
-                          Publish
-                        </button>
-                      </form>
-                    ) : (
-                      <span className="text-xs text-gray-400">Read-only</span>
-                    )}
+                    <button type="button" onClick={() => { setSelectedId(r.id); setDrawerTab("publish"); }} className="text-xs text-brand-600 hover:underline">
+                      {r.status === "published" ? "Published ✓" : "Publish…"}
+                    </button>
                   </td>
 
                   <td className="text-right">
                     <div className="inline-flex items-center gap-1.5">
-                      {props.canWrite ? (
-                        <form
-                          action={reviseAct}
-                          onSubmit={() => {
-                            setLastKey("revise");
-                            setSelectedId(r.id);
-                            setDrawerTab("draft");
-                          }}
-                        >
-                          <input type="hidden" name="contentId" value={r.id} />
-                          <input type="hidden" name="instruction" value={revisePreset} />
-                          <button
-                            type="submit"
-                            data-testid="content-revise-btn"
-                            disabled={revisePending}
-                            className="btn-secondary !px-2.5 !py-1 text-xs"
-                          >
-                            ✎ Revise with Athena
-                          </button>
-                        </form>
-                      ) : null}
                       <button
                         type="button"
                         onClick={() => {
@@ -728,6 +594,7 @@ export function ContentGrid(props: {
                   ["brief", `1. AI Content Brief ${selectedItem.latestBrief?.approvedAt ? "(Approved)" : ""}`],
                   ["draft", `2. Draft & Versions (${selectedItem.versions.length})`],
                   ["revise", `3. Revise with Athena`],
+                  ["publish", `4. Publish`],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -884,51 +751,12 @@ export function ContentGrid(props: {
               </div>
             ) : null}
 
-            {drawerTab === "revise" ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Add structured comparison table, cite verified KB pricing facts, and reinforce internal links",
-                    "Strengthen FAQ schema with direct Q&A blocks for ChatGPT and Perplexity citations",
-                    "Tighten executive TL;DR summary and highlight differentiators against Figma and Canva",
-                  ].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setRevisePreset(preset)}
-                      className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700 hover:border-brand-300 hover:bg-brand-50"
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
+            {drawerTab === "publish" ? (
+              <PublishTab item={{ id: selectedItem.id, status: selectedItem.status, targetUrl: selectedItem.targetUrl, hasVersion: selectedItem.versions.length > 0 }} targets={props.publishTargets} canWrite={props.canWrite} />
+            ) : null}
 
-                <form
-                  action={reviseAct}
-                  onSubmit={() => {
-                    setLastKey("revise");
-                    setSelectedVersionNum(null);
-                    setDrawerTab("draft");
-                  }}
-                  className="space-y-3"
-                >
-                  <input type="hidden" name="contentId" value={selectedItem.id} />
-                  <textarea
-                    name="instruction"
-                    value={revisePreset}
-                    onChange={(e) => setRevisePreset(e.target.value)}
-                    rows={3}
-                    required
-                    placeholder="Describe how Athena should revise this article…"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800"
-                  />
-                  <div className="flex justify-end">
-                    <button type="submit" disabled={revisePending || !props.canWrite} className="btn-primary !px-4 !py-2 text-xs">
-                      {revisePending ? "Athena revising…" : "✎ Run Revise with Athena → Create New Version"}
-                    </button>
-                  </div>
-                </form>
-              </div>
+            {drawerTab === "revise" ? (
+              <ReviseTab contentId={selectedItem.id} canWrite={props.canWrite} onRevised={() => { setSelectedVersionNum(null); setDrawerTab("draft"); }} />
             ) : null}
           </div>
         </div>

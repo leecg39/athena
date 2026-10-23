@@ -1,6 +1,6 @@
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
-import { listContentHub, seedInitialContentItems } from "@athena/core/content";
+import { listContentHub, listPublishTargets } from "@athena/core/content";
 import { PageHeader } from "@/components/page-header";
 import { ContentGrid } from "@/components/content-grid";
 import { requireWorkspace } from "@/lib/workspace";
@@ -9,20 +9,13 @@ export const metadata = { title: "Content" };
 
 export default async function ContentPage() {
   const ws = await requireWorkspace();
-  const [membership, initial] = await Promise.all([
+  // viewing never writes: the grid starts empty until the team adds or imports content
+  const [membership, data, targets] = await Promise.all([
     getMembership(db, ws.user.id, ws.organizationId),
     listContentHub(db, { actorId: ws.user.id, websiteId: ws.websiteId }),
+    listPublishTargets(db, { actorId: ws.user.id, websiteId: ws.websiteId }),
   ]);
   const canWrite = membership?.permissions.includes("content:write") ?? false;
-
-  let data = initial;
-  if (initial.counts.total === 0) {
-    await seedInitialContentItems(db, {
-      actorId: canWrite ? ws.user.id : undefined,
-      websiteId: ws.websiteId,
-    });
-    data = await listContentHub(db, { actorId: ws.user.id, websiteId: ws.websiteId });
-  }
 
   return (
     <div>
@@ -54,8 +47,8 @@ export default async function ContentPage() {
           </div>
           <div className="metric-card">
             <div className="text-xs font-medium text-gray-500">Connected CMS Targets</div>
-            <div className="mt-1 text-2xl font-semibold text-gray-900">{data.publishTargets.length} / 8</div>
-            <div className="mt-1 text-xs text-gray-400">WordPress, Webflow, Contentful, Sanity, Shopify…</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900">{targets.filter((t) => t.mode === "direct" && t.configured).length}</div>
+            <div className="mt-1 text-xs text-gray-400">Direct: WordPress, Shopify · others via Export</div>
           </div>
         </div>
 
@@ -95,11 +88,7 @@ export default async function ContentPage() {
             createdAt: item.createdAt.toISOString(),
           }))}
           counts={data.counts}
-          publishTargets={data.publishTargets.map((t) => ({
-            id: t.id,
-            provider: t.provider,
-            config: t.config,
-          }))}
+          publishTargets={targets.map((t) => ({ id: t.id, provider: t.provider, label: t.label, mode: t.mode, configured: t.configured, config: t.config }))}
           prompts={data.prompts}
           canWrite={canWrite}
         />

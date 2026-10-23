@@ -1,3 +1,5 @@
+import { decodeEntities } from "../shared/html";
+
 /**
  * Author contact exactly as a page publishes it: Article JSON-LD, author meta
  * tags or a rel="author" byline. Never guesses — no match gives nulls, and an
@@ -16,20 +18,6 @@ const MAX_HTML = 600_000;
 const ARTICLE_TYPE = /^(Article|NewsArticle|AnalysisNewsArticle|OpinionNewsArticle|ReportageNewsArticle|BlogPosting|TechArticle|ScholarlyArticle|Report|Review|WebPage)$/;
 const META_NAMES = new Set(["author", "byl", "parsely-author", "sailthru.author", "dc.creator", "article:author"]);
 const EMAIL = /^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i;
-const NAMED: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
-  aacute: "á", agrave: "à", eacute: "é", egrave: "è", iacute: "í", oacute: "ó", uacute: "ú",
-  ntilde: "ñ", ccedil: "ç", auml: "ä", ouml: "ö", uuml: "ü", szlig: "ß",
-};
-
-function decodeEntities(s: string): string {
-  return s.replace(/&(#x[0-9a-f]{1,6}|#\d{1,7}|[a-z]{2,8});/gi, (m, e: string) => {
-    if (e[0] !== "#") return NAMED[e.toLowerCase()] ?? m;
-    const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-    return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : m;
-  });
-}
-
 function cleanName(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const name = decodeEntities(raw.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim().replace(/^by\s+/i, "");
