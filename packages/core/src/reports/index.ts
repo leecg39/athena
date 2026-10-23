@@ -150,7 +150,7 @@ export interface PublicReportData {
 }
 
 function generateShareId(prefix = "rpt"): string {
-  return `${prefix}_${randomBytes(9).toString("hex")}`;
+  return `${prefix}_${randomBytes(16).toString("hex")}`;
 }
 
 function normalizeCharts(raw: string[]): ReportChartKey[] {

@@ -9,9 +9,9 @@ import { answer, ndjsonResponse } from "@/lib/ask-run";
 import { askLimiter, threadLimiter } from "@/lib/limits";
 import { assertSameOrigin, readJsonBody, RequestError } from "@/lib/request";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
-const MAX_BODY_BYTES = 512_000;
+const MAX_BODY_BYTES = 2_000_000;
 
 const attachmentSchema = z.object({
   name: z.string(),

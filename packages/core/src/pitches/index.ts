@@ -514,7 +514,7 @@ export async function ensureStarterPitches(
         organizationId: opts.organizationId,
         websiteUrl: "https://acme.io",
         brandName: "Acme Cloud",
-        shareId: `pitch_${randomBytes(8).toString("hex")}`,
+        shareId: `pitch_${randomBytes(16).toString("hex")}`,
         kind: "visibility",
         payload: acmePayload as unknown as Record<string, unknown>,
         createdAt: prevMonthDate,
@@ -523,7 +523,7 @@ export async function ensureStarterPitches(
         organizationId: opts.organizationId,
         websiteUrl: "https://northwind.com",
         brandName: "Northwind Commerce",
-        shareId: `cpitch_${randomBytes(8).toString("hex")}`,
+        shareId: `cpitch_${randomBytes(16).toString("hex")}`,
         kind: "content",
         payload: northwindPayload as unknown as Record<string, unknown>,
         createdAt: new Date(prevMonthDate.getTime() + 86_400_000),
@@ -598,7 +598,7 @@ export async function createPitch(
   });
 
   const prefix = input.kind === "content" ? "cpitch" : "pitch";
-  const shareId = `${prefix}_${randomBytes(9).toString("hex")}`;
+  const shareId = `${prefix}_${randomBytes(16).toString("hex")}`;
 
   const inserted = await db.transaction(async (tx) => {
     await tx.execute(
