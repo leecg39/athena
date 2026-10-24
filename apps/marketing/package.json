@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev -p 4321",
+    "dev": "astro dev --port 4321",
     "build": "astro build",
     "preview": "astro preview",
     "typecheck": "astro sync"
   },
   "dependencies": {
-    "astro": "^5.1.1"
+    "astro": "^5.1.1",
+    "@athena/i18n": "*"
   }
 }

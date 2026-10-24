@@ -1,7 +1,12 @@
 ---
 import Doc from "../layouts/Doc.astro";
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Doc title="Integrations | Athenum Docs">
-  <h1>Integrations</h1>
-  <p>Measure (GA4, Search Console, Google Ads), Publish (WordPress, Shopify, Webflow, Contentful, Sanity, Wix, Framer, Payload), Extend (MCP for ChatGPT/Claude, Looker Studio, Slack reports).</p>
+<Doc locale={locale} title={tt("Integrations | Athenum Docs")}>
+  <h1>{tt("Integrations")}</h1>
+  <p>{tt("Measure (GA4, Search Console, Google Ads), Publish (WordPress, Shopify, Webflow, Contentful, Sanity, Wix, Framer, Payload), Extend (MCP for ChatGPT/Claude, Looker Studio, Slack reports).")}</p>
 </Doc>

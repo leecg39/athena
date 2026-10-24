@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,6 +14,7 @@ interface Snapshot {
 
 /** Live progress for queued/running runs (polls /api/runs/:id every 2s until finished). */
 export function RunProgressBar({ runId, initial }: { runId: string; initial: Snapshot }) {
+  const tt = useTranslations();
   const [snap, setSnap] = useState(initial);
   const router = useRouter();
   const active = snap.state === "queued" || snap.state === "running";
@@ -46,8 +49,8 @@ export function RunProgressBar({ runId, initial }: { runId: string; initial: Sna
         <div className={`h-1.5 rounded-full ${snap.state === "failed" ? "bg-red-500" : "bg-brand-600"}`} style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-gray-500">
-        {snap.state} · {snap.done}/{snap.total}
-        {snap.failed ? ` · ${snap.failed} failed` : ""}
+        {tt(snap.state)} · {snap.done}/{snap.total}
+        {tt(snap.failed ? ` · ${snap.failed} failed` : "")}
       </span>
     </div>
   );

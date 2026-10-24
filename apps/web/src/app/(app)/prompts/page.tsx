@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
@@ -10,7 +11,10 @@ import { SchedulesTab } from "./_tabs/schedules";
 import { DiscoverTab } from "./_tabs/discover";
 import { RunsTab } from "./_tabs/runs";
 
-export const metadata = { title: "Prompts" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Prompts") };
+}
 
 const TABS = [
   ["prompt-universe", "Prompt Universe"],
@@ -28,6 +32,7 @@ const PAGE_SIZE = 50;
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export default async function PromptsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const tab: TabId = TABS.some(([id]) => id === sp.tab) ? (sp.tab as TabId) : "prompt-universe";
@@ -81,13 +86,12 @@ export default async function PromptsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div>
-      <PageHeader title="Prompts" subtitle="What buyers ask AI assistants — the questions we track for your brand" />
+      <PageHeader title={tt("Prompts")} subtitle={tt("What buyers ask AI assistants — the questions we track for your brand")} />
       {sp.welcome ? (
         <div className="mx-6 mt-4 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-          Setup complete. Your prompts are scheduled; answers appear in Olympus after the first collection run.
-        </div>
+          {tt("Setup complete. Your prompts are scheduled; answers appear in Olympus after the first collection run.")}</div>
       ) : null}
-      <nav className="flex gap-1 border-b border-gray-100 px-6" aria-label="Prompt sections">
+      <nav className="flex gap-1 border-b border-gray-100 px-6" aria-label={tt("Prompt sections")}>
         {TABS.map(([id, label]) => (
           <Link
             key={id}
@@ -95,7 +99,7 @@ export default async function PromptsPage({ searchParams }: { searchParams: Prom
             aria-current={tab === id ? "page" : undefined}
             className={`border-b-2 px-3 py-2.5 text-sm transition ${tab === id ? "border-brand-600 font-medium text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
           >
-            {label}
+            {tt(label)}
           </Link>
         ))}
       </nav>

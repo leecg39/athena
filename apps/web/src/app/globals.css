@@ -11,6 +11,21 @@ body {
   @apply bg-white text-gray-900 antialiased;
 }
 
+.language-bar {
+  @apply flex h-12 items-center justify-end gap-3 border-b border-gray-100 bg-white px-4;
+}
+
+/* Keep the language selector in its own row so it never covers page actions. */
+.app-shell > aside,
+.app-shell > main {
+  height: calc(100dvh - 3rem);
+}
+
+html[lang="ko"] body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 .metric-card {
   @apply rounded-xl border border-gray-100 bg-white p-4 shadow-sm;
 }

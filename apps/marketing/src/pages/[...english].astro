@@ -1,0 +1,21 @@
+---
+import Page0 from "./blog.astro";
+import Page1 from "./case-studies.astro";
+import Page2 from "./comparison.astro";
+import Page3 from "./index.astro";
+import Page4 from "./industries.astro";
+import Page5 from "./platform.astro";
+import Page6 from "./pricing.astro";
+const pages = {"blog": Page0,
+"case-studies": Page1,
+"comparison": Page2,
+"": Page3,
+"industries": Page4,
+"platform": Page5,
+"pricing": Page6};
+export function getStaticPaths() {
+  return ["blog","case-studies","comparison","","industries","platform","pricing"].map(slug => ({ params: { english: slug ? 'en/' + slug : 'en' }, props: { slug } }));
+}
+const Page = pages[Astro.props.slug as keyof typeof pages];
+---
+<Page locale="en" />

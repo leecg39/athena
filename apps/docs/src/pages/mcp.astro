@@ -12,9 +12,14 @@ const config = `{
     }
   }
 }`;
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Doc title="MCP | Athenum Docs">
-  <h1>MCP — Use Athenum in ChatGPT or Claude</h1>
+<Doc locale={locale} title={tt("MCP | Athenum Docs")}>
+  <h1>{tt("MCP — Use Athenum in ChatGPT or Claude")}</h1>
   <pre>{config}</pre>
-  <p>14 Registered Tools: <code>list_websites</code>, <code>list_prompts</code>, <code>get_basics</code>, <code>get_metrics</code>, <code>get_sources</code>, <code>search_responses</code>, <code>get_knowledge_base</code>, <code>create_kb_fact</code>, <code>create_content</code>, <code>get_billing_credits</code>, <code>get_teams</code>, <code>get_bi_connector_feed</code>, <code>start_collection</code>, <code>get_collection_status</code>.</p>
+  <p>{tt("14 Registered Tools: ")}<code>list_websites</code>, <code>list_prompts</code>, <code>get_basics</code>, <code>get_metrics</code>, <code>get_sources</code>, <code>search_responses</code>, <code>get_knowledge_base</code>, <code>create_kb_fact</code>, <code>create_content</code>, <code>get_billing_credits</code>, <code>get_teams</code>, <code>get_bi_connector_feed</code>, <code>start_collection</code>, <code>get_collection_status</code>.</p>
 </Doc>

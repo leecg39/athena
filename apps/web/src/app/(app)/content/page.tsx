@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
 import { listContentHub, listPublishTargets } from "@athena/core/content";
@@ -5,9 +6,13 @@ import { PageHeader } from "@/components/page-header";
 import { ContentGrid } from "@/components/content-grid";
 import { requireWorkspace } from "@/lib/workspace";
 
-export const metadata = { title: "Content" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Content") };
+}
 
 export default async function ContentPage() {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   // viewing never writes: the grid starts empty until the team adds or imports content
   const [membership, data, targets] = await Promise.all([
@@ -20,35 +25,34 @@ export default async function ContentPage() {
   return (
     <div>
       <PageHeader
-        title="Content Hub"
-        subtitle="Manage, generate, revise with Athena, and publish AI-optimized content across your CMS and Shopify catalog"
+        title={tt("Content Hub")}
+        subtitle={tt("Manage, generate, revise with Athena, and publish AI-optimized content across your CMS and Shopify catalog")}
       />
       <div className="p-6 space-y-6">
         {/* KPI Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <div className="metric-card">
-            <div className="text-xs font-medium text-gray-500">Tracked Content Items</div>
+            <div className="text-xs font-medium text-gray-500">{tt("Tracked Content Items")}</div>
             <div className="mt-1 text-2xl font-semibold text-gray-900">{data.counts.total}</div>
             <div className="mt-1 text-xs text-gray-400">
-              {data.counts.brief} brief · {data.counts.draft} draft · {data.counts.review} review
-            </div>
+              {data.counts.brief} {tt(" brief · ")}{data.counts.draft} {tt(" draft · ")}{data.counts.review} {tt(" review")}</div>
           </div>
           <div className="metric-card">
-            <div className="text-xs font-medium text-gray-500">AI Revisions Ready</div>
+            <div className="text-xs font-medium text-gray-500">{tt("AI Revisions Ready")}</div>
             <div className="mt-1 text-2xl font-semibold text-brand-600">
               {data.counts.draft + data.counts.review + data.counts.approved}
             </div>
-            <div className="mt-1 text-xs text-gray-400">Grounded in KB facts & internal links</div>
+            <div className="mt-1 text-xs text-gray-400">{tt("Grounded in KB facts & internal links")}</div>
           </div>
           <div className="metric-card">
-            <div className="text-xs font-medium text-gray-500">Published to CMS</div>
+            <div className="text-xs font-medium text-gray-500">{tt("Published to CMS")}</div>
             <div className="mt-1 text-2xl font-semibold text-emerald-600">{data.counts.published}</div>
-            <div className="mt-1 text-xs text-gray-400">Live & monitored for AI citations</div>
+            <div className="mt-1 text-xs text-gray-400">{tt("Live & monitored for AI citations")}</div>
           </div>
           <div className="metric-card">
-            <div className="text-xs font-medium text-gray-500">Connected CMS Targets</div>
+            <div className="text-xs font-medium text-gray-500">{tt("Connected CMS Targets")}</div>
             <div className="mt-1 text-2xl font-semibold text-gray-900">{targets.filter((t) => t.mode === "direct" && t.configured).length}</div>
-            <div className="mt-1 text-xs text-gray-400">Direct: WordPress, Shopify · others via Export</div>
+            <div className="mt-1 text-xs text-gray-400">{tt("Direct: WordPress, Shopify · others via Export")}</div>
           </div>
         </div>
 

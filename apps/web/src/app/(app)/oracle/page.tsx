@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
 import {
@@ -12,7 +13,10 @@ import { PageHeader } from "@/components/page-header";
 import { OracleList } from "@/components/oracle-list";
 import { requireWorkspace } from "@/lib/workspace";
 
-export const metadata = { title: "Oracle" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Oracle") };
+}
 
 function parseStatus(raw?: string): OracleFindingStatus | "all" {
   if (raw === "all") return "all";
@@ -30,6 +34,7 @@ export default async function OraclePage({
 }: {
   searchParams: Promise<{ status?: string; type?: string }>;
 }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const currentStatus = parseStatus(sp.status);
@@ -50,8 +55,8 @@ export default async function OraclePage({
   return (
     <div>
       <PageHeader
-        title="Oracle"
-        subtitle="Scan AI responses against your knowledge base — review the evidence, keep your brand facts current"
+        title={tt("Oracle")}
+        subtitle={tt("Scan AI responses against your knowledge base — review the evidence, keep your brand facts current")}
       />
       <div className="p-6">
         <OracleList

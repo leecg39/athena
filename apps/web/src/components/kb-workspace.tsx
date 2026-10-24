@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -61,6 +63,7 @@ export function KbWorkspace(props: {
   initialTab?: "pillars" | "review" | "links";
   canWrite: boolean;
 }) {
+  const tt = useTranslations();
   const [tab, setTab] = useState<"pillars" | "review" | "links">(props.initialTab ?? "pillars");
   const [selectedPillarId, setSelectedPillarId] = useState<string | "all">("all");
   const [editingPillarId, setEditingPillarId] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export function KbWorkspace(props: {
     <div>
       {/* Navigation tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6">
-        <div className="flex gap-1" role="tablist" aria-label="Knowledge Base sections">
+        <div className="flex gap-1" role="tablist" aria-label={tt("Knowledge Base sections")}>
           {(
             [
               ["pillars", `Pillars & Facts (${props.counts.confirmed})`],
@@ -131,19 +134,18 @@ export function KbWorkspace(props: {
                 tab === id ? "border-brand-600 font-medium text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              {label}
+              {tt(label)}
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-2 py-2">
           <Link href="/oracle" className="btn-secondary !px-3 !py-1.5 text-xs">
-            Open Oracle scanner →
-          </Link>
+            {tt("Open Oracle scanner →")}</Link>
           {props.canWrite ? (
             <form action={extractAct} onSubmit={() => setLastKey("extract")}>
               <button type="submit" disabled={extractPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                {extractPending ? "Extracting…" : "Extract facts from AI answers"}
+                {tt(extractPending ? "Extracting…" : "Extract facts from AI answers")}
               </button>
             </form>
           ) : null}
@@ -153,12 +155,12 @@ export function KbWorkspace(props: {
       <div className="space-y-6 p-6">
         {errorMsg ? (
           <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {errorMsg}
+            {tt(errorMsg)}
           </div>
         ) : null}
         {!errorMsg && infoMsg ? (
           <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-            {infoMsg}
+            {tt(infoMsg)}
           </div>
         ) : null}
 
@@ -167,23 +169,23 @@ export function KbWorkspace(props: {
             {/* Create Pillar form */}
             {props.canWrite ? (
               <form action={createPillarAct} onSubmit={() => setLastKey("createPillar")} className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">Create Knowledge Pillar</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">{tt("Create Knowledge Pillar")}</div>
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                   <input
                     name="name"
                     required
-                    placeholder="Pillar name (e.g. Pricing & Plans)"
+                    placeholder={tt("Pillar name (e.g. Pricing & Plans)")}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                   <input
                     name="document"
-                    placeholder="Reference summary or markdown notes (optional)"
+                    placeholder={tt("Reference summary or markdown notes (optional)")}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
                   />
                 </div>
                 <div className="mt-3 flex justify-end">
                   <button type="submit" disabled={createPillarPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                    {createPillarPending ? "Creating…" : "+ Add pillar"}
+                    {tt(createPillarPending ? "Creating…" : "+ Add pillar")}
                   </button>
                 </div>
               </form>
@@ -210,9 +212,9 @@ export function KbWorkspace(props: {
                           {p.name}
                         </button>
                         <div className="mt-1 flex items-center gap-2 text-xs text-gray-400">
-                          <span>{p.confirmedCount} verified facts</span>
+                          <span>{p.confirmedCount} {tt(" verified facts")}</span>
                           {p.pendingCount > 0 ? (
-                            <span className="badge bg-amber-50 text-amber-700">{p.pendingCount} pending</span>
+                            <span className="badge bg-amber-50 text-amber-700">{p.pendingCount} {tt(" pending")}</span>
                           ) : null}
                         </div>
                       </div>
@@ -223,13 +225,12 @@ export function KbWorkspace(props: {
                             onClick={() => setEditingPillarId(isEditing ? null : p.id)}
                             className="text-brand-600 hover:underline"
                           >
-                            {isEditing ? "Close" : "Edit"}
+                            {tt(isEditing ? "Close" : "Edit")}
                           </button>
                           <form action={deletePillarAct} onSubmit={() => setLastKey("deletePillar")}>
                             <input type="hidden" name="pillarId" value={p.id} />
                             <button type="submit" disabled={deletePillarPending} className="text-red-500 hover:underline">
-                              Delete
-                            </button>
+                              {tt("Delete")}</button>
                           </form>
                         </div>
                       ) : null}
@@ -259,12 +260,11 @@ export function KbWorkspace(props: {
                           name="document"
                           defaultValue={p.document ?? ""}
                           rows={3}
-                          placeholder="Pillar reference document (markdown)"
+                          placeholder={tt("Pillar reference document (markdown)")}
                           className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs"
                         />
                         <button type="submit" disabled={updatePillarPending} className="btn-primary !px-2.5 !py-1 text-xs">
-                          Save pillar
-                        </button>
+                          {tt("Save pillar")}</button>
                       </form>
                     ) : null}
                   </div>
@@ -275,7 +275,7 @@ export function KbWorkspace(props: {
             {/* Add Brand Fact form */}
             {props.canWrite && props.pillars.length > 0 ? (
               <form action={createFactAct} onSubmit={() => setLastKey("createFact")} className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">Add Brand Fact</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">{tt("Add Brand Fact")}</div>
                 <div className="mt-3 grid gap-3 md:grid-cols-4">
                   <select
                     name="pillarId"
@@ -291,22 +291,22 @@ export function KbWorkspace(props: {
                   <input
                     name="claim"
                     required
-                    placeholder="Verified brand claim (e.g. Canvasly Pro starts at $29/mo)"
+                    placeholder={tt("Verified brand claim (e.g. Canvasly Pro starts at $29/mo)")}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
                   />
                   <input
                     name="sourceUrl"
-                    placeholder={`https://${props.websiteDomain}/pricing (optional)`}
+                    placeholder={tt("https://{0}/pricing (optional)", { 0: props.websiteDomain })}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <select name="status" defaultValue="confirmed" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700">
-                    <option value="confirmed">Status: Verified (Confirmed)</option>
-                    <option value="pending_review">Status: Send to Approval Queue</option>
+                    <option value="confirmed">{tt("Status: Verified (Confirmed)")}</option>
+                    <option value="pending_review">{tt("Status: Send to Approval Queue")}</option>
                   </select>
                   <button type="submit" disabled={createFactPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                    {createFactPending ? "Adding…" : "+ Add brand fact"}
+                    {tt(createFactPending ? "Adding…" : "+ Add brand fact")}
                   </button>
                 </div>
               </form>
@@ -316,15 +316,14 @@ export function KbWorkspace(props: {
             <div className="rounded-xl border border-gray-200 bg-white">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Verified Brand Facts ({confirmedFacts.length})</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">{tt("Verified Brand Facts (")}{confirmedFacts.length})</h3>
                   {selectedPillarId !== "all" ? (
                     <button
                       type="button"
                       onClick={() => setSelectedPillarId("all")}
                       className="badge bg-brand-50 text-brand-600 hover:bg-brand-100"
                     >
-                      Showing selected pillar · Show all
-                    </button>
+                      {tt("Showing selected pillar · Show all")}</button>
                   ) : null}
                 </div>
               </div>
@@ -342,7 +341,7 @@ export function KbWorkspace(props: {
                           </div>
                           {f.sourceUrl ? (
                             <div className="text-xs text-gray-400">
-                              Source:{" "}
+                              {tt("Source:")}{tt(" ")}
                               <a href={f.sourceUrl} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
                                 {f.sourceUrl}
                               </a>
@@ -357,13 +356,12 @@ export function KbWorkspace(props: {
                               onClick={() => setEditingFactId(isEditing ? null : f.id)}
                               className="btn-secondary !px-2.5 !py-1 text-xs"
                             >
-                              {isEditing ? "Cancel" : "Edit"}
+                              {tt(isEditing ? "Cancel" : "Edit")}
                             </button>
                             <form action={deleteFactAct} onSubmit={() => setLastKey("deleteFact")}>
                               <input type="hidden" name="factId" value={f.id} />
                               <button type="submit" disabled={deleteFactPending} className="btn-secondary !px-2.5 !py-1 text-xs text-red-600">
-                                Delete
-                              </button>
+                                {tt("Delete")}</button>
                             </form>
                           </div>
                         ) : null}
@@ -400,12 +398,11 @@ export function KbWorkspace(props: {
                             <input
                               name="sourceUrl"
                               defaultValue={f.sourceUrl ?? ""}
-                              placeholder="Source URL"
+                              placeholder={tt("Source URL")}
                               className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs"
                             />
                             <button type="submit" disabled={updateFactPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                              Save
-                            </button>
+                              {tt("Save")}</button>
                           </div>
                         </form>
                       ) : null}
@@ -415,8 +412,7 @@ export function KbWorkspace(props: {
 
                 {confirmedFacts.length === 0 ? (
                   <div className="p-8 text-center text-sm text-gray-400">
-                    No verified facts in this view yet. Add a fact above or approve claims from the review queue.
-                  </div>
+                    {tt("No verified facts in this view yet. Add a fact above or approve claims from the review queue.")}</div>
                 ) : null}
               </div>
             </div>
@@ -437,8 +433,7 @@ export function KbWorkspace(props: {
                     <div className="flex items-center gap-2">
                       <span className="badge bg-amber-50 text-amber-700">{c.pillarName}</span>
                       <span className="text-xs text-gray-400">
-                        confidence {(c.confidence * 100).toFixed(0)}% — extracted from AI answers, awaiting verification
-                      </span>
+                        {tt("confidence ")}{(c.confidence * 100).toFixed(0)}{tt("% — extracted from AI answers, awaiting verification")}</span>
                     </div>
                     <input
                       name="claim"
@@ -456,8 +451,7 @@ export function KbWorkspace(props: {
                         disabled={reviewFactPending}
                         className="btn-primary !px-3 !py-1.5 text-xs"
                       >
-                        Approve
-                      </button>
+                        {tt("Approve")}</button>
                       <button
                         type="submit"
                         name="decision"
@@ -465,8 +459,7 @@ export function KbWorkspace(props: {
                         disabled={reviewFactPending}
                         className="btn-secondary !px-3 !py-1.5 text-xs"
                       >
-                        Reject
-                      </button>
+                        {tt("Reject")}</button>
                     </div>
                   ) : null}
                 </form>
@@ -475,8 +468,7 @@ export function KbWorkspace(props: {
 
             {pendingFacts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-400">
-                All pending claims have been reviewed. Click “Extract facts from AI answers” to scan for new candidate facts.
-              </div>
+                {tt("All pending claims have been reviewed. Click “Extract facts from AI answers” to scan for new candidate facts.")}</div>
             ) : null}
           </div>
         ) : null}
@@ -488,15 +480,13 @@ export function KbWorkspace(props: {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Add or Update Internal Link Page
-                    </div>
+                      {tt("Add or Update Internal Link Page")}</div>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Canonical URLs on <span className="font-medium text-gray-700">{props.websiteDomain}</span> and anchor keywords used when grounding AI content drafts.
-                    </p>
+                      {tt("Canonical URLs on ")}<span className="font-medium text-gray-700">{props.websiteDomain}</span> {tt(" and anchor keywords used when grounding AI content drafts.")}</p>
                   </div>
                   <form action={syncLinkAct} onSubmit={() => setLastKey("syncLink")}>
                     <button type="submit" disabled={syncLinkPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                      {syncLinkPending ? "Syncing…" : "Sync from AI citations"}
+                      {tt(syncLinkPending ? "Syncing…" : "Sync from AI citations")}
                     </button>
                   </form>
                 </div>
@@ -516,25 +506,25 @@ export function KbWorkspace(props: {
                     required
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
-                    placeholder={`https://${props.websiteDomain}/pricing`}
+                    placeholder={tt("https://{0}/pricing", { 0: props.websiteDomain })}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                   <input
                     name="title"
                     value={linkTitle}
                     onChange={(e) => setLinkTitle(e.target.value)}
-                    placeholder="Page title (e.g. Canvasly Pricing & Plans)"
+                    placeholder={tt("Page title (e.g. Canvasly Pricing & Plans)")}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                   <input
                     name="keywords"
                     value={linkKeywords}
                     onChange={(e) => setLinkKeywords(e.target.value)}
-                    placeholder="Anchor keywords (comma-separated)"
+                    placeholder={tt("Anchor keywords (comma-separated)")}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                   <button type="submit" disabled={upsertLinkPending} className="btn-primary !px-3 !py-2 text-xs">
-                    {upsertLinkPending ? "Saving…" : "Save internal link"}
+                    {tt(upsertLinkPending ? "Saving…" : "Save internal link")}
                   </button>
                 </form>
               </div>
@@ -544,11 +534,11 @@ export function KbWorkspace(props: {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-gray-100 bg-gray-50/70 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   <tr>
-                    <th className="px-4 py-3">Internal Page</th>
-                    <th className="px-4 py-3">Anchor Keywords</th>
-                    <th className="px-4 py-3">Linked Facts</th>
-                    <th className="px-4 py-3">AI Citations</th>
-                    {props.canWrite ? <th className="px-4 py-3 text-right">Actions</th> : null}
+                    <th className="px-4 py-3">{tt("Internal Page")}</th>
+                    <th className="px-4 py-3">{tt("Anchor Keywords")}</th>
+                    <th className="px-4 py-3">{tt("Linked Facts")}</th>
+                    <th className="px-4 py-3">{tt("AI Citations")}</th>
+                    {props.canWrite ? <th className="px-4 py-3 text-right">{tt("Actions")}</th> : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -584,13 +574,11 @@ export function KbWorkspace(props: {
                               }}
                               className="text-xs font-medium text-brand-600 hover:underline"
                             >
-                              Edit
-                            </button>
+                              {tt("Edit")}</button>
                             <form action={deleteLinkAct} onSubmit={() => setLastKey("deleteLink")}>
                               <input type="hidden" name="linkId" value={l.id} />
                               <button type="submit" disabled={deleteLinkPending} className="text-xs font-medium text-red-600 hover:underline">
-                                Delete
-                              </button>
+                                {tt("Delete")}</button>
                             </form>
                           </div>
                         </td>
@@ -600,8 +588,7 @@ export function KbWorkspace(props: {
                   {props.internalLinks.length === 0 ? (
                     <tr>
                       <td colSpan={props.canWrite ? 5 : 4} className="px-4 py-8 text-center text-sm text-gray-400">
-                        No internal link pages yet. Add a canonical brand URL above or click “Sync from AI citations”.
-                      </td>
+                        {tt("No internal link pages yet. Add a canonical brand URL above or click “Sync from AI citations”.")}</td>
                     </tr>
                   ) : null}
                 </tbody>

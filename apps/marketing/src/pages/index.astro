@@ -29,26 +29,26 @@ const pillars = [
     desc: "Generate AEO briefs, full drafts, and Shopify catalog optimizations with 1-click publishing to Webflow, WordPress, Contentful, and Sanity.",
   },
 ];
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base title="Athenum | AI Search Visibility & Answer Engine Optimization Platform">
+<Base locale={locale} title={tt("Athenum | AI Search Visibility & Answer Engine Optimization Platform")}>
   <section class="wrap" style="text-align:center;padding:84px 24px 56px;">
-    <span class="badge">2026 Enterprise GEO & AEO Suite · Native MCP Server</span>
-    <h1 style="font-size:52px;letter-spacing:-1.8px;margin:20px 0 16px;line-height:1.06;">
-      Become the Default Answer<br /><span style="color:var(--brand);">Across Every AI Engine</span>
+    <span class="badge">{tt("2026 Enterprise GEO & AEO Suite · Native MCP Server")}</span>
+    <h1 style="font-size:52px;letter-spacing:-1.8px;margin:20px 0 16px;line-height:1.06;">{tt(" Become the Default Answer")}<br /><span style="color:var(--brand);">{tt("Across Every AI Engine")}</span>
     </h1>
-    <p style="font-size:18px;color:#475569;max-width:640px;margin:0 auto 32px;">
-      Athenum tracks how ChatGPT, Perplexity, Claude, Gemini, and Google AI Overviews cite your brand—then deploys autonomous content, Oracle fact verification, and outreach workflows to win Share of Voice.
-    </p>
+    <p style="font-size:18px;color:#475569;max-width:640px;margin:0 auto 32px;">{tt(" Athenum tracks how ChatGPT, Perplexity, Claude, Gemini, and Google AI Overviews cite your brand—then deploys autonomous content, Oracle fact verification, and outreach workflows to win Share of Voice. ")}</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a class="btn btn-primary" href="http://localhost:3000/home">Launch Live Workspace</a>
-      <a class="btn btn-secondary" href="/platform">Explore 8 Platform Modules →</a>
+      <a class="btn btn-primary" href="http://localhost:3000/home">{tt("Launch Live Workspace")}</a>
+      <a class="btn btn-secondary" href={hrefFor("/platform")}>{tt("Explore 8 Platform Modules →")}</a>
     </div>
   </section>
 
   <section class="wrap" style="padding:16px 24px 48px;">
-    <p style="text-align:center;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">
-      Continuous Multi-Model Collection Across 8 Answer Surfaces
-    </p>
+    <p style="text-align:center;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">{tt(" Continuous Multi-Model Collection Across 8 Answer Surfaces ")}</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
       {engines.map((engine) => (
         <span style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:#334155;">
@@ -61,9 +61,9 @@ const pillars = [
   <section class="wrap grid-3" style="padding:24px;">
     {pillars.map((c) => (
       <div class="card">
-        <span class="badge" style="margin-bottom:12px;">{c.badge}</span>
-        <h2 style="font-size:19px;margin-bottom:8px;">{c.title}</h2>
-        <p style="font-size:14px;color:#475569;line-height:1.6;">{c.desc}</p>
+        <span class="badge" style="margin-bottom:12px;">{tt(c.badge)}</span>
+        <h2 style="font-size:19px;margin-bottom:8px;">{tt(c.title)}</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.6;">{tt(c.desc)}</p>
       </div>
     ))}
   </section>
@@ -71,13 +71,11 @@ const pillars = [
   <section class="wrap" style="padding:48px 24px 16px;">
     <div class="card" style="background:#0f172a;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;padding:36px;">
       <div>
-        <span class="badge" style="background:rgba(79,57,246,0.25);color:#c7d2fe;">Agency Pitch Workspace & Multi-Brand Groups</span>
-        <h2 style="font-size:24px;margin-top:10px;">Run 60-Second Prospect Audits & Shared Credit Pools</h2>
-        <p style="color:#94a3b8;font-size:14px;margin-top:6px;max-width:600px;">
-          Generate shareable prospect visibility benchmarks and Before/After AEO content rewrite pitches with FAQPage JSON-LD schema.
-        </p>
+        <span class="badge" style="background:rgba(79,57,246,0.25);color:#c7d2fe;">{tt("Agency Pitch Workspace & Multi-Brand Groups")}</span>
+        <h2 style="font-size:24px;margin-top:10px;">{tt("Run 60-Second Prospect Audits & Shared Credit Pools")}</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-top:6px;max-width:600px;">{tt(" Generate shareable prospect visibility benchmarks and Before/After AEO content rewrite pitches with FAQPage JSON-LD schema. ")}</p>
       </div>
-      <a class="btn btn-primary" href="/case-studies">Read Customer Case Studies →</a>
+      <a class="btn btn-primary" href={hrefFor("/case-studies")}>{tt("Read Customer Case Studies →")}</a>
     </div>
   </section>
 </Base>

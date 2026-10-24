@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { EMAIL_TEMPLATE_CATALOG, renderEmailTemplateHtml } from "@athena/emails";
 import { ObservabilitySettingsView } from "@/components/observability-settings-view";
 import { SettingsShell } from "@/components/settings-shell";
@@ -10,12 +11,16 @@ import {
   triggerDiagnosticTraceAction,
 } from "./actions";
 
-export const metadata = {
-  title: "Settings — Observability, Security & Email Templates",
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return {
+  title: tt("Settings — Observability, Security & Email Templates"),
 };
+}
 export const dynamic = "force-dynamic";
 
 export default async function ObservabilitySettingsPage() {
+  const tt = await getTranslations();
   const s = await getSettingsContext();
   const snap = getObservabilitySnapshot();
   const baseUrl = await appBaseUrl();
@@ -40,8 +45,8 @@ export default async function ObservabilitySettingsPage() {
   return (
     <SettingsShell
       active="observability"
-      title="Observability, Telemetry & Email Templates"
-      subtitle="PostHog events/replays/surveys, Vercel Speed Insights, OpenTelemetry traces, CSP reports, and React Email templates"
+      title={tt("Observability, Telemetry & Email Templates")}
+      subtitle={tt("PostHog events/replays/surveys, Vercel Speed Insights, OpenTelemetry traces, CSP reports, and React Email templates")}
     >
       <ObservabilitySettingsView
         userEmail={s.user.email ?? "demo@example.com"}

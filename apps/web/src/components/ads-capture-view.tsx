@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useActionState, useState } from "react";
 import type {
@@ -37,6 +39,7 @@ const SURFACE_LABELS: Record<AdSurface, string> = {
 };
 
 export function AdsCaptureView(props: Props) {
+  const tt = useTranslations();
   const [surfaceFilter, setSurfaceFilter] = useState<"all" | AdSurface>("all");
   const [advertiserFilter, setAdvertiserFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
@@ -86,7 +89,7 @@ export function AdsCaptureView(props: Props) {
                 surfaceFilter === "all" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              All Surfaces ({props.impressions.length})
+              {tt("All Surfaces (")}{props.impressions.length})
             </button>
             <button
               type="button"
@@ -96,7 +99,7 @@ export function AdsCaptureView(props: Props) {
                 surfaceFilter === "chatgpt" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              ChatGPT ({props.surfaceCounts.chatgpt})
+              {tt("ChatGPT (")}{props.surfaceCounts.chatgpt})
             </button>
             <button
               type="button"
@@ -106,7 +109,7 @@ export function AdsCaptureView(props: Props) {
                 surfaceFilter === "ai_mode" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              AI Mode ({props.surfaceCounts.ai_mode})
+              {tt("AI Mode (")}{props.surfaceCounts.ai_mode})
             </button>
             <button
               type="button"
@@ -116,17 +119,17 @@ export function AdsCaptureView(props: Props) {
                 surfaceFilter === "ai_overview" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              AI Overview ({props.surfaceCounts.ai_overview})
+              {tt("AI Overview (")}{props.surfaceCounts.ai_overview})
             </button>
           </div>
 
           <select
             value={advertiserFilter}
             onChange={(e) => setAdvertiserFilter(e.target.value)}
-            aria-label="Filter by advertiser"
+            aria-label={tt("Filter by advertiser")}
             className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700"
           >
-            <option value="all">All Advertisers ({props.advertisers.length})</option>
+            <option value="all">{tt("All Advertisers (")}{props.advertisers.length})</option>
             {props.advertisers.map((adv) => (
               <option key={adv} value={adv}>
                 {adv}
@@ -138,7 +141,7 @@ export function AdsCaptureView(props: Props) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search advertiser, ad copy, or prompt…"
+            placeholder={tt("Search advertiser, ad copy, or prompt…")}
             className="w-56 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-800"
           />
         </div>
@@ -150,15 +153,14 @@ export function AdsCaptureView(props: Props) {
               onClick={() => setShowAddForm((v) => !v)}
               className="btn-secondary !px-3 !py-1.5 text-xs"
             >
-              + Record ad capture
-            </button>
+              {tt("+ Record ad capture")}</button>
             <form action={scanAct} onSubmit={() => setLastKey("scan")}>
               <button
                 type="submit"
                 disabled={scanPending}
                 className="btn-primary !px-3 !py-1.5 text-xs"
               >
-                {scanPending ? "Scanning…" : "Scan collected answers"}
+                {tt(scanPending ? "Scanning…" : "Scan collected answers")}
               </button>
             </form>
           </div>
@@ -172,7 +174,7 @@ export function AdsCaptureView(props: Props) {
           data-testid="ads-error-banner"
           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
         >
-          {errorMsg}
+          {tt(errorMsg)}
         </div>
       ) : null}
       {!errorMsg && infoMsg ? (
@@ -181,7 +183,7 @@ export function AdsCaptureView(props: Props) {
           data-testid="ads-status-banner"
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
         >
-          {infoMsg}
+          {tt(infoMsg)}
         </div>
       ) : null}
 
@@ -194,11 +196,9 @@ export function AdsCaptureView(props: Props) {
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Record Sponsored Ad Capture (ChatGPT / AI Mode / AI Overview)
-            </div>
+              {tt("Record Sponsored Ad Capture (ChatGPT / AI Mode / AI Overview)")}</div>
             <button type="button" onClick={() => setShowAddForm(false)} className="text-xs text-gray-400">
-              Close
-            </button>
+              {tt("Close")}</button>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-5">
             <select
@@ -206,14 +206,14 @@ export function AdsCaptureView(props: Props) {
               defaultValue="chatgpt"
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
             >
-              <option value="chatgpt">ChatGPT Sponsored</option>
-              <option value="ai_mode">Google AI Mode</option>
-              <option value="ai_overview">Google AI Overview</option>
+              <option value="chatgpt">{tt("ChatGPT Sponsored")}</option>
+              <option value="ai_mode">{tt("Google AI Mode")}</option>
+              <option value="ai_overview">{tt("Google AI Overview")}</option>
             </select>
             <input
               name="advertiser"
               required
-              placeholder="Advertiser (e.g. Framer, Sketch)"
+              placeholder={tt("Advertiser (e.g. Framer, Sketch)")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs"
             />
             <select
@@ -221,7 +221,7 @@ export function AdsCaptureView(props: Props) {
               defaultValue={props.prompts[0]?.id ?? "none"}
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
             >
-              <option value="none">No linked prompt</option>
+              <option value="none">{tt("No linked prompt")}</option>
               {props.prompts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.text}
@@ -231,11 +231,11 @@ export function AdsCaptureView(props: Props) {
             <input
               name="adText"
               required
-              placeholder="Sponsored ad copy shown in response…"
+              placeholder={tt("Sponsored ad copy shown in response…")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs"
             />
             <button type="submit" disabled={recordPending} className="btn-primary !px-3 !py-2 text-xs">
-              {recordPending ? "Saving…" : "Save Ad Capture"}
+              {tt(recordPending ? "Saving…" : "Save Ad Capture")}
             </button>
           </div>
         </form>
@@ -246,11 +246,9 @@ export function AdsCaptureView(props: Props) {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-gray-900">
-              Advertiser Share of Sponsored Voice
-            </div>
+              {tt("Advertiser Share of Sponsored Voice")}</div>
             <div className="text-xs text-gray-400">
-              Share of captured sponsored placements across ChatGPT, Google AI Mode, and AI Overview
-            </div>
+              {tt("Share of captured sponsored placements across ChatGPT, Google AI Mode, and AI Overview")}</div>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -268,13 +266,13 @@ export function AdsCaptureView(props: Props) {
                     adv.isOwn ? "bg-brand-100 text-brand-700" : "bg-white text-gray-600"
                   }`}
                 >
-                  {adv.isOwn ? "Own Brand" : "Competitor"}
+                  {tt(adv.isOwn ? "Own Brand" : "Competitor")}
                 </span>
               </div>
               <div className="mt-2 flex items-baseline justify-between">
                 <span className="text-lg font-bold text-gray-900">{adv.sharePct.toFixed(1)}%</span>
                 <span className="text-[11px] text-gray-500">
-                  {adv.impressions} {adv.impressions === 1 ? "capture" : "captures"}
+                  {adv.impressions} {tt(adv.impressions === 1 ? "capture" : "captures")}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
@@ -294,12 +292,12 @@ export function AdsCaptureView(props: Props) {
         <table className="table-base" data-testid="ads-captures-table">
           <thead>
             <tr>
-              <th>AI Surface</th>
-              <th>Advertiser</th>
-              <th>Sponsored Ad Copy</th>
-              <th>Trigger Prompt</th>
-              <th>Captured</th>
-              {props.canWrite ? <th className="text-right">Action</th> : null}
+              <th>{tt("AI Surface")}</th>
+              <th>{tt("Advertiser")}</th>
+              <th>{tt("Sponsored Ad Copy")}</th>
+              <th>{tt("Trigger Prompt")}</th>
+              <th>{tt("Captured")}</th>
+              {props.canWrite ? <th className="text-right">{tt("Action")}</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -312,7 +310,7 @@ export function AdsCaptureView(props: Props) {
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-gray-900">{a.advertiser}</span>
                     {a.isOwn ? (
-                      <span className="badge bg-brand-50 text-[10px] text-brand-700">Own</span>
+                      <span className="badge bg-brand-50 text-[10px] text-brand-700">{tt("Own")}</span>
                     ) : null}
                   </div>
                 </td>
@@ -322,11 +320,11 @@ export function AdsCaptureView(props: Props) {
                     <div>
                       <div className="font-medium text-gray-700">&ldquo;{a.promptText}&rdquo;</div>
                       {a.topicName ? (
-                        <span className="text-[10px] text-gray-400">Topic: {a.topicName}</span>
+                        <span className="text-[10px] text-gray-400">{tt("Topic: ")}{a.topicName}</span>
                       ) : null}
                     </div>
                   ) : (
-                    <span className="text-gray-400">Category benchmark query</span>
+                    <span className="text-gray-400">{tt("Category benchmark query")}</span>
                   )}
                 </td>
                 <td className="font-mono text-xs text-gray-400">
@@ -341,8 +339,7 @@ export function AdsCaptureView(props: Props) {
                         disabled={deletePending}
                         className="text-xs text-red-500 hover:text-red-700"
                       >
-                        Remove
-                      </button>
+                        {tt("Remove")}</button>
                     </form>
                   </td>
                 ) : null}

@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useActionState, useState } from "react";
 import type { OutreachStatus } from "@athena/core/outreach";
@@ -41,6 +43,7 @@ export function OutreachKanban(props: {
   domains: string[];
   canWrite: boolean;
 }) {
+  const tt = useTranslations();
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [domainFilter, setDomainFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
@@ -100,7 +103,7 @@ export function OutreachKanban(props: {
                 viewMode === "kanban" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Kanban Pipeline ({props.counts.total})
+              {tt("Kanban Pipeline (")}{props.counts.total})
             </button>
             <button
               type="button"
@@ -110,8 +113,7 @@ export function OutreachKanban(props: {
                 viewMode === "table" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Opportunity Pages Table
-            </button>
+              {tt("Opportunity Pages Table")}</button>
           </div>
 
           <select
@@ -119,7 +121,7 @@ export function OutreachKanban(props: {
             onChange={(e) => setDomainFilter(e.target.value)}
             className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700"
           >
-            <option value="all">All domains ({props.domains.length})</option>
+            <option value="all">{tt("All domains (")}{props.domains.length})</option>
             {props.domains.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -131,7 +133,7 @@ export function OutreachKanban(props: {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search URL, domain, author…"
+            placeholder={tt("Search URL, domain, author…")}
             className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs"
           />
         </div>
@@ -144,8 +146,7 @@ export function OutreachKanban(props: {
               onClick={() => setShowAddForm(!showAddForm)}
               className="btn-secondary !px-3 !py-1.5 text-xs"
             >
-              + Add opportunity URL
-            </button>
+              {tt("+ Add opportunity URL")}</button>
             <form action={discoverAct} onSubmit={() => setLastKey("discover")}>
               <button
                 type="submit"
@@ -153,7 +154,7 @@ export function OutreachKanban(props: {
                 disabled={discoverPending}
                 className="btn-primary !px-3 !py-1.5 text-xs"
               >
-                {discoverPending ? "Scanning citations…" : "Discover citation opportunities"}
+                {tt(discoverPending ? "Scanning citations…" : "Discover citation opportunities")}
               </button>
             </form>
           </div>
@@ -163,12 +164,12 @@ export function OutreachKanban(props: {
       {/* Banners */}
       {errorMsg ? (
         <div role="alert" data-testid="outreach-error-banner" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {errorMsg}
+          {tt(errorMsg)}
         </div>
       ) : null}
       {!errorMsg && infoMsg ? (
         <div role="status" data-testid="outreach-status-banner" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-          {infoMsg}
+          {tt(infoMsg)}
         </div>
       ) : null}
 
@@ -183,26 +184,24 @@ export function OutreachKanban(props: {
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Add External Citation Opportunity Page
-            </div>
+              {tt("Add External Citation Opportunity Page")}</div>
             <button type="button" onClick={() => setShowAddForm(false)} className="text-xs text-gray-400">
-              Close
-            </button>
+              {tt("Close")}</button>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-4">
             <input
               name="url"
               required
-              placeholder="https://smashingmagazine.com/2026/09/best-design-tools"
+              placeholder={tt("https://smashingmagazine.com/2026/09/best-design-tools")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
             />
             <input
               name="notes"
-              placeholder="Editorial note (e.g. Lists Figma & Canva, omits us)"
+              placeholder={tt("Editorial note (e.g. Lists Figma & Canva, omits us)")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
             />
             <button type="submit" disabled={createPending} className="btn-primary !px-3 !py-2 text-xs">
-              {createPending ? "Adding…" : "Add to Pipeline"}
+              {tt(createPending ? "Adding…" : "Add to Pipeline")}
             </button>
           </div>
         </form>
@@ -221,8 +220,8 @@ export function OutreachKanban(props: {
               >
                 <div className="mb-3 flex items-center justify-between px-1">
                   <div>
-                    <div className="text-sm font-semibold text-gray-800">{col.label}</div>
-                    <div className="text-[11px] text-gray-400">{col.hint}</div>
+                    <div className="text-sm font-semibold text-gray-800">{tt(col.label)}</div>
+                    <div className="text-[11px] text-gray-400">{tt(col.hint)}</div>
                   </div>
                   <span className="badge bg-white text-gray-600 shadow-2xs">{colItems.length}</span>
                 </div>
@@ -252,13 +251,13 @@ export function OutreachKanban(props: {
 
                         <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-gray-500">
                           <span>
-                            Citation <strong className="text-gray-800">{i.citationPct.toFixed(1)}%</strong>
+                            {tt("Citation ")}<strong className="text-gray-800">{i.citationPct.toFixed(1)}%</strong>
                           </span>
                           <span>
-                            <span title="Monthly searches for the prompts whose AI answers cite this page">Search demand</span> <strong className="text-gray-800">{i.estimatedImpressions ? `${(i.estimatedImpressions / 1000).toFixed(1)}k` : "—"}</strong>
+                            <span title={tt("Monthly searches for the prompts whose AI answers cite this page")}>{tt("Search demand")}</span> <strong className="text-gray-800">{tt(i.estimatedImpressions ? `${(i.estimatedImpressions / 1000).toFixed(1)}k` : "—")}</strong>
                           </span>
                           <span>
-                            Citations <strong className="text-gray-800">{i.citations}</strong>
+                            {tt("Citations ")}<strong className="text-gray-800">{i.citations}</strong>
                           </span>
                         </div>
 
@@ -291,7 +290,7 @@ export function OutreachKanban(props: {
                                 disabled={authorPending}
                                 className="btn-secondary !px-2 !py-0.5 text-[11px]"
                               >
-                                🔍 {i.authorName ? "Refresh author" : "Find author"}
+                                🔍 {tt(i.authorName ? "Refresh author" : "Find author")}
                               </button>
                             </form>
 
@@ -309,7 +308,7 @@ export function OutreachKanban(props: {
                                 disabled={draftPending}
                                 className="btn-secondary !px-2 !py-0.5 text-[11px]"
                               >
-                                ✉ {i.emailDraft ? "Regenerate pitch" : "Draft pitch"}
+                                ✉ {tt(i.emailDraft ? "Regenerate pitch" : "Draft pitch")}
                               </button>
                             </form>
 
@@ -323,7 +322,7 @@ export function OutreachKanban(props: {
                                   disabled={statusPending}
                                   className="btn-primary !px-2 !py-0.5 text-[11px]"
                                 >
-                                  {col.status === "new" ? "→ Todo" : "→ Done"}
+                                  {tt(col.status === "new" ? "→ Todo" : "→ Done")}
                                 </button>
                               </form>
                             ) : (
@@ -331,8 +330,7 @@ export function OutreachKanban(props: {
                                 <input type="hidden" name="opportunityId" value={i.id} />
                                 <input type="hidden" name="status" value="todo" />
                                 <button type="submit" disabled={statusPending} className="btn-secondary !px-2 !py-0.5 text-[11px]">
-                                  ↺ Reopen
-                                </button>
+                                  {tt("↺ Reopen")}</button>
                               </form>
                             )}
                           </div>
@@ -343,7 +341,7 @@ export function OutreachKanban(props: {
 
                   {colItems.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-gray-200 p-6 text-center text-xs text-gray-400">
-                      No opportunities in {col.label}.
+                      {tt("No opportunities in ")}{tt(col.label)}.
                     </div>
                   ) : null}
                 </div>
@@ -357,14 +355,14 @@ export function OutreachKanban(props: {
           <table className="table-base">
             <thead>
               <tr>
-                <th>Opportunity Page</th>
-                <th>Domain</th>
-                <th>Citation Rate</th>
-                <th title="Monthly searches for the prompts whose AI answers cite this page">Search demand</th>
-                <th>AI Citations</th>
-                <th>Author / Contact</th>
-                <th>Stage</th>
-                <th className="text-right">Actions</th>
+                <th>{tt("Opportunity Page")}</th>
+                <th>{tt("Domain")}</th>
+                <th>{tt("Citation Rate")}</th>
+                <th title={tt("Monthly searches for the prompts whose AI answers cite this page")}>{tt("Search demand")}</th>
+                <th>{tt("AI Citations")}</th>
+                <th>{tt("Author / Contact")}</th>
+                <th>{tt("Stage")}</th>
+                <th className="text-right">{tt("Actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -383,7 +381,7 @@ export function OutreachKanban(props: {
                     <span className="badge bg-gray-100 text-gray-700">{i.domain}</span>
                   </td>
                   <td className="font-medium text-gray-900">{i.citationPct.toFixed(1)}%</td>
-                  <td className="text-gray-600">{i.estimatedImpressions ? i.estimatedImpressions.toLocaleString() : "—"}</td>
+                  <td className="text-gray-600">{tt(i.estimatedImpressions ? i.estimatedImpressions.toLocaleString() : "—")}</td>
                   <td className="text-gray-600">{i.citations}</td>
                   <td>
                     {i.authorName ? (
@@ -392,11 +390,11 @@ export function OutreachKanban(props: {
                         <div className="text-gray-400">{i.authorEmail}</div>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400">Not looked up</span>
+                      <span className="text-xs text-gray-400">{tt("Not looked up")}</span>
                     )}
                   </td>
                   <td>
-                    <span className="badge bg-brand-50 text-brand-700 uppercase">{i.status}</span>
+                    <span className="badge bg-brand-50 text-brand-700 uppercase">{tt(i.status)}</span>
                   </td>
                   <td className="text-right">
                     <button
@@ -404,8 +402,7 @@ export function OutreachKanban(props: {
                       onClick={() => setSelectedId(i.id)}
                       className="btn-secondary !px-2.5 !py-1 text-xs"
                     >
-                      Inspect & Pitch
-                    </button>
+                      {tt("Inspect & Pitch")}</button>
                   </td>
                 </tr>
               ))}
@@ -421,10 +418,9 @@ export function OutreachKanban(props: {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                  Outreach Pitch Studio
-                </span>
+                  {tt("Outreach Pitch Studio")}</span>
                 <span className="badge bg-gray-100 text-gray-700">{selectedItem.domain}</span>
-                <span className="badge bg-brand-50 text-brand-700 uppercase">{selectedItem.status}</span>
+                <span className="badge bg-brand-50 text-brand-700 uppercase">{tt(selectedItem.status)}</span>
               </div>
               <a
                 href={selectedItem.url}
@@ -441,20 +437,17 @@ export function OutreachKanban(props: {
                 <form action={authorAct} onSubmit={() => setLastKey("author")}>
                   <input type="hidden" name="opportunityId" value={selectedItem.id} />
                   <button type="submit" disabled={authorPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                    🔍 Find author on page
-                  </button>
+                    {tt("🔍 Find author on page")}</button>
                 </form>
                 <form action={draftAct} onSubmit={() => setLastKey("draft")}>
                   <input type="hidden" name="opportunityId" value={selectedItem.id} />
                   <button type="submit" disabled={draftPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                    ✉ Draft pitch email
-                  </button>
+                    {tt("✉ Draft pitch email")}</button>
                 </form>
                 <form action={deleteAct} onSubmit={() => setLastKey("delete")}>
                   <input type="hidden" name="opportunityId" value={selectedItem.id} />
                   <button type="submit" disabled={deletePending} className="text-xs text-red-500 hover:underline px-2">
-                    Delete
-                  </button>
+                    {tt("Delete")}</button>
                 </form>
               </div>
             ) : null}
@@ -469,31 +462,31 @@ export function OutreachKanban(props: {
             <input type="hidden" name="opportunityId" value={selectedItem.id} />
             <div className="grid gap-3 md:grid-cols-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">Author / Editor Name</label>
+                <label className="block text-xs font-medium text-gray-700">{tt("Author / Editor Name")}</label>
                 <input
                   name="authorName"
                   defaultValue={selectedItem.authorName ?? ""}
-                  placeholder="Click 'Find author on page' or enter the name"
+                  placeholder={tt("Click 'Find author on page' or enter the name")}
                   readOnly={!props.canWrite}
                   className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">Author / Desk Email</label>
+                <label className="block text-xs font-medium text-gray-700">{tt("Author / Desk Email")}</label>
                 <input
                   name="authorEmail"
                   defaultValue={selectedItem.authorEmail ?? ""}
-                  placeholder="editor@publication.com"
+                  placeholder={tt("editor@publication.com")}
                   readOnly={!props.canWrite}
                   className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">Outreach Notes</label>
+                <label className="block text-xs font-medium text-gray-700">{tt("Outreach Notes")}</label>
                 <input
                   name="notes"
                   defaultValue={selectedItem.notes ?? ""}
-                  placeholder="Follow-up dates, placement status…"
+                  placeholder={tt("Follow-up dates, placement status…")}
                   readOnly={!props.canWrite}
                   className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs"
                 />
@@ -502,13 +495,12 @@ export function OutreachKanban(props: {
 
             <div>
               <label className="block text-xs font-medium text-gray-700">
-                Personalized Outreach Pitch Email (Grounded in Knowledge Base Facts & Citation Rate)
-              </label>
+                {tt("Personalized Outreach Pitch Email (Grounded in Knowledge Base Facts & Citation Rate)")}</label>
               <textarea
                 name="emailDraft"
                 defaultValue={selectedItem.emailDraft ?? ""}
                 rows={9}
-                placeholder="Click 'Draft pitch email' to start from your verified Knowledge Base facts…"
+                placeholder={tt("Click 'Draft pitch email' to start from your verified Knowledge Base facts…")}
                 readOnly={!props.canWrite}
                 className="mt-1 w-full rounded-xl border border-gray-200 p-3 font-sans text-xs leading-relaxed text-gray-800"
               />
@@ -517,7 +509,7 @@ export function OutreachKanban(props: {
             {props.canWrite ? (
               <div className="flex justify-end">
                 <button type="submit" disabled={detailsPending} className="btn-primary !px-4 !py-1.5 text-xs">
-                  {detailsPending ? "Saving…" : "Save Contact & Pitch Draft"}
+                  {tt(detailsPending ? "Saving…" : "Save Contact & Pitch Draft")}
                 </button>
               </div>
             ) : null}

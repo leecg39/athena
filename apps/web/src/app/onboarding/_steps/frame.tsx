@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -22,7 +23,7 @@ export function nextStep(step: StepId): StepId | null {
   return STEPS[i + 1]?.id ?? null;
 }
 
-export function OnboardingFrame({
+export async function OnboardingFrame({
   step,
   websiteId,
   reached = 0,
@@ -38,18 +39,19 @@ export function OnboardingFrame({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const tt = await getTranslations();
   const current = STEPS.findIndex((s) => s.id === step);
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">A</div>
-          <span className="font-semibold">Athenum</span>
-          <span className="ml-2 text-sm text-gray-400">Set up AI search tracking</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{tt("A")}</div>
+          <span className="font-semibold">{tt("Athenum")}</span>
+          <span className="ml-2 text-sm text-gray-400">{tt("Set up AI search tracking")}</span>
         </div>
       </header>
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <ol className="mb-8 flex flex-wrap items-center gap-2" aria-label="Setup progress">
+        <ol className="mb-8 flex flex-wrap items-center gap-2" aria-label={tt("Setup progress")}>
           {STEPS.map((s, i) => {
             const canJump = websiteId && i <= Math.max(reached, current) && i !== current;
             const badge = (
@@ -66,12 +68,12 @@ export function OnboardingFrame({
                 {canJump ? (
                   <Link href={stepHref(websiteId, s.id)} className="flex items-center gap-1.5 hover:opacity-80">
                     {badge}
-                    <span className="hidden text-xs text-gray-500 md:inline">{s.label}</span>
+                    <span className="hidden text-xs text-gray-500 md:inline">{tt(s.label)}</span>
                   </Link>
                 ) : (
                   <>
                     {badge}
-                    <span className={`hidden text-xs md:inline ${i === current ? "font-medium text-gray-900" : "text-gray-400"}`}>{s.label}</span>
+                    <span className={`hidden text-xs md:inline ${i === current ? "font-medium text-gray-900" : "text-gray-400"}`}>{tt(s.label)}</span>
                   </>
                 )}
                 {i < STEPS.length - 1 ? <span className="mx-1 h-px w-4 bg-gray-200" aria-hidden /> : null}
@@ -80,8 +82,8 @@ export function OnboardingFrame({
           })}
         </ol>
         <div className="rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-          {subtitle ? <p className="mt-1 text-sm text-gray-500">{subtitle}</p> : null}
+          <h1 className="text-lg font-semibold text-gray-900">{tt(title)}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-gray-500">{tt(subtitle)}</p> : null}
           <div className="mt-6">{children}</div>
         </div>
       </div>
@@ -89,9 +91,10 @@ export function OnboardingFrame({
   );
 }
 
-export function SourceNote({ source, provider }: { source: string; provider?: string }) {
-  if (source === "ai") return <p className="text-xs text-gray-400">Suggested by AI ({provider}). Review before saving.</p>;
-  if (source === "template") return <p className="text-xs text-amber-700">AI suggestions are unavailable — these are starter templates based on your site’s own copy.</p>;
-  if (source === "failed") return <p className="text-xs text-amber-700">AI suggestions could not be generated right now. Add your own below.</p>;
-  return <p className="text-xs text-gray-400">AI suggestions are off (no LLM API key configured). Add your own below.</p>;
+export async function SourceNote({ source, provider }: { source: string; provider?: string }) {
+  const tt = await getTranslations();
+  if (source === "ai") return <p className="text-xs text-gray-400">{tt("Suggested by AI (")}{provider}{tt("). Review before saving.")}</p>;
+  if (source === "template") return <p className="text-xs text-amber-700">{tt("AI suggestions are unavailable — these are starter templates based on your site’s own copy.")}</p>;
+  if (source === "failed") return <p className="text-xs text-amber-700">{tt("AI suggestions could not be generated right now. Add your own below.")}</p>;
+  return <p className="text-xs text-gray-400">{tt("AI suggestions are off (no LLM API key configured). Add your own below.")}</p>;
 }

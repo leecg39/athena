@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db, organizations } from "@athena/db";
@@ -5,7 +6,10 @@ import { findInviteByToken, acceptInvite, DomainError } from "@athena/core/org";
 import { requireUser } from "@/lib/session";
 import { setActiveWebsite } from "@/lib/workspace";
 
-export const metadata = { title: "Accept invitation" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Accept invitation") };
+}
 
 export default async function InvitePage({
   params,
@@ -14,6 +18,7 @@ export default async function InvitePage({
   params: Promise<{ token: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
+  const tt = await getTranslations();
   const { token } = await params;
   const { error } = await searchParams;
   const user = await requireUser(`/invite/${encodeURIComponent(token)}`);
@@ -39,29 +44,26 @@ export default async function InvitePage({
       <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
         {!invite || !org ? (
           <>
-            <h1 className="text-lg font-semibold">Invitation unavailable</h1>
-            <p className="mt-2 text-sm text-gray-500">This invite link is invalid, was revoked, or has expired. Ask for a new one.</p>
+            <h1 className="text-lg font-semibold">{tt("Invitation unavailable")}</h1>
+            <p className="mt-2 text-sm text-gray-500">{tt("This invite link is invalid, was revoked, or has expired. Ask for a new one.")}</p>
           </>
         ) : (
           <>
-            <h1 className="text-lg font-semibold">Join {org.name}</h1>
+            <h1 className="text-lg font-semibold">{tt("Join ")}{org.name}</h1>
             <p className="mt-2 text-sm text-gray-500">
-              You were invited as <strong>{invite.role}</strong>. Signed in as {user.email}.
+              {tt("You were invited as ")}<strong>{tt(invite.role)}</strong>{tt(". Signed in as ")}{user.email}.
             </p>
             {invite.email.toLowerCase() !== (user.email ?? "").toLowerCase() ? (
               <p role="alert" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                This invite was sent to {invite.email}. Sign in with that address to accept it.
-              </p>
+                {tt("This invite was sent to ")}{invite.email}{tt(". Sign in with that address to accept it.")}</p>
             ) : null}
             {error ? (
               <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                This invitation could not be accepted. Check that you are signed in with the invited email address.
-              </p>
+                {tt("This invitation could not be accepted. Check that you are signed in with the invited email address.")}</p>
             ) : null}
             <form action={accept} className="mt-6">
               <button type="submit" className="btn-primary w-full">
-                Accept invitation
-              </button>
+                {tt("Accept invitation")}</button>
             </form>
           </>
         )}

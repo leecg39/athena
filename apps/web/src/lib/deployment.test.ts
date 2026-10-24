@@ -53,12 +53,10 @@ describe("Astro Marketing Site, Docs Site & 4-Project Vercel Deployment Configs 
       path.join(REPO_ROOT, "apps/marketing/src/layouts/Base.astro"),
       "utf8",
     );
-    expect(baseLayout).toContain('href="/platform"');
-    expect(baseLayout).toContain('href="/pricing"');
-    expect(baseLayout).toContain('href="/industries"');
-    expect(baseLayout).toContain('href="/comparison"');
-    expect(baseLayout).toContain('href="/case-studies"');
-    expect(baseLayout).toContain('href="/blog"');
+    const navigationTargets = [...baseLayout.matchAll(/href=\{hrefFor\("([^"]+)"\)\}/g)].map((match) => match[1]);
+    expect(navigationTargets).toEqual(expect.arrayContaining([
+      "/platform", "/pricing", "/industries", "/comparison", "/case-studies", "/blog",
+    ]));
   });
 
   it("verifies all 7 Astro documentation pages including /api and /mcp", () => {

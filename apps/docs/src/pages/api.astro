@@ -18,9 +18,14 @@ POST /api/v1/kb                  { websiteId, kind: "pillar"|"fact", claim, sour
 GET  /api/v1/billing/credits?scope=all|organization|website|group
 GET  /api/v1/teams
 GET  /api/v1/connectors/{looker-studio|power-bi}?websiteId=&days=14&format=json|csv`;
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Doc title="API Reference | Athenum Docs">
-  <h1>API Reference</h1>
-  <p>Base URL: <code>/api/v1</code> — Authenticate via <code>Authorization: Bearer ath_…</code> or <code>X-API-Key: ath_…</code>. Rate limit: 60 req/min per key.</p>
+<Doc locale={locale} title={tt("API Reference | Athenum Docs")}>
+  <h1>{tt("API Reference")}</h1>
+  <p>{tt("Base URL: ")}<code>/api/v1</code>{tt(" — Authenticate via ")}<code>Authorization: Bearer ath_…</code>{tt(" or ")}<code>X-API-Key: ath_…</code>{tt(". Rate limit: 60 req/min per key.")}</p>
   <pre>{apiTable}</pre>
 </Doc>

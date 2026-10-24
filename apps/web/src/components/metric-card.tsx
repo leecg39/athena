@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useState } from "react";
 import {
@@ -28,6 +30,7 @@ export function MetricCard(props: {
   detailed?: boolean;
   invertValue?: boolean;
 }) {
+  const tt = useTranslations();
   const [mode, setMode] = useState<"detailed" | "simple">("simple");
   const detailed = mode === "detailed" && props.detailed !== false;
 
@@ -36,14 +39,14 @@ export function MetricCard(props: {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
-            {props.title} <span className="cursor-help text-gray-300">ⓘ</span>
+            {tt(props.title)} <span className="cursor-help text-gray-300">ⓘ</span>
           </div>
-          <div className="text-xs text-gray-400">{props.subtitle}</div>
+          <div className="text-xs text-gray-400">{tt(props.subtitle)}</div>
         </div>
       </div>
       <div className="mb-2 mt-3 flex items-baseline gap-2">
         <span className="text-3xl font-bold text-gray-900">{props.value}</span>
-        {props.suffix ? <span className="text-xs text-gray-400">{props.suffix}</span> : null}
+        {props.suffix ? <span className="text-xs text-gray-400">{tt(props.suffix)}</span> : null}
       </div>
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
@@ -69,9 +72,9 @@ export function MetricCard(props: {
               contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #eee" }}
             />
             {detailed ? (
-              <Line type="monotone" dataKey="competitor" stroke="#f97316" strokeWidth={2} dot={false} name="Competitor" />
+              <Line type="monotone" dataKey="competitor" stroke="#f97316" strokeWidth={2} dot={false} name={tt("Competitor")} />
             ) : null}
-            <Area type="monotone" dataKey="brand" stroke="#4f39f6" strokeWidth={2.5} fill="url(#brandFill)" name="Brand" />
+            <Area type="monotone" dataKey="brand" stroke="#4f39f6" strokeWidth={2.5} fill="url(#brandFill)" name={tt("Brand")} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -85,7 +88,7 @@ export function MetricCard(props: {
                 mode === m ? "bg-white font-medium shadow-sm" : "text-gray-500"
               }`}
             >
-              {m}
+              {tt(m)}
             </button>
           ))}
         </div>

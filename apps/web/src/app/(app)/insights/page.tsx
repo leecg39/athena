@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
 import {
@@ -11,7 +12,10 @@ import { PageHeader } from "@/components/page-header";
 import { InsightsList } from "@/components/insights-list";
 import { requireWorkspace } from "@/lib/workspace";
 
-export const metadata = { title: "Insights" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Insights") };
+}
 
 function parseStatus(raw?: string): InsightStatus | "all" {
   if (raw === "all") return "all";
@@ -29,6 +33,7 @@ export default async function InsightsPage({
 }: {
   searchParams: Promise<{ status?: string; kind?: string }>;
 }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const currentStatus = parseStatus(sp.status);
@@ -48,8 +53,8 @@ export default async function InsightsPage({
   return (
     <div>
       <PageHeader
-        title="Insights"
-        subtitle="AI-generated proactive insights, content gaps, and competitor movements"
+        title={tt("Insights")}
+        subtitle={tt("AI-generated proactive insights, content gaps, and competitor movements")}
       />
       <div className="p-6">
         <InsightsList

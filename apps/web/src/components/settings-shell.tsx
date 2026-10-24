@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 
 const SETTINGS_NAV = [
@@ -12,7 +13,8 @@ const SETTINGS_NAV = [
   ["activity", "Activity Log"],
 ] as const;
 
-export function SettingsShell(props: { active: string; title: string; subtitle?: string; children: React.ReactNode }) {
+export async function SettingsShell(props: { active: string; title: string; subtitle?: string; children: React.ReactNode }) {
+  const tt = await getTranslations();
   return (
     <div>
       <div className="flex border-b border-gray-100">
@@ -23,14 +25,14 @@ export function SettingsShell(props: { active: string; title: string; subtitle?:
               href={`/settings/${id}`}
               className={`block rounded-lg px-3 py-1.5 text-sm ${props.active === id ? "bg-brand-50 font-medium text-brand-600" : "text-gray-600 hover:bg-gray-50"}`}
             >
-              {label}
+              {tt(label)}
             </Link>
           ))}
         </div>
         <div className="flex-1">
           <div className="border-b border-gray-100 px-6 py-4">
-            <h1 className="text-lg font-semibold text-gray-900">{props.title}</h1>
-            {props.subtitle ? <p className="mt-0.5 text-sm text-gray-500">{props.subtitle}</p> : null}
+            <h1 className="text-lg font-semibold text-gray-900">{tt(props.title)}</h1>
+            {props.subtitle ? <p className="mt-0.5 text-sm text-gray-500">{tt(props.subtitle)}</p> : null}
           </div>
           <div className="max-w-3xl p-6">{props.children}</div>
         </div>

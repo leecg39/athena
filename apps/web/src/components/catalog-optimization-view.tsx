@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -33,6 +35,7 @@ export function CatalogOptimizationView(props: {
   storeDomain: string;
   canWrite: boolean;
 }) {
+  const tt = useTranslations();
   const [selectedId, setSelectedId] = useState<string | null>(props.products[0]?.id ?? null);
   const [lastAction, setLastAction] = useState<"sync" | "draft" | "save" | "apply">("sync");
 
@@ -59,12 +62,11 @@ export function CatalogOptimizationView(props: {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <Link href="/content" className="btn-secondary !px-3 !py-1.5 text-xs">
-            ← Back to Content Hub
-          </Link>
+            {tt("← Back to Content Hub")}</Link>
           <span
             className={`badge ${props.shopifyConnected ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
           >
-            {props.shopifyConnected ? `Shopify Connected (${props.storeDomain})` : "Shopify not connected"}
+            {tt(props.shopifyConnected ? `Shopify Connected (${props.storeDomain})` : "Shopify not connected")}
           </span>
         </div>
 
@@ -76,7 +78,7 @@ export function CatalogOptimizationView(props: {
               disabled={syncPending}
               className="btn-primary !px-3 !py-1.5 text-xs"
             >
-              {syncPending ? "Syncing…" : "Sync Shopify catalog"}
+              {tt(syncPending ? "Syncing…" : "Sync Shopify catalog")}
             </button>
           </form>
         ) : null}
@@ -84,7 +86,7 @@ export function CatalogOptimizationView(props: {
 
       {errorMsg ? (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {errorMsg}
+          {tt(errorMsg)}
         </div>
       ) : null}
       {!errorMsg && infoMsg ? (
@@ -93,17 +95,17 @@ export function CatalogOptimizationView(props: {
           data-testid="catalog-status-banner"
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
         >
-          {infoMsg}
+          {tt(infoMsg)}
         </div>
       ) : null}
 
       {props.products.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <div className="text-sm font-medium text-gray-900">No Shopify products synced yet</div>
+          <div className="text-sm font-medium text-gray-900">{tt("No Shopify products synced yet")}</div>
           <p className="mt-1 text-xs text-gray-500">
-            {props.shopifyConnected
+            {tt(props.shopifyConnected
               ? 'Click "Sync Shopify catalog" above to pull products from your Shopify store.'
-              : "Connect your Shopify store (store domain and Admin API token) in Content Hub → CMS connections, then sync your catalog."}
+              : "Connect your Shopify store (store domain and Admin API token) in Content Hub → CMS connections, then sync your catalog.")}
           </p>
         </div>
       ) : (
@@ -111,14 +113,14 @@ export function CatalogOptimizationView(props: {
           <table className="table-base">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Price</th>
-                <th>AI Shopping Appearances</th>
-                <th>Title score</th>
-                <th>Description score</th>
-                <th>FAQ</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
+                <th>{tt("Product")}</th>
+                <th>{tt("Price")}</th>
+                <th>{tt("AI Shopping Appearances")}</th>
+                <th>{tt("Title score")}</th>
+                <th>{tt("Description score")}</th>
+                <th>{tt("FAQ")}</th>
+                <th>{tt("Status")}</th>
+                <th className="text-right">{tt("Actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +144,7 @@ export function CatalogOptimizationView(props: {
                     </td>
                     <td className="text-gray-600">{p.price}</td>
                     <td className="text-gray-600">
-                      {p.appearances} ({p.avgPosition > 0 ? `avg #${p.avgPosition.toFixed(1)}` : "—"})
+                      {p.appearances} ({tt(p.avgPosition > 0 ? `avg #${p.avgPosition.toFixed(1)}` : "—")})
                     </td>
                     <td>
                       <ScoreBar value={p.titleScore} />
@@ -169,11 +171,11 @@ export function CatalogOptimizationView(props: {
                               : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {p.optimizationStatus === "published"
+                        {tt(p.optimizationStatus === "published"
                           ? "Published to Shopify"
                           : p.optimizationStatus === "draft_ready"
                             ? `Draft v${p.version} ready`
-                            : "Needs optimization"}
+                            : "Needs optimization")}
                       </span>
                     </td>
                     <td className="text-right">
@@ -193,7 +195,7 @@ export function CatalogOptimizationView(props: {
                               disabled={draftPending}
                               className="btn-secondary !px-3 !py-1 text-xs"
                             >
-                              {p.version > 0 ? "Regenerate with AI" : "Draft with AI"}
+                              {tt(p.version > 0 ? "Regenerate with AI" : "Draft with AI")}
                             </button>
                           </form>
                         ) : null}
@@ -202,8 +204,7 @@ export function CatalogOptimizationView(props: {
                           onClick={() => setSelectedId(p.id)}
                           className="btn-secondary !px-2.5 !py-1 text-xs"
                         >
-                          Inspect
-                        </button>
+                          {tt("Inspect")}</button>
                       </div>
                     </td>
                   </tr>
@@ -220,15 +221,14 @@ export function CatalogOptimizationView(props: {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                Shopify Product Editor
-              </div>
+                {tt("Shopify Product Editor")}</div>
               <h3 className="mt-0.5 text-base font-semibold text-gray-900">{selectedProduct.title}</h3>
             </div>
             {props.canWrite ? (
               <form action={draftAct} onSubmit={() => setLastAction("draft")}>
                 <input type="hidden" name="productId" value={selectedProduct.id} />
                 <button type="submit" disabled={draftPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                  {draftPending ? "Drafting…" : "Draft with AI"}
+                  {tt(draftPending ? "Drafting…" : "Draft with AI")}
                 </button>
               </form>
             ) : null}
@@ -243,7 +243,7 @@ export function CatalogOptimizationView(props: {
             <input type="hidden" name="productId" value={selectedProduct.id} />
             <div>
               <label className="block text-xs font-medium text-gray-700">
-                Product Title (Title Score: {selectedProduct.titleScore}/100)
+                {tt("Product Title (Title Score: ")}{selectedProduct.titleScore}/100)
               </label>
               <input
                 name="title"
@@ -257,12 +257,12 @@ export function CatalogOptimizationView(props: {
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <label className="block text-xs font-medium text-gray-700">
-                  Product Description (Description Score: {selectedProduct.descScore}/100)
+                  {tt("Product Description (Description Score: ")}{selectedProduct.descScore}/100)
                 </label>
                 <textarea
                   name="description"
                   defaultValue={selectedProduct.recommendedDescription ?? selectedProduct.currentDescription}
-                  placeholder="Write a product description with bullet points, specifications and use cases…"
+                  placeholder={tt("Write a product description with bullet points, specifications and use cases…")}
                   rows={8}
                   readOnly={!props.canWrite}
                   required
@@ -272,12 +272,12 @@ export function CatalogOptimizationView(props: {
 
               <div>
                 <label className="block text-xs font-medium text-gray-700">
-                  Product FAQ ({selectedProduct.faqStatus === "ok" ? "2+ questions" : "Add 2+ Q:/A: pairs"})
+                  {tt("Product FAQ (")}{tt(selectedProduct.faqStatus === "ok" ? "2+ questions" : "Add 2+ Q:/A: pairs")})
                 </label>
                 <textarea
                   name="faq"
                   defaultValue={selectedProduct.recommendedFaq ?? ""}
-                  placeholder={"Q: What is included?\nA: ...\nQ: Who is it for?\nA: ..."}
+                  placeholder={tt("Q: What is included?\nA: ...\nQ: Who is it for?\nA: ...")}
                   rows={8}
                   readOnly={!props.canWrite}
                   className="mt-1 w-full rounded-lg border border-gray-200 p-3 font-mono text-xs text-gray-800"
@@ -294,7 +294,7 @@ export function CatalogOptimizationView(props: {
                   disabled={savePending || applyPending}
                   className="btn-secondary !px-4 !py-2 text-xs"
                 >
-                  {savePending ? "Saving…" : "Save draft"}
+                  {tt(savePending ? "Saving…" : "Save draft")}
                 </button>
                 <button
                   type="submit"
@@ -302,7 +302,7 @@ export function CatalogOptimizationView(props: {
                   disabled={applyPending || savePending}
                   className="btn-primary !px-4 !py-2 text-xs"
                 >
-                  {applyPending ? "Publishing to Shopify…" : "Publish to Shopify →"}
+                  {tt(applyPending ? "Publishing to Shopify…" : "Publish to Shopify →")}
                 </button>
               </div>
             ) : null}

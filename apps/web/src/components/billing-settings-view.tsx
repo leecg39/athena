@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -65,6 +67,7 @@ export function BillingSettingsView({
   plans: BillingPlanCatalogItem[];
   canWriteBilling: boolean;
 }) {
+  const tt = useTranslations();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">(
     overview.subscription.billingInterval,
   );
@@ -99,7 +102,7 @@ export function BillingSettingsView({
           role="status"
           className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800"
         >
-          ✓ {banner.message}
+          ✓ {tt(banner.message)}
         </div>
       ) : null}
       {banner?.error ? (
@@ -107,58 +110,55 @@ export function BillingSettingsView({
           role="alert"
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700"
         >
-          ⚠ {banner.error}
+          ⚠ {tt(banner.error)}
         </div>
       ) : null}
 
       {/* Top Executive KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <div className="metric-card">
-          <div className="text-xs text-gray-500">Current Subscription Plan</div>
+          <div className="text-xs text-gray-500">{tt("Current Subscription Plan")}</div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-xl font-bold text-gray-900">{currentPlan.label}</span>
+            <span className="text-xl font-bold text-gray-900">{tt(currentPlan.label)}</span>
             <span className="badge bg-brand-50 text-[11px] font-semibold uppercase text-brand-700">
               {overview.subscription.billingInterval}
             </span>
           </div>
           <div className="mt-1 text-xs text-gray-400">
-            {currentPlan.priceMonthlyUsd > 0 ? `$${currentPlan.priceMonthlyUsd}/mo` : "Free tier"} ·{" "}
-            {currentPlan.modelsCount} AI models · {currentPlan.pitchLimit} pitches/mo
-          </div>
+            {tt(currentPlan.priceMonthlyUsd > 0 ? `$${currentPlan.priceMonthlyUsd}/mo` : "Free tier")} ·{tt(" ")}
+            {currentPlan.modelsCount} {tt(" AI models · ")}{currentPlan.pitchLimit} {tt(" pitches/mo")}</div>
         </div>
 
         <div className="metric-card border-brand-200 bg-brand-50/30">
-          <div className="text-xs font-medium text-brand-700">Total Org-Wide Credits</div>
+          <div className="text-xs font-medium text-brand-700">{tt("Total Org-Wide Credits")}</div>
           <div className="mt-1 text-xl font-bold text-brand-900">
             {overview.balances.totalOrgWideCredits.toLocaleString()}
           </div>
           <div className="mt-1 text-xs text-brand-700">
-            Org: {overview.balances.orgUnallocatedBalance.toLocaleString()} · Sites:{" "}
-            {overview.balances.totalWebsiteCredits.toLocaleString()} · Groups:{" "}
+            {tt("Org: ")}{overview.balances.orgUnallocatedBalance.toLocaleString()} {tt(" · Sites:")}{tt(" ")}
+            {overview.balances.totalWebsiteCredits.toLocaleString()} {tt(" · Groups:")}{tt(" ")}
             {overview.balances.totalGroupCredits.toLocaleString()}
           </div>
         </div>
 
         <div className="metric-card">
-          <div className="text-xs text-gray-500">Monthly Credit Allowance</div>
+          <div className="text-xs text-gray-500">{tt("Monthly Credit Allowance")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900">
             {overview.subscription.monthlyCredits.toLocaleString()}
           </div>
           <div className="mt-1 text-xs text-gray-400">
-            Status: <span className="font-medium text-emerald-700">{overview.subscription.status}</span> ·
-            Renews {new Date(overview.subscription.currentPeriodEnd).toISOString().slice(0, 10)}
+            {tt("Status: ")}<span className="font-medium text-emerald-700">{tt(overview.subscription.status)}</span> {tt(" · Renews ")}{new Date(overview.subscription.currentPeriodEnd).toISOString().slice(0, 10)}
           </div>
         </div>
 
         <div className="metric-card">
-          <div className="text-xs text-gray-500">Active Billing Add-ons</div>
+          <div className="text-xs text-gray-500">{tt("Active Billing Add-ons")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900">
-            {overview.subscription.addons.length} active
-          </div>
+            {overview.subscription.addons.length} {tt(" active")}</div>
           <div className="mt-1 text-xs text-gray-400">
-            {overview.subscription.addons.length > 0
+            {tt(overview.subscription.addons.length > 0
               ? overview.subscription.addons.join(", ")
-              : "No recurring add-ons enabled"}
+              : "No recurring add-ons enabled")}
           </div>
         </div>
       </div>
@@ -168,12 +168,9 @@ export function BillingSettingsView({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              Subscription Plans — Free, Starter ($295/mo) &amp; Enterprise
-            </h2>
+              {tt("Subscription Plans — Free, Starter ($295/mo) & Enterprise")}</h2>
             <p className="text-xs text-gray-500">
-              Upgrade anytime to unlock all 11 AI search engines, higher monthly credit allowances,
-              and agency pitch quotas.
-            </p>
+              {tt("Upgrade anytime to unlock all 11 AI search engines, higher monthly credit allowances, and agency pitch quotas.")}</p>
           </div>
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-xs">
             <button
@@ -185,8 +182,7 @@ export function BillingSettingsView({
                   : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              Monthly Billing
-            </button>
+              {tt("Monthly Billing")}</button>
             <button
               type="button"
               onClick={() => setBillingInterval("annual")}
@@ -196,8 +192,7 @@ export function BillingSettingsView({
                   : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              Annual Billing (Save 20%)
-            </button>
+              {tt("Annual Billing (Save 20%)")}</button>
           </div>
         </div>
 
@@ -218,13 +213,12 @@ export function BillingSettingsView({
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-bold text-gray-900">{p.label}</span>
+                    <span className="text-base font-bold text-gray-900">{tt(p.label)}</span>
                     {isCurrent ? (
-                      <span className="badge bg-brand-600 text-xs text-white">Current Plan</span>
+                      <span className="badge bg-brand-600 text-xs text-white">{tt("Current Plan")}</span>
                     ) : p.tier === "starter" ? (
                       <span className="badge bg-emerald-50 text-xs text-emerald-700">
-                        Most Popular
-                      </span>
+                        {tt("Most Popular")}</span>
                     ) : null}
                   </div>
 
@@ -232,17 +226,16 @@ export function BillingSettingsView({
                     <span className="text-2xl font-extrabold text-gray-900">
                       ${displayPrice.toLocaleString()}
                     </span>
-                    <span className="text-xs text-gray-500">/ month</span>
+                    <span className="text-xs text-gray-500">{tt("/ month")}</span>
                   </div>
                   <div className="mt-1 text-xs font-medium text-brand-700">
-                    {p.monthlyCredits.toLocaleString()} monthly AI response credits
-                  </div>
+                    {p.monthlyCredits.toLocaleString()} {tt(" monthly AI response credits")}</div>
 
                   <ul className="mt-4 space-y-2 text-xs text-gray-600">
                     {p.features.map((f, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <span className="text-emerald-600">✓</span>
-                        <span>{f}</span>
+                        <span>{tt(f)}</span>
                       </li>
                     ))}
                   </ul>
@@ -261,11 +254,11 @@ export function BillingSettingsView({
                           : "border border-gray-200 bg-gray-50 text-gray-800 hover:bg-gray-100"
                       }`}
                     >
-                      {isCurrent && overview.subscription.billingInterval === billingInterval
-                        ? `Active (${p.label})`
+                      {tt(isCurrent && overview.subscription.billingInterval === billingInterval
+                        ? tt("Active ({0})", { 0: tt(p.label) })
                         : p.tier === "free"
                           ? "Downgrade to Free"
-                          : `Upgrade to ${p.label} ($${displayPrice}/mo)`}
+                          : tt("Upgrade to {0} (${1}/mo)", { 0: tt(p.label), 1: displayPrice }))}
                     </button>
                   </form>
                 ) : null}
@@ -280,16 +273,12 @@ export function BillingSettingsView({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              Multi-Scope Credit System — Organization, Website &amp; Group Balances
-            </h2>
+              {tt("Multi-Scope Credit System — Organization, Website & Group Balances")}</h2>
             <p className="text-xs text-gray-500">
-              Allocate credits from your Organization Unallocated Pool to dedicated Website
-              workspaces or Agency Portfolio Groups.
-            </p>
+              {tt("Allocate credits from your Organization Unallocated Pool to dedicated Website workspaces or Agency Portfolio Groups.")}</p>
           </div>
           <span className="badge bg-brand-50 font-mono text-xs text-brand-700">
-            Org Unallocated Pool: {overview.balances.orgUnallocatedBalance.toLocaleString()} credits
-          </span>
+            {tt("Org Unallocated Pool: ")}{overview.balances.orgUnallocatedBalance.toLocaleString()} {tt(" credits")}</span>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -297,11 +286,10 @@ export function BillingSettingsView({
           <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-700">
-                Website Dedicated Credit Pools ({overview.balances.websitePools.length})
+                {tt("Website Dedicated Credit Pools (")}{overview.balances.websitePools.length})
               </h3>
               <span className="font-mono text-xs font-semibold text-gray-900">
-                {overview.balances.totalWebsiteCredits.toLocaleString()} credits
-              </span>
+                {overview.balances.totalWebsiteCredits.toLocaleString()} {tt(" credits")}</span>
             </div>
             <div className="space-y-2">
               {overview.balances.websitePools.map((w) => (
@@ -314,8 +302,7 @@ export function BillingSettingsView({
                     <div className="font-mono text-[11px] text-gray-400">{w.domain}</div>
                   </div>
                   <span className="badge bg-brand-50 font-mono text-xs font-semibold text-brand-700">
-                    {w.balance.toLocaleString()} credits
-                  </span>
+                    {w.balance.toLocaleString()} {tt(" credits")}</span>
                 </div>
               ))}
             </div>
@@ -325,11 +312,10 @@ export function BillingSettingsView({
           <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-700">
-                Group Shared Credit Pools ({overview.balances.groupPools.length})
+                {tt("Group Shared Credit Pools (")}{overview.balances.groupPools.length})
               </h3>
               <span className="font-mono text-xs font-semibold text-gray-900">
-                {overview.balances.totalGroupCredits.toLocaleString()} credits
-              </span>
+                {overview.balances.totalGroupCredits.toLocaleString()} {tt(" credits")}</span>
             </div>
             <div className="space-y-2">
               {overview.balances.groupPools.map((g) => (
@@ -343,20 +329,17 @@ export function BillingSettingsView({
                       href={`/group/${g.groupId}?tab=billing`}
                       className="text-[11px] text-brand-600 underline"
                     >
-                      Manage in Group Billing →
-                    </Link>
+                      {tt("Manage in Group Billing →")}</Link>
                   </div>
                   <span className="badge bg-emerald-50 font-mono text-xs font-semibold text-emerald-700">
-                    {g.balance.toLocaleString()} credits
-                  </span>
+                    {g.balance.toLocaleString()} {tt(" credits")}</span>
                 </div>
               ))}
               {overview.balances.groupPools.length === 0 ? (
                 <div className="py-4 text-center text-xs text-gray-400">
-                  No portfolio groups created yet.{" "}
+                  {tt("No portfolio groups created yet.")}{tt(" ")}
                   <Link href="/group" className="text-brand-600 underline">
-                    Open Group Dashboard
-                  </Link>
+                    {tt("Open Group Dashboard")}</Link>
                 </div>
               ) : null}
             </div>
@@ -371,29 +354,25 @@ export function BillingSettingsView({
           >
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Target Website Pool
-              </label>
+                {tt("Target Website Pool")}</label>
               <select name="websiteId" className="input-base w-full text-xs">
                 {overview.balances.websitePools.map((w) => (
                   <option key={w.websiteId} value={w.websiteId}>
-                    {w.websiteName} ({w.domain}) — {w.balance} credits
-                  </option>
+                    {w.websiteName} ({w.domain}) — {w.balance} {tt(" credits")}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Transfer Direction
-              </label>
+                {tt("Transfer Direction")}</label>
               <select name="direction" className="input-base w-full text-xs">
-                <option value="to_website">Org Unallocated Pool → Website Pool</option>
-                <option value="to_org">Website Pool → Org Unallocated Pool</option>
+                <option value="to_website">{tt("Org Unallocated Pool → Website Pool")}</option>
+                <option value="to_org">{tt("Website Pool → Org Unallocated Pool")}</option>
               </select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Credits Amount *
-              </label>
+                {tt("Credits Amount *")}</label>
               <input
                 type="number"
                 name="amount"
@@ -410,7 +389,7 @@ export function BillingSettingsView({
                 disabled={webAllocPending}
                 className="btn-secondary w-full !py-2 text-xs font-semibold"
               >
-                {webAllocPending ? "Transferring..." : "Transfer Website Credits"}
+                {tt(webAllocPending ? "Transferring..." : "Transfer Website Credits")}
               </button>
             </div>
           </form>
@@ -423,35 +402,28 @@ export function BillingSettingsView({
         <section className="metric-card space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              Additional Credit Top-Up Packs
-            </h2>
+              {tt("Additional Credit Top-Up Packs")}</h2>
             <p className="text-xs text-gray-500">
-              Purchase instant AI response credit packs and deposit them into your Organization,
-              Website, or Group pool.
-            </p>
+              {tt("Purchase instant AI response credit packs and deposit them into your Organization, Website, or Group pool.")}</p>
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">
-              Deposit Purchased Credits Into:
-            </label>
+              {tt("Deposit Purchased Credits Into:")}</label>
             <select
               value={packTargetScope}
               onChange={(e) => setPackTargetScope(e.target.value)}
               className="input-base w-full text-xs"
             >
               <option value="organization">
-                Organization Unallocated Pool ({overview.balances.orgUnallocatedBalance.toLocaleString()} credits)
-              </option>
+                {tt("Organization Unallocated Pool (")}{overview.balances.orgUnallocatedBalance.toLocaleString()} {tt(" credits)")}</option>
               {overview.balances.websitePools.map((w) => (
                 <option key={w.websiteId} value={`website:${w.websiteId}`}>
-                  Website Pool: {w.websiteName} ({w.balance.toLocaleString()} credits)
-                </option>
+                  {tt("Website Pool: ")}{w.websiteName} ({w.balance.toLocaleString()} {tt(" credits)")}</option>
               ))}
               {overview.balances.groupPools.map((g) => (
                 <option key={g.groupId} value={`group:${g.groupId}`}>
-                  Group Shared Pool: {g.groupName} ({g.balance.toLocaleString()} credits)
-                </option>
+                  {tt("Group Shared Pool: ")}{g.groupName} ({g.balance.toLocaleString()} {tt(" credits)")}</option>
               ))}
             </select>
           </div>
@@ -466,15 +438,15 @@ export function BillingSettingsView({
                 <input type="hidden" name="packId" value={pack.id} />
                 <input type="hidden" name="targetScope" value={packTargetScope} />
                 <div>
-                  <div className="text-xs font-semibold text-gray-900">{pack.label}</div>
-                  <div className="text-[11px] text-gray-500">{pack.description}</div>
+                  <div className="text-xs font-semibold text-gray-900">{tt(pack.label)}</div>
+                  <div className="text-[11px] text-gray-500">{tt(pack.description)}</div>
                 </div>
                 <button
                   type="submit"
                   disabled={!canWriteBilling || packPending}
                   className="btn-primary shrink-0 !px-3.5 !py-1.5 text-xs font-semibold"
                 >
-                  Buy ${pack.priceUsd}
+                  {tt("Buy $")}{pack.priceUsd}
                 </button>
               </form>
             ))}
@@ -485,11 +457,9 @@ export function BillingSettingsView({
         <section className="metric-card space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              API, MCP &amp; Agency Add-ons
-            </h2>
+              {tt("API, MCP & Agency Add-ons")}</h2>
             <p className="text-xs text-gray-500">
-              Enable Public REST API / MCP Server access or Agency Pitch Deck Pro features.
-            </p>
+              {tt("Enable Public REST API / MCP Server access or Agency Pitch Deck Pro features.")}</p>
           </div>
 
           <div className="space-y-3">
@@ -510,17 +480,15 @@ export function BillingSettingsView({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-900">{addon.label}</span>
+                        <span className="text-xs font-semibold text-gray-900">{tt(addon.label)}</span>
                         {isEnabled ? (
                           <span className="badge bg-emerald-50 text-[10px] font-semibold text-emerald-700">
-                            Active
-                          </span>
+                            {tt("Active")}</span>
                         ) : null}
                       </div>
-                      <div className="mt-1 text-xs text-gray-600">{addon.description}</div>
+                      <div className="mt-1 text-xs text-gray-600">{tt(addon.description)}</div>
                       <div className="mt-2 font-mono text-xs font-semibold text-brand-700">
-                        ${addon.priceMonthlyUsd}/month · +{addon.bonusCredits} bonus credits
-                      </div>
+                        ${addon.priceMonthlyUsd}{tt("/month · +")}{addon.bonusCredits} {tt(" bonus credits")}</div>
                     </div>
                     <button
                       type="submit"
@@ -531,7 +499,7 @@ export function BillingSettingsView({
                           : "bg-brand-600 text-white hover:bg-brand-700"
                       }`}
                     >
-                      {isEnabled ? "Disable Add-on" : `Enable ($${addon.priceMonthlyUsd}/mo)`}
+                      {tt(isEnabled ? "Disable Add-on" : `Enable ($${addon.priceMonthlyUsd}/mo)`)}
                     </button>
                   </div>
                 </form>
@@ -545,21 +513,19 @@ export function BillingSettingsView({
       <section className="metric-card space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900">
-            Organization, Website &amp; Group Credit Ledger
-          </h2>
+            {tt("Organization, Website & Group Credit Ledger")}</h2>
           <span className="text-xs text-gray-400">
-            Showing latest {overview.ledger.length} entries
-          </span>
+            {tt("Showing latest ")}{overview.ledger.length} {tt(" entries")}</span>
         </div>
         <div className="overflow-x-auto rounded-xl border border-gray-100">
           <table className="table-base">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Pool Scope</th>
-                <th>Reason</th>
-                <th className="text-right">Credits</th>
+                <th>{tt("Date")}</th>
+                <th>{tt("Type")}</th>
+                <th>{tt("Pool Scope")}</th>
+                <th>{tt("Reason")}</th>
+                <th className="text-right">{tt("Credits")}</th>
               </tr>
             </thead>
             <tbody>
@@ -576,7 +542,7 @@ export function BillingSettingsView({
                           : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      {l.kind}
+                      {tt(l.kind)}
                     </span>
                   </td>
                   <td className="text-xs font-medium text-gray-700">{l.scopeLabel}</td>
@@ -586,7 +552,7 @@ export function BillingSettingsView({
                       l.amount < 0 ? "text-red-600" : "text-emerald-700"
                     }`}
                   >
-                    {l.amount > 0 ? "+" : ""}
+                    {tt(l.amount > 0 ? "+" : "")}
                     {l.amount.toLocaleString()}
                   </td>
                 </tr>
@@ -594,8 +560,7 @@ export function BillingSettingsView({
               {overview.ledger.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-xs text-gray-400">
-                    No credit ledger entries yet.
-                  </td>
+                    {tt("No credit ledger entries yet.")}</td>
                 </tr>
               ) : null}
             </tbody>
@@ -606,19 +571,19 @@ export function BillingSettingsView({
       {/* Section 5: Invoices & PDF Receipts */}
       <section className="metric-card space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Invoices &amp; Tax Receipts</h2>
-          <span className="text-xs text-gray-400">{overview.invoices.length} invoice(s)</span>
+          <h2 className="text-sm font-semibold text-gray-900">{tt("Invoices & Tax Receipts")}</h2>
+          <span className="text-xs text-gray-400">{overview.invoices.length} {tt(" invoice(s)")}</span>
         </div>
         <div className="overflow-x-auto rounded-xl border border-gray-100">
           <table className="table-base">
             <thead>
               <tr>
-                <th>Issue Date</th>
-                <th>Invoice ID</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th className="text-right">Amount</th>
-                <th className="text-right">Receipt PDF</th>
+                <th>{tt("Issue Date")}</th>
+                <th>{tt("Invoice ID")}</th>
+                <th>{tt("Description")}</th>
+                <th>{tt("Status")}</th>
+                <th className="text-right">{tt("Amount")}</th>
+                <th className="text-right">{tt("Receipt PDF")}</th>
               </tr>
             </thead>
             <tbody>
@@ -630,10 +595,10 @@ export function BillingSettingsView({
                   <td className="font-mono text-xs text-gray-700">
                     {inv.stripeInvoiceId ?? inv.id.slice(0, 12)}
                   </td>
-                  <td className="text-xs font-medium text-gray-900">{inv.description}</td>
+                  <td className="text-xs font-medium text-gray-900">{tt(inv.description)}</td>
                   <td>
                     <span className="badge bg-emerald-50 text-xs uppercase text-emerald-700">
-                      {inv.status}
+                      {tt(inv.status)}
                     </span>
                   </td>
                   <td className="text-right font-mono text-xs font-semibold text-gray-900">
@@ -644,17 +609,14 @@ export function BillingSettingsView({
                       href={inv.pdfUrl}
                       className="btn-secondary !px-2.5 !py-1 text-xs"
                     >
-                      ⬇ PDF
-                    </a>
+                      {tt("⬇ PDF")}</a>
                   </td>
                 </tr>
               ))}
               {overview.invoices.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-6 text-center text-xs text-gray-400">
-                    No invoices issued yet. Upgrade a plan, enable an add-on, or purchase a credit
-                    pack to generate an invoice.
-                  </td>
+                    {tt("No invoices issued yet. Upgrade a plan, enable an add-on, or purchase a credit pack to generate an invoice.")}</td>
                 </tr>
               ) : null}
             </tbody>

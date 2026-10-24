@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import type { Heatmap } from "@athena/core/competitors";
 
@@ -9,27 +10,29 @@ function heat(value: number): React.CSSProperties {
   return { background: `rgba(79, 57, 246, ${(0.06 + a * 0.6).toFixed(2)})`, color: a > 0.55 ? "#fff" : "#1f2937" };
 }
 
-function MetricTabs({ metric, hrefFor }: { metric: HeatmapMetric; hrefFor: (m: HeatmapMetric) => string }) {
+async function MetricTabs({ metric, hrefFor }: { metric: HeatmapMetric; hrefFor: (m: HeatmapMetric) => string }) {
+  const tt = await getTranslations();
   const tab = (m: HeatmapMetric, label: string) => (
     <Link role="tab" aria-selected={metric === m} href={hrefFor(m)} className={`rounded-lg px-3 py-1 ${metric === m ? "bg-brand-50 font-medium text-brand-600" : "text-gray-500"}`}>
-      {label}
+      {tt(label)}
     </Link>
   );
   return (
-    <div className="flex gap-1 text-xs" role="tablist" aria-label="Heatmap metric">
+    <div className="flex gap-1 text-xs" role="tablist" aria-label={tt("Heatmap metric")}>
       {tab("mention", "Mention rate")}
       {tab("citation", "Citation rate")}
     </div>
   );
 }
 
-function HeatmapTable({ heatmap, grid }: { heatmap: Heatmap; grid: number[][] }) {
+async function HeatmapTable({ heatmap, grid }: { heatmap: Heatmap; grid: number[][] }) {
+  const tt = await getTranslations();
   return (
     <div className="overflow-x-auto">
       <table className="text-xs">
         <thead>
           <tr>
-            <th className="px-2 py-1 text-left font-medium text-gray-500">Topic</th>
+            <th className="px-2 py-1 text-left font-medium text-gray-500">{tt("Topic")}</th>
             {heatmap.entities.map((e) => (
               <th key={e.competitorId ?? "brand"} className={`px-2 py-1 font-medium ${e.competitorId === null ? "text-brand-700" : "text-gray-500"}`}>
                 {e.name}
@@ -56,15 +59,16 @@ function HeatmapTable({ heatmap, grid }: { heatmap: Heatmap; grid: number[][] })
   );
 }
 
-export function HeatmapSection({ heatmap, metric, hrefFor }: { heatmap: Heatmap; metric: HeatmapMetric; hrefFor: (m: HeatmapMetric) => string }) {
+export async function HeatmapSection({ heatmap, metric, hrefFor }: { heatmap: Heatmap; metric: HeatmapMetric; hrefFor: (m: HeatmapMetric) => string }) {
+  const tt = await getTranslations();
   return (
     <section className="rounded-xl border border-gray-100 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Topic × brand heatmap</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{tt("Topic × brand heatmap")}</h2>
         <MetricTabs metric={metric} hrefFor={hrefFor} />
       </div>
       {heatmap.topics.length === 0 ? (
-        <p className="text-sm text-gray-400">No answers in this period.</p>
+        <p className="text-sm text-gray-400">{tt("No answers in this period.")}</p>
       ) : (
         <HeatmapTable heatmap={heatmap} grid={metric === "citation" ? heatmap.citation : heatmap.mention} />
       )}

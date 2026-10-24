@@ -49,47 +49,50 @@ const addons = [
   { name: "Agency Pitch Pro Add-on", price: "$75/mo", detail: "Expands Pitch Workspace quota and white-labelBefore/After AEO rewrite share links (+300 bonus credits)." },
   { name: "On-Demand Credit Packs", price: "$79 – $895", detail: "Instant top-up packs (+1,000 for $79 · +5,000 for $345 · +15,000 for $895) allocatable to Org, Website, or Group pools." },
 ];
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base title="Pricing | Athenum">
+<Base locale={locale} title={tt("Pricing | Athenum")}>
   <section class="wrap" style="padding:64px 24px 32px;">
     <div style="text-align:center;">
-      <span class="badge">Transparent Credit Ledger · 1 Credit = 1 AI Response</span>
-      <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:12px;">Plans & Credit Pricing</h1>
-      <p style="color:#475569;margin-top:8px;font-size:16px;">
-        Save 20% with annual billing. Allocate credits flexibly across Organization, Website, and Agency Group pools.
-      </p>
+      <span class="badge">{tt("Transparent Credit Ledger · 1 Credit = 1 AI Response")}</span>
+      <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:12px;">{tt("Plans & Credit Pricing")}</h1>
+      <p style="color:#475569;margin-top:8px;font-size:16px;">{tt(" Save 20% with annual billing. Allocate credits flexibly across Organization, Website, and Agency Group pools. ")}</p>
     </div>
 
     <div class="grid-3" style="margin-top:40px;">
       {plans.map((p) => (
         <div class="card" style={p.popular ? "border-color:var(--brand);box-shadow:0 12px 40px rgba(79,57,246,0.12);" : ""}>
-          {p.popular ? <span class="badge">Most Popular</span> : <span class="badge" style="background:#f1f5f9;color:#475569;">Tier</span>}
-          <h2 style="font-size:22px;margin:12px 0 4px;">{p.name}</h2>
+          {p.popular ? <span class="badge">{tt("Most Popular")}</span> : <span class="badge" style="background:#f1f5f9;color:#475569;">{tt("Tier")}</span>}
+          <h2 style="font-size:22px;margin:12px 0 4px;">{tt(p.name)}</h2>
           <div style="font-size:38px;font-weight:800;">
-            {p.price}<span style="font-size:14px;color:#64748b;font-weight:500;">/mo</span>
+            {tt(p.price)}<span style="font-size:14px;color:#64748b;font-weight:500;">{tt("/mo")}</span>
           </div>
-          <div style="color:#475569;font-size:13px;font-weight:600;margin:6px 0 2px;">{p.credits}</div>
-          <div style="color:#64748b;font-size:13px;margin-bottom:18px;">{p.models}</div>
+          <div style="color:#475569;font-size:13px;font-weight:600;margin:6px 0 2px;">{tt(p.credits)}</div>
+          <div style="color:#64748b;font-size:13px;margin-bottom:18px;">{tt(p.models)}</div>
           <ul style="list-style:none;padding:0;font-size:14px;color:#334155;display:grid;gap:10px;margin-bottom:24px;">
-            {p.features.map((f) => <li>✓ {f}</li>)}
+            {p.features.map((f) => <li>✓ {tt(f)}</li>)}
           </ul>
           <a class={`btn ${p.popular ? "btn-primary" : "btn-secondary"}`} style="width:100%;" href="http://localhost:3000/login">
-            {p.name === "Enterprise" ? "Start Enterprise Trial" : "Start Free Workspace"}
+            {tt(p.name === "Enterprise" ? "Start Enterprise Trial" : "Start Free Workspace")}
           </a>
         </div>
       ))}
     </div>
 
     <div style="margin-top:48px;">
-      <h2 style="font-size:22px;margin-bottom:16px;">Add-ons & Credit Top-Up Packs</h2>
+      <h2 style="font-size:22px;margin-bottom:16px;">{tt("Add-ons & Credit Top-Up Packs")}</h2>
       <div class="grid-3">
         {addons.map((a) => (
           <div class="card" style="background:#f8fafc;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <strong style="font-size:15px;">{a.name}</strong>
-              <span class="badge">{a.price}</span>
+              <strong style="font-size:15px;">{tt(a.name)}</strong>
+              <span class="badge">{tt(a.price)}</span>
             </div>
-            <p style="font-size:13px;color:#475569;">{a.detail}</p>
+            <p style="font-size:13px;color:#475569;">{tt(a.detail)}</p>
           </div>
         ))}
       </div>

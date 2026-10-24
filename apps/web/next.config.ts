@@ -16,7 +16,7 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@athena/db", "@athena/core", "@athena/llm", "@athena/crawler", "@athena/jobs", "@athena/ui", "@athena/emails"],
+  transpilePackages: ["@athena/db", "@athena/core", "@athena/llm", "@athena/crawler", "@athena/jobs", "@athena/ui", "@athena/emails", "@athena/i18n"],
   serverExternalPackages: ["pg", "@electric-sql/pglite"],
   async headers() {
     return [

@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import { db } from "@athena/db";
 import { MODEL_LABELS } from "@athena/core";
@@ -19,11 +20,15 @@ import { MetricCards } from "./_components/cards";
 import { TrendChart } from "./_components/charts";
 import { saveViewAction, deleteViewAction } from "./actions";
 
-export const metadata = { title: "Olympus Dashboard" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Olympus Dashboard") };
+}
 
 const LABELS: Record<string, string> = { ...MODEL_LABELS, simulated: "Simulated (dev)" };
 
 export default async function OlympusPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const c = { actorId: ws.user.id, websiteId: ws.websiteId };
@@ -49,33 +54,31 @@ export default async function OlympusPage({ searchParams }: { searchParams: Prom
   return (
     <div>
       <PageHeader
-        title="Olympus Dashboard"
-        subtitle={`AI search visibility for ${ws.website.name}`}
+        title={tt("Olympus Dashboard")}
+        subtitle={tt("AI search visibility for {0}", { 0: ws.website.name })}
         actions={
           <a href={`/api/olympus/export?${query}`} className="btn-secondary text-xs">
-            Export CSV
-          </a>
+            {tt("Export CSV")}</a>
         }
       />
       <div className="space-y-4 p-6">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-gray-500">Views:</span>
+          <span className="text-gray-500">{tt("Views:")}</span>
           <Link href="/olympus" className={`badge ${activeView ? "bg-gray-100 text-gray-600" : "bg-brand-50 text-brand-600"}`}>
-            Default
-          </Link>
+            {tt("Default")}</Link>
           {views.map((v) => (
             <Link key={v.id} href={`/olympus?view=${v.id}`} className={`badge ${activeView?.id === v.id ? "bg-brand-50 text-brand-600" : "bg-gray-100 text-gray-600"}`}>
               {v.name}
             </Link>
           ))}
           {activeView ? (
-            <ActionForm action={deleteViewAction} submitLabel="Delete view" variant="secondary" confirm={`Delete view ${activeView.name}?`}>
+            <ActionForm action={deleteViewAction} submitLabel={tt("Delete view")} variant="secondary" confirm={tt("Delete view {0}?", { 0: activeView.name })}>
               <input type="hidden" name="viewId" value={activeView.id} />
             </ActionForm>
           ) : (
-            <ActionForm action={saveViewAction} submitLabel="Save view" variant="secondary" className="flex items-center gap-2" resetOnSuccess>
+            <ActionForm action={saveViewAction} submitLabel={tt("Save view")} variant="secondary" className="flex items-center gap-2" resetOnSuccess>
               <input type="hidden" name="state" value={query} />
-              <input name="name" className="input !w-40 !py-1 text-xs" placeholder="Name this view" required maxLength={60} />
+              <input name="name" className="input !w-40 !py-1 text-xs" placeholder={tt("Name this view")} required maxLength={60} />
             </ActionForm>
           )}
         </div>
@@ -84,50 +87,47 @@ export default async function OlympusPage({ searchParams }: { searchParams: Prom
 
         {metrics.totals.simulatedShare > 0 ? (
           <p role="note" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            {metrics.totals.simulatedShare}% of these answers come from the dev-only simulated provider — not real AI output.
-          </p>
+            {metrics.totals.simulatedShare}{tt("% of these answers come from the dev-only simulated provider — not real AI output.")}</p>
         ) : null}
 
         {metrics.totals.responses === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-500">
-            No AI answers in this period.{" "}
+            {tt("No AI answers in this period.")}{tt(" ")}
             <Link href="/prompts?tab=runs" className="text-brand-600 underline">
-              Run a collection
-            </Link>{" "}
-            or widen the filters.
-          </div>
+              {tt("Run a collection")}</Link>{tt(" ")}
+            {tt("or widen the filters.")}</div>
         ) : (
           <>
             <MetricCards cards={state.cards} totals={metrics.totals} delta={delta} value={value} />
             <TrendChart daily={metrics.daily} dailyByModel={metrics.dailyByModel} dailyEntities={metrics.dailyEntities} mode={state.chart} labels={LABELS} />
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-xl border border-gray-100 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-gray-900">By AI model</h2>
+                <h2 className="mb-2 text-sm font-semibold text-gray-900">{tt("By AI model")}</h2>
                 <table className="table-base">
                   <thead>
                     <tr>
-                      <th>Model</th>
-                      <th>Answers</th>
-                      <th>Mention</th>
-                      <th>Citation</th>
-                      <th>Position</th>
+                      <th>{tt("Model")}</th>
+                      <th>{tt("Answers")}</th>
+                      <th>{tt("Mention")}</th>
+                      <th>{tt("Citation")}</th>
+                      <th>{tt("Position")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {metrics.byModel.map((m) => (
                       <tr key={m.model}>
-                        <td>{LABELS[m.model] ?? m.model}</td>
+                        <td>{tt(LABELS[m.model] ?? m.model)}</td>
                         <td className="text-gray-500">{m.responses}</td>
                         <td>{m.mentionRate}%</td>
                         <td>{m.citationRate}%</td>
-                        <td>{m.avgPosition === null ? "—" : `#${m.avgPosition}`}</td>
+                        <td>{tt(m.avgPosition === null ? "—" : `#${m.avgPosition}`)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </section>
               <section className="rounded-xl border border-gray-100 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-gray-900">Share of voice</h2>
+                <h2 className="mb-2 text-sm font-semibold text-gray-900">{tt("Share of voice")}</h2>
                 <ul className="space-y-2">
                   {metrics.entities.map((e) => (
                     <li key={e.competitorId ?? "brand"} className="flex items-center gap-3 text-xs">
@@ -144,7 +144,7 @@ export default async function OlympusPage({ searchParams }: { searchParams: Prom
               </section>
             </div>
             <p className="text-[11px] text-gray-400">
-              {metrics.totals.responses.toLocaleString()} answers · {current.from.toISOString().slice(0, 10)} – {new Date(current.to.getTime() - 1).toISOString().slice(0, 10)} · days in {ws.website.timezone}
+              {metrics.totals.responses.toLocaleString()} {tt(" answers · ")}{current.from.toISOString().slice(0, 10)} – {new Date(current.to.getTime() - 1).toISOString().slice(0, 10)} {tt(" · days in ")}{ws.website.timezone}
             </p>
           </>
         )}

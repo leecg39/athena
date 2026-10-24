@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +29,7 @@ export function AthAskHome(props: {
   connectors: ConnectorState[];
   recentThreads?: RecentThreadItem[];
 }) {
+  const tt = useTranslations();
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [interacting, setInteracting] = useState(false);
@@ -88,10 +91,10 @@ export function AthAskHome(props: {
 
       <div className="relative z-10 w-full max-w-2xl text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-          {greeting}, {props.firstName}
+          {tt(greeting)}{props.firstName ? `, ${props.firstName}` : ""}
         </h1>
         <p className="mt-2 text-sm text-gray-500">
-          Asking about <span className="font-medium text-gray-700">{props.websiteName}</span>
+          {tt("Asking about ")}<span className="font-medium text-gray-700">{props.websiteName}</span>
         </p>
 
         <div
@@ -113,7 +116,7 @@ export function AthAskHome(props: {
             value={text}
             rows={3}
             maxLength={MAX_MESSAGE_CHARS}
-            placeholder="Ask Athena about your AI visibility, competitors, sources or content…"
+            placeholder={tt("Ask Athena about your AI visibility, competitors, sources or content…")}
             className="w-full resize-none bg-transparent text-sm outline-none"
             disabled={submitting}
             onChange={(e) => {
@@ -132,10 +135,10 @@ export function AthAskHome(props: {
             <div className="mt-2 flex flex-wrap gap-1.5">
               {files.map((f) => (
                 <span key={f.name} className="badge bg-brand-50 text-brand-600">
-                  {f.name} <span className="text-[10px] text-gray-400">({f.size.toLocaleString()} chars)</span>
+                  {f.name} <span className="text-[10px] text-gray-400">({f.size.toLocaleString()} {tt(" chars)")}</span>
                   <button
                     type="button"
-                    aria-label={`Remove ${f.name}`}
+                    aria-label={tt("Remove {0}", { 0: f.name })}
                     onClick={() => setFiles((all) => all.filter((x) => x.name !== f.name))}
                     className="ml-1 text-gray-400 hover:text-gray-600"
                   >
@@ -148,7 +151,7 @@ export function AthAskHome(props: {
 
           {error ? (
             <p role="alert" className="mt-2 text-xs text-red-600">
-              {error}
+              {tt(error)}
             </p>
           ) : null}
 
@@ -158,10 +161,9 @@ export function AthAskHome(props: {
                 type="button"
                 className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                 onClick={() => fileRef.current?.click()}
-                title="Attach text files (TXT, MD, CSV, TSV, JSON)"
+                title={tt("Attach text files (TXT, MD, CSV, TSV, JSON)")}
               >
-                + Attach file
-              </button>
+                {tt("+ Attach file")}</button>
               <input
                 ref={fileRef}
                 type="file"
@@ -181,12 +183,12 @@ export function AthAskHome(props: {
             </div>
             <button
               type="button"
-              aria-label="Send question"
+              aria-label={tt("Send question")}
               className="btn-primary !px-3 !py-1.5"
               onClick={() => void send()}
               disabled={!text.trim() || submitting}
             >
-              {submitting ? "…" : "↑"}
+              {tt(submitting ? "…" : "↑")}
             </button>
           </div>
         </div>
@@ -197,10 +199,10 @@ export function AthAskHome(props: {
               key={q}
               type="button"
               disabled={submitting}
-              onClick={() => void send(q)}
+              onClick={() => void send(tt(q))}
               className="rounded-full border border-gray-200 bg-white/80 px-4 py-1.5 text-sm text-gray-600 shadow-sm transition hover:border-brand-600 hover:text-brand-600 disabled:opacity-50"
             >
-              {q}
+              {tt(q)}
             </button>
           ))}
         </div>
@@ -208,10 +210,9 @@ export function AthAskHome(props: {
         {props.recentThreads && props.recentThreads.length > 0 ? (
           <div className="mt-10 rounded-2xl border border-gray-100 bg-white/80 p-4 text-left shadow-sm backdrop-blur">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-400">
-              <span>Recent chats</span>
+              <span>{tt("Recent chats")}</span>
               <Link href="/chat" className="font-medium normal-case text-brand-600 hover:underline">
-                Open full chat →
-              </Link>
+                {tt("Open full chat →")}</Link>
             </div>
             <ul className="divide-y divide-gray-100 text-sm">
               {props.recentThreads.slice(0, 5).map((t) => (

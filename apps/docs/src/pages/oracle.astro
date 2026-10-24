@@ -1,7 +1,12 @@
 ---
 import Doc from "../layouts/Doc.astro";
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Doc title="Oracle | Athenum Docs">
-  <h1>Oracle</h1>
-  <p>Oracle scans AI responses against your Knowledge Base and surfaces confirmed inaccuracies, KB inconsistencies, and model disagreements — each with the evidence excerpt for review.</p>
+<Doc locale={locale} title={tt("Oracle | Athenum Docs")}>
+  <h1>{tt("Oracle")}</h1>
+  <p>{tt("Oracle scans AI responses against your Knowledge Base and surfaces confirmed inaccuracies, KB inconsistencies, and model disagreements — each with the evidence excerpt for review.")}</p>
 </Doc>

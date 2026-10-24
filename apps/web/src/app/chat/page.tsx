@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { getThread, listThreads, RUN_TIMEOUT_MS } from "@athena/core/assistant";
 import { NotFoundError } from "@athena/core/org";
@@ -5,7 +6,10 @@ import { requireWorkspace } from "@/lib/workspace";
 import { connectorsFor } from "@/lib/assistant";
 import { AthChat, type ChatThreadView } from "@/components/ath-chat";
 
-export const metadata = { title: "Ask Athena" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Ask Athena") };
+}
 
 export default async function ChatPage({
   searchParams,

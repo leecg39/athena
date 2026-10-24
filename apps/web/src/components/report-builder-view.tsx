@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -79,6 +81,7 @@ interface Props {
 }
 
 export function ReportBuilderView(props: Props) {
+  const tt = useTranslations();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(props.reports[0]?.id ?? null);
   const [lastKey, setLastKey] = useState<string>("send");
@@ -112,11 +115,10 @@ export function ReportBuilderView(props: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3">
         <div>
           <div className="text-sm font-semibold text-gray-900">
-            Scheduled Reports &amp; Public Share Links ({props.reports.length})
+            {tt("Scheduled Reports & Public Share Links (")}{props.reports.length})
           </div>
           <div className="text-xs text-gray-500">
-            Compose chart sets, schedule automated Email &amp; Slack weekly digests, export PDFs, and share live AI Search or Content Proposal reports
-          </div>
+            {tt("Compose chart sets, schedule automated Email & Slack weekly digests, export PDFs, and share live AI Search or Content Proposal reports")}</div>
         </div>
         {props.canWrite ? (
           <button
@@ -125,8 +127,7 @@ export function ReportBuilderView(props: Props) {
             onClick={() => setShowCreateForm((v) => !v)}
             className="btn-primary !px-3.5 !py-1.5 text-xs"
           >
-            + New report
-          </button>
+            {tt("+ New report")}</button>
         ) : null}
       </div>
 
@@ -137,7 +138,7 @@ export function ReportBuilderView(props: Props) {
           data-testid="reports-error-banner"
           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
         >
-          {errorMsg}
+          {tt(errorMsg)}
         </div>
       ) : null}
       {!errorMsg && infoMsg ? (
@@ -146,7 +147,7 @@ export function ReportBuilderView(props: Props) {
           data-testid="reports-status-banner"
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
         >
-          {infoMsg}
+          {tt(infoMsg)}
         </div>
       ) : null}
 
@@ -160,45 +161,43 @@ export function ReportBuilderView(props: Props) {
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Create Scheduled Report &amp; Public Share Link
-            </div>
+              {tt("Create Scheduled Report & Public Share Link")}</div>
             <button type="button" onClick={() => setShowCreateForm(false)} className="text-xs text-gray-400">
-              Close
-            </button>
+              {tt("Close")}</button>
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-gray-600">Report Name</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">{tt("Report Name")}</label>
               <input
                 name="name"
                 required
-                placeholder="e.g. Executive Weekly AI Search Digest"
+                placeholder={tt("e.g. Executive Weekly AI Search Digest")}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Report Type</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">{tt("Report Type")}</label>
               <select
                 name="reportType"
                 defaultValue="ai_search"
                 className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
               >
-                <option value="ai_search">AI Search Visibility Report (/report/...)</option>
-                <option value="content_proposal">Content Proposal Report (/report/content/...)</option>
+                <option value="ai_search">{tt("AI Search Visibility Report (/report/...)")}</option>
+                <option value="content_proposal">{tt("Content Proposal Report (/report/content/...)")}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Delivery Cadence</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">{tt("Delivery Cadence")}</label>
               <select
                 name="cadence"
                 defaultValue="weekly"
                 className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
               >
-                <option value="daily">Daily · 09:00 UTC</option>
-                <option value="weekly">Weekly · Mon 09:00 UTC</option>
-                <option value="biweekly">Biweekly · Mon 09:00 UTC</option>
-                <option value="monthly">Monthly · 1st of month</option>
+                <option value="daily">{tt("Daily · 09:00 UTC")}</option>
+                <option value="weekly">{tt("Weekly · Mon 09:00 UTC")}</option>
+                <option value="biweekly">{tt("Biweekly · Mon 09:00 UTC")}</option>
+                <option value="monthly">{tt("Monthly · 1st of month")}</option>
               </select>
             </div>
           </div>
@@ -206,23 +205,21 @@ export function ReportBuilderView(props: Props) {
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                Email Recipients (comma-separated)
-              </label>
+                {tt("Email Recipients (comma-separated)")}</label>
               <input
                 name="recipients"
                 defaultValue={`leadership@${props.siteDomain}, marketing@${props.siteDomain}`}
-                placeholder="exec@company.com, seo@company.com"
+                placeholder={tt("exec@company.com, seo@company.com")}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                Slack Weekly Report Channel
-              </label>
+                {tt("Slack Weekly Report Channel")}</label>
               <input
                 name="slackChannel"
                 defaultValue="#aeo-weekly"
-                placeholder="#aeo-weekly"
+                placeholder={tt("#aeo-weekly")}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs"
               />
             </div>
@@ -230,8 +227,7 @@ export function ReportBuilderView(props: Props) {
 
           <div>
             <label className="mb-2 block text-xs font-medium text-gray-600">
-              Chart Composition Modules (Select charts to include in PDF, Slack &amp; Public Share Link)
-            </label>
+              {tt("Chart Composition Modules (Select charts to include in PDF, Slack & Public Share Link)")}</label>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {CHART_MODULES.map((m, idx) => (
                 <label
@@ -246,8 +242,8 @@ export function ReportBuilderView(props: Props) {
                     className="mt-0.5 rounded border-gray-300"
                   />
                   <div>
-                    <div className="font-semibold text-gray-800">{m.label}</div>
-                    <div className="text-[11px] text-gray-400">{m.description}</div>
+                    <div className="font-semibold text-gray-800">{tt(m.label)}</div>
+                    <div className="text-[11px] text-gray-400">{tt(m.description)}</div>
                   </div>
                 </label>
               ))}
@@ -256,7 +252,7 @@ export function ReportBuilderView(props: Props) {
 
           <div className="flex justify-end">
             <button type="submit" disabled={createPending} className="btn-primary !px-4 !py-2 text-xs">
-              {createPending ? "Creating…" : "Create Report & Generate Share Link"}
+              {tt(createPending ? "Creating…" : "Create Report & Generate Share Link")}
             </button>
           </div>
         </form>
@@ -267,13 +263,13 @@ export function ReportBuilderView(props: Props) {
         <table className="table-base" data-testid="reports-table">
           <thead>
             <tr>
-              <th>Report Name</th>
-              <th>Type</th>
-              <th>Chart Modules</th>
-              <th>Cadence &amp; Slack</th>
-              <th>Recipients</th>
-              <th>Public Share Link</th>
-              <th className="text-right">Actions</th>
+              <th>{tt("Report Name")}</th>
+              <th>{tt("Type")}</th>
+              <th>{tt("Chart Modules")}</th>
+              <th>{tt("Cadence & Slack")}</th>
+              <th>{tt("Recipients")}</th>
+              <th>{tt("Public Share Link")}</th>
+              <th className="text-right">{tt("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -288,9 +284,9 @@ export function ReportBuilderView(props: Props) {
                   <td>
                     <div className="font-semibold text-gray-900">{r.name}</div>
                     <div className="text-[11px] text-gray-400">
-                      {r.lastSentAt
+                      {tt(r.lastSentAt
                         ? `Last sent ${new Date(r.lastSentAt).toISOString().slice(0, 10)}`
-                        : "Never dispatched"}
+                        : "Never dispatched")}
                     </div>
                   </td>
                   <td>
@@ -301,26 +297,25 @@ export function ReportBuilderView(props: Props) {
                           : "bg-brand-50 text-brand-700"
                       }`}
                     >
-                      {r.reportType === "content_proposal" ? "Content Proposal" : "AI Search Report"}
+                      {tt(r.reportType === "content_proposal" ? "Content Proposal" : "AI Search Report")}
                     </span>
                   </td>
                   <td>
                     <span className="font-mono text-xs font-semibold text-gray-800">
-                      {r.charts.length} charts
-                    </span>
+                      {r.charts.length} {tt(" charts")}</span>
                   </td>
                   <td>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                      <span className="badge bg-gray-100 text-gray-700">{r.cadence}</span>
+                      <span className="badge bg-gray-100 text-gray-700">{tt(r.cadence)}</span>
                       {r.slackChannel ? (
                         <span className="badge bg-emerald-50 font-mono text-emerald-700">
-                          Slack {r.slackChannel}
+                          {tt("Slack ")}{r.slackChannel}
                         </span>
                       ) : null}
                     </div>
                   </td>
                   <td className="text-xs text-gray-600">
-                    {r.recipients.length} {r.recipients.length === 1 ? "email" : "emails"}
+                    {r.recipients.length} {tt(r.recipients.length === 1 ? "email" : "emails")}
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <Link
@@ -340,16 +335,14 @@ export function ReportBuilderView(props: Props) {
                             disabled={sendPending}
                             className="btn-secondary !px-2.5 !py-1 text-xs"
                           >
-                            Send now
-                          </button>
+                            {tt("Send now")}</button>
                         </form>
                       ) : null}
                       <a
                         href={`/api/reports/${r.id}/pdf?shareId=${encodeURIComponent(r.shareId)}`}
                         className="btn-secondary !px-2.5 !py-1 text-xs"
                       >
-                        PDF
-                      </a>
+                        {tt("PDF")}</a>
                       {props.canWrite ? (
                         <form action={deleteAct} onSubmit={() => setLastKey("delete")}>
                           <input type="hidden" name="reportId" value={r.id} />
@@ -358,8 +351,7 @@ export function ReportBuilderView(props: Props) {
                             disabled={deletePending}
                             className="text-xs text-red-500 hover:text-red-700"
                           >
-                            Delete
-                          </button>
+                            {tt("Delete")}</button>
                         </form>
                       ) : null}
                     </div>
@@ -384,26 +376,23 @@ export function ReportBuilderView(props: Props) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                Chart Composition &amp; Schedule Studio
-              </div>
+                {tt("Chart Composition & Schedule Studio")}</div>
               <div className="text-sm font-bold text-gray-900">{selectedReport.name}</div>
             </div>
             <div className="flex items-center gap-2">
               <Link href={selectedReport.sharePath} className="btn-secondary !px-3 !py-1.5 text-xs">
-                Open Public Share View →
-              </Link>
+                {tt("Open Public Share View →")}</Link>
               <a
                 href={`/api/reports/${selectedReport.id}/pdf?shareId=${encodeURIComponent(selectedReport.shareId)}`}
                 className="btn-secondary !px-3 !py-1.5 text-xs"
               >
-                ⬇ Download PDF
-              </a>
+                {tt("⬇ Download PDF")}</a>
             </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-gray-600">Report Title</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">{tt("Report Title")}</label>
               <input
                 name="name"
                 defaultValue={selectedReport.name}
@@ -412,27 +401,27 @@ export function ReportBuilderView(props: Props) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Report Template</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">{tt("Report Template")}</label>
               <select
                 name="reportType"
                 defaultValue={selectedReport.reportType}
                 className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
               >
-                <option value="ai_search">AI Search Visibility Report</option>
-                <option value="content_proposal">Content Proposal Report</option>
+                <option value="ai_search">{tt("AI Search Visibility Report")}</option>
+                <option value="content_proposal">{tt("Content Proposal Report")}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Schedule Cadence</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">{tt("Schedule Cadence")}</label>
               <select
                 name="cadence"
                 defaultValue={selectedReport.cadence}
                 className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Biweekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{tt("Daily")}</option>
+                <option value="weekly">{tt("Weekly")}</option>
+                <option value="biweekly">{tt("Biweekly")}</option>
+                <option value="monthly">{tt("Monthly")}</option>
               </select>
             </div>
           </div>
@@ -440,8 +429,7 @@ export function ReportBuilderView(props: Props) {
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                Email Recipients (comma-separated)
-              </label>
+                {tt("Email Recipients (comma-separated)")}</label>
               <input
                 name="recipients"
                 defaultValue={selectedReport.recipients.join(", ")}
@@ -450,12 +438,11 @@ export function ReportBuilderView(props: Props) {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                Slack Weekly Digest Channel
-              </label>
+                {tt("Slack Weekly Digest Channel")}</label>
               <input
                 name="slackChannel"
                 defaultValue={selectedReport.slackChannel ?? ""}
-                placeholder="#aeo-executive"
+                placeholder={tt("#aeo-executive")}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs"
               />
             </div>
@@ -463,8 +450,7 @@ export function ReportBuilderView(props: Props) {
 
           <div>
             <label className="mb-2 block text-xs font-medium text-gray-600">
-              Active Chart Modules ({selectedReport.charts.length} selected)
-            </label>
+              {tt("Active Chart Modules (")}{selectedReport.charts.length} {tt(" selected)")}</label>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {CHART_MODULES.map((m) => (
                 <label
@@ -479,8 +465,8 @@ export function ReportBuilderView(props: Props) {
                     className="mt-0.5 rounded border-gray-300"
                   />
                   <div>
-                    <div className="font-semibold text-gray-800">{m.label}</div>
-                    <div className="text-[11px] text-gray-400">{m.description}</div>
+                    <div className="font-semibold text-gray-800">{tt(m.label)}</div>
+                    <div className="text-[11px] text-gray-400">{tt(m.description)}</div>
                   </div>
                 </label>
               ))}
@@ -489,7 +475,7 @@ export function ReportBuilderView(props: Props) {
 
           <div className="flex justify-end">
             <button type="submit" disabled={updatePending} className="btn-primary !px-4 !py-2 text-xs">
-              {updatePending ? "Saving…" : "Save Report Configuration"}
+              {tt(updatePending ? "Saving…" : "Save Report Configuration")}
             </button>
           </div>
         </form>

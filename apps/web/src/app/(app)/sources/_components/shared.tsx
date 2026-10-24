@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import type { SourceType } from "@athena/core/sources";
 
 export const TYPE_LABEL: Record<SourceType, { short: string; label: string; cls: string }> = {
@@ -7,11 +8,12 @@ export const TYPE_LABEL: Record<SourceType, { short: string; label: string; cls:
   third_party: { short: "T", label: "Third-party", cls: "bg-gray-100 text-gray-600" },
 };
 
-export function TypeBadge({ type }: { type: SourceType }) {
+export async function TypeBadge({ type }: { type: SourceType }) {
+  const tt = await getTranslations();
   const t = TYPE_LABEL[type];
   return (
-    <span className={`badge ${t.cls}`} title={t.label}>
-      {t.short} · {t.label}
+    <span className={`badge ${t.cls}`} title={tt(t.label)}>
+      {t.short} · {tt(t.label)}
     </span>
   );
 }

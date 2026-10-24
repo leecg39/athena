@@ -31,27 +31,28 @@ const posts = [
     readTime: "5 min read",
   },
 ];
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base title="Blog & Research | Athenum">
+<Base locale={locale} title={tt("Blog & Research | Athenum")}>
   <section class="wrap" style="padding:64px 24px 32px;">
-    <span class="badge">Athenum Research & Playbooks</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
-      AI Search Engineering & AEO Insights
-    </h1>
-    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">
-      Deep dives into Answer Engine Optimization, citation graph mechanics, LLM hallucination remediation, and agentic workflows.
-    </p>
+    <span class="badge">{tt("Athenum Research & Playbooks")}</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" AI Search Engineering & AEO Insights ")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt(" Deep dives into Answer Engine Optimization, citation graph mechanics, LLM hallucination remediation, and agentic workflows. ")}</p>
   </section>
 
   <section class="wrap grid-2" style="padding:16px 24px 48px;">
     {posts.map((post) => (
       <article class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#64748b;margin-bottom:10px;">
-          <span class="badge">{post.category}</span>
-          <span>{post.date} · {post.readTime}</span>
+          <span class="badge">{tt(post.category)}</span>
+          <span>{post.date} · {tt(post.readTime)}</span>
         </div>
-        <h2 style="font-size:20px;margin-bottom:10px;line-height:1.35;">{post.title}</h2>
-        <p style="font-size:14px;color:#475569;line-height:1.6;">{post.excerpt}</p>
+        <h2 style="font-size:20px;margin-bottom:10px;line-height:1.35;">{tt(post.title)}</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.6;">{tt(post.excerpt)}</p>
       </article>
     ))}
   </section>

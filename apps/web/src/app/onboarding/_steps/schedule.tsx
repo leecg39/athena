@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, prompts, organizations, promptSchedules } from "@athena/db";
 import { PLANS } from "@athena/core";
@@ -12,6 +13,7 @@ const OPTIONS = [
 ] as const;
 
 export async function ScheduleStep({ site }: { site: WebsiteRow }) {
+  const tt = await getTranslations();
   const [[count], [org], [schedule]] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(prompts).where(and(eq(prompts.websiteId, site.id), isNull(prompts.deletedAt))),
     db.select({ plan: organizations.plan }).from(organizations).where(eq(organizations.id, site.organizationId)),
@@ -24,30 +26,28 @@ export async function ScheduleStep({ site }: { site: WebsiteRow }) {
   const fallback = OPTIONS.find((o) => fits(o.runsPerMonth))?.value ?? "weekly";
   const selected = schedule?.cadence ?? fallback;
   return (
-    <ActionForm action={finishOnboarding} submitLabel="Finish setup" className="space-y-4">
+    <ActionForm action={finishOnboarding} submitLabel={tt("Finish setup")} className="space-y-4">
       <input type="hidden" name="websiteId" value={site.id} />
       <fieldset className="space-y-2">
-        <legend className="mb-1 text-xs font-medium text-gray-600">How often should we ask AI models your prompts?</legend>
+        <legend className="mb-1 text-xs font-medium text-gray-600">{tt("How often should we ask AI models your prompts?")}</legend>
         {OPTIONS.map((o) => (
           <label key={o.value} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 text-sm">
             <span className="flex items-center gap-2">
               <input type="radio" name="cadence" value={o.value} defaultChecked={selected === o.value} />
-              {o.label}
+              {tt(o.label)}
             </span>
             <span className={`text-xs ${fits(o.runsPerMonth) ? "text-gray-400" : "text-amber-700"}`}>
-              ≈ {(perRun * o.runsPerMonth).toLocaleString()} credits / month{fits(o.runsPerMonth) ? "" : " — exceeds your plan"}
+              ≈ {(perRun * o.runsPerMonth).toLocaleString()} {tt(" credits / month")}{tt(fits(o.runsPerMonth) ? "" : " — exceeds your plan")}
             </span>
           </label>
         ))}
       </fieldset>
       {!fits(OPTIONS[OPTIONS.length - 1].runsPerMonth) ? (
         <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Even a weekly schedule needs more credits than your plan includes. Runs stop when credits run out — track fewer prompts or upgrade.
-        </p>
+          {tt("Even a weekly schedule needs more credits than your plan includes. Runs stop when credits run out — track fewer prompts or upgrade.")}</p>
       ) : null}
       <p className="text-xs text-gray-500">
-        {count?.n ?? 0} prompts × {plan.models.length} AI models = {perRun} answers (credits) per run on the {plan.label} plan ({plan.monthlyCredits || "custom"} credits/month).
-      </p>
+        {count?.n ?? 0} {tt(" prompts × ")}{plan.models.length} {tt(" AI models = ")}{perRun} {tt(" answers (credits) per run on the ")}{tt(plan.label)} {tt(" plan (")}{plan.monthlyCredits || "custom"} {tt(" credits/month).")}</p>
     </ActionForm>
   );
 }

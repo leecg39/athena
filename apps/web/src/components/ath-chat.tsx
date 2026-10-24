@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -76,6 +78,7 @@ function ThreadHeaderControls({
   title: string;
   onRenamed: (next: string) => void;
 }) {
+  const tt = useTranslations();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const [renameState, renameFormAction, renaming] = useActionState(renameThreadAction, idle);
@@ -110,31 +113,28 @@ function ThreadHeaderControls({
             name="title"
             value={draft}
             maxLength={80}
-            aria-label="Chat title"
+            aria-label={tt("Chat title")}
             onChange={(e) => setDraft(e.target.value)}
             className="input !py-1 text-xs"
           />
           <button type="submit" disabled={renaming || !draft.trim()} className="btn-primary !px-2.5 !py-1 text-xs">
-            Save
-          </button>
+            {tt("Save")}</button>
           <button type="button" onClick={() => setEditing(false)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-500">
-            Cancel
-          </button>
+            {tt("Cancel")}</button>
         </form>
       ) : (
         <>
-          <h1 className="truncate text-sm font-semibold text-gray-900">{title}</h1>
+          <h1 className="truncate text-sm font-semibold text-gray-900">{tt(title)}</h1>
           <button
             type="button"
             onClick={() => setEditing(true)}
             className="rounded border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 hover:bg-gray-50"
           >
-            Rename
-          </button>
+            {tt("Rename")}</button>
           <form
             action={deleteFormAction}
             onSubmit={(e) => {
-              if (!window.confirm("Delete this chat?")) e.preventDefault();
+              if (!window.confirm(tt("Delete this chat?"))) e.preventDefault();
             }}
           >
             <input type="hidden" name="threadId" value={threadId} />
@@ -143,13 +143,12 @@ function ThreadHeaderControls({
               disabled={deleting}
               className="rounded border border-gray-200 px-2 py-0.5 text-[11px] text-red-600 hover:bg-red-50"
             >
-              Delete
-            </button>
+              {tt("Delete")}</button>
           </form>
         </>
       )}
-      {renameState.error ? <span className="text-xs text-red-600">{renameState.error}</span> : null}
-      {deleteState.error ? <span className="text-xs text-red-600">{deleteState.error}</span> : null}
+      {renameState.error ? <span className="text-xs text-red-600">{tt(renameState.error)}</span> : null}
+      {deleteState.error ? <span className="text-xs text-red-600">{tt(deleteState.error)}</span> : null}
     </div>
   );
 }
@@ -173,6 +172,7 @@ export function AthChat({
   initialSearchConsole: boolean;
   notFoundError?: string | null;
 }) {
+  const tt = useTranslations();
   const router = useRouter();
   const [threadId, setThreadId] = useState<string | null>(initialThread?.id ?? null);
   const [title, setTitle] = useState<string>(initialThread?.title ?? "New chat");
@@ -419,8 +419,7 @@ export function AthChat({
       <aside className="flex w-64 shrink-0 flex-col border-r border-gray-100 bg-gray-50/70">
         <div className="flex items-center justify-between border-b border-gray-100 p-3">
           <Link href="/home" className="text-xs font-medium text-gray-600 hover:text-brand-600">
-            ← Back to Home
-          </Link>
+            {tt("← Back to Home")}</Link>
           <Link
             href="/chat"
             onClick={() => {
@@ -432,16 +431,15 @@ export function AthChat({
             }}
             className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
           >
-            + New chat
-          </Link>
+            {tt("+ New chat")}</Link>
         </div>
 
         <div className="px-3 pt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          Chats · {websiteName}
+          {tt("Chats · ")}{websiteName}
         </div>
-        <nav aria-label="Chat history" className="mt-1 flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
+        <nav aria-label={tt("Chat history")} className="mt-1 flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
           {threads.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-gray-400">No saved chats yet.</p>
+            <p className="px-2 py-3 text-xs text-gray-400">{tt("No saved chats yet.")}</p>
           ) : (
             threads.map((t) => {
               const active = t.id === threadId;
@@ -466,12 +464,12 @@ export function AthChat({
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-3">
           <div className="min-w-0">
             {threadId ? (
-              <ThreadHeaderControls threadId={threadId} title={title} onRenamed={setTitle} />
+              <ThreadHeaderControls threadId={threadId} title={tt(title)} onRenamed={setTitle} />
             ) : (
-              <h1 className="text-sm font-semibold text-gray-900">Ask Athena</h1>
+              <h1 className="text-sm font-semibold text-gray-900">{tt("Ask Athena")}</h1>
             )}
             <p className="text-xs text-gray-400">
-              Grounded in <span className="font-medium text-gray-600">{websiteName}</span> ({websiteDomain})
+              {tt("Grounded in ")}<span className="font-medium text-gray-600">{websiteName}</span> ({websiteDomain})
             </p>
           </div>
           <ConnectorsBar
@@ -485,10 +483,9 @@ export function AthChat({
           <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
             {messages.length === 0 ? (
               <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-6 text-center">
-                <h2 className="text-base font-semibold text-gray-900">Ask Athena anything about {websiteName}</h2>
+                <h2 className="text-base font-semibold text-gray-900">{tt("Ask Athena anything about ")}{websiteName}</h2>
                 <p className="mt-1 text-xs text-gray-500">
-                  Athena queries your visibility metrics, competitor benchmarks, cited sources and sampled AI answers.
-                </p>
+                  {tt("Athena queries your visibility metrics, competitor benchmarks, cited sources and sampled AI answers.")}</p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {QUICK_PROMPTS.map((q) => (
                     <button
@@ -498,7 +495,7 @@ export function AthChat({
                       onClick={() => void send(q)}
                       className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-xs text-gray-700 shadow-sm hover:border-brand-600 hover:text-brand-600"
                     >
-                      {q}
+                      {tt(q)}
                     </button>
                   ))}
                 </div>
@@ -515,8 +512,7 @@ export function AthChat({
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {m.attachments.map((a) => (
                         <span key={a.name} className="badge bg-brand-50 text-brand-600">
-                          📎 {a.name} ({a.size.toLocaleString()} chars)
-                        </span>
+                          📎 {a.name} ({a.size.toLocaleString()} {tt(" chars)")}</span>
                       ))}
                     </div>
                   ) : null}
@@ -540,19 +536,18 @@ export function AthChat({
                                   : "bg-gray-100 text-gray-700"
                             }`}
                           >
-                            {tc.status === "running" ? "⟳ " : tc.status === "error" ? "! " : "✓ "}
+                            {tt(tc.status === "running" ? "⟳ " : tc.status === "error" ? "! " : "✓ ")}
                             {TOOL_LABELS[tc.name] ?? tc.name}
                           </span>
                         ))}
                         {m.simulated ? (
                           <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
-                            Simulated
-                          </span>
+                            {tt("Simulated")}</span>
                         ) : m.provider ? (
                           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">{m.provider}</span>
                         ) : null}
                         {m.status === "stopped" ? (
-                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">Stopped</span>
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">{tt("Stopped")}</span>
                         ) : null}
                       </div>
                     ) : null}
@@ -560,7 +555,7 @@ export function AthChat({
                     {m.content ? (
                       <Markdown text={m.content} />
                     ) : (
-                      <p className="animate-pulse text-sm text-gray-400">Athena is analysing your workspace data…</p>
+                      <p className="animate-pulse text-sm text-gray-400">{tt("Athena is analysing your workspace data…")}</p>
                     )}
                   </div>
                 </div>
@@ -569,7 +564,7 @@ export function AthChat({
 
             {error ? (
               <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
-                {error}
+                {tt(error)}
               </div>
             ) : null}
 
@@ -580,8 +575,7 @@ export function AthChat({
                   onClick={() => threadId && void streamAnswer(threadId)}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  ↻ Generate answer
-                </button>
+                  {tt("↻ Generate answer")}</button>
               </div>
             ) : null}
           </div>
@@ -608,10 +602,10 @@ export function AthChat({
               <div className="flex flex-wrap gap-1.5">
                 {files.map((f) => (
                   <span key={f.name} className="badge bg-brand-50 text-brand-600">
-                    {f.name} <span className="text-[10px] text-gray-400">({f.size.toLocaleString()} chars)</span>
+                    {f.name} <span className="text-[10px] text-gray-400">({f.size.toLocaleString()} {tt(" chars)")}</span>
                     <button
                       type="button"
-                      aria-label={`Remove ${f.name}`}
+                      aria-label={tt("Remove {0}", { 0: f.name })}
                       onClick={() => setFiles((all) => all.filter((x) => x.name !== f.name))}
                       className="ml-1 text-gray-400 hover:text-gray-600"
                     >
@@ -627,10 +621,9 @@ export function AthChat({
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 className="rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                title="Attach text files (TXT, MD, CSV, TSV, JSON)"
+                title={tt("Attach text files (TXT, MD, CSV, TSV, JSON)")}
               >
-                + File
-              </button>
+                {tt("+ File")}</button>
               <input
                 ref={fileRef}
                 type="file"
@@ -646,7 +639,7 @@ export function AthChat({
                 rows={2}
                 maxLength={MAX_MESSAGE_CHARS}
                 className="input flex-1 resize-none"
-                placeholder="Ask a follow-up or drop a TXT/MD/CSV/JSON file…"
+                placeholder={tt("Ask a follow-up or drop a TXT/MD/CSV/JSON file…")}
                 value={input}
                 disabled={streaming}
                 onChange={(e) => setInput(e.target.value)}
@@ -663,12 +656,11 @@ export function AthChat({
                   onClick={stop}
                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  Stop
-                </button>
+                  {tt("Stop")}</button>
               ) : (
                 <button
                   type="button"
-                  aria-label="Send message"
+                  aria-label={tt("Send message")}
                   className="btn-primary !px-3.5 !py-2"
                   onClick={() => void send()}
                   disabled={!input.trim()}

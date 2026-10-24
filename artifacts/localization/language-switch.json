@@ -1,0 +1,15 @@
+{
+  "en": {
+    "lang": "en",
+    "title": "Home | Athenum",
+    "question": "입력한 한국어 질문이 유지되는지 확인",
+    "selected": "true"
+  },
+  "ko": {
+    "lang": "ko",
+    "title": "홈 | Athenum",
+    "question": "입력한 한국어 질문이 유지되는지 확인",
+    "selected": "true"
+  },
+  "preservesInput": true
+}

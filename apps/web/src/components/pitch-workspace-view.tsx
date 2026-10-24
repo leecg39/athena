@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -23,6 +25,7 @@ export function PitchWorkspaceView({
   defaultGroupId: string;
   defaultGroupName: string;
 }) {
+  const tt = useTranslations();
   const [showWizard, setShowWizard] = useState(false);
   const [wizardKind, setWizardKind] = useState<"visibility" | "content">("visibility");
   const [kindFilter, setKindFilter] = useState<"all" | "visibility" | "content">("all");
@@ -57,26 +60,23 @@ export function PitchWorkspaceView({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
         <div>
           <div className="text-sm font-semibold text-gray-900">
-            Prospect Pitch Generator &amp; Agency Portfolio Hub
-          </div>
+            {tt("Prospect Pitch Generator & Agency Portfolio Hub")}</div>
           <div className="text-xs text-gray-500">
-            Generate shareable AI visibility &amp; content rewrite decks from any prospect URL, or
-            manage multi-brand groups and shared credit pools.
-          </div>
+            {tt("Generate shareable AI visibility & content rewrite decks from any prospect URL, or manage multi-brand groups and shared credit pools.")}</div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/group/${defaultGroupId}`}
             className="btn-secondary !px-3.5 !py-2 text-xs font-medium"
           >
-            🏢 Group Dashboard &amp; Billing ({defaultGroupName})
+            {tt("🏢 Group Dashboard & Billing (")}{defaultGroupName})
           </Link>
           <button
             type="button"
             onClick={() => setShowWizard((v) => !v)}
             className="btn-primary !px-4 !py-2 text-xs font-semibold"
           >
-            {showWizard ? "Close Pitch Wizard" : "+ Create Pitch"}
+            {tt(showWizard ? "Close Pitch Wizard" : "+ Create Pitch")}
           </button>
         </div>
       </div>
@@ -87,7 +87,7 @@ export function PitchWorkspaceView({
           role="status"
           className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800"
         >
-          ✓ {banner.message}
+          ✓ {tt(banner.message)}
         </div>
       ) : null}
       {banner?.error ? (
@@ -95,7 +95,7 @@ export function PitchWorkspaceView({
           role="alert"
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700"
         >
-          ⚠ {banner.error}
+          ⚠ {tt(banner.error)}
         </div>
       ) : null}
 
@@ -103,21 +103,18 @@ export function PitchWorkspaceView({
       <div className="rounded-xl border border-brand-100 bg-brand-50/50 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="text-brand-800">
-            Pitch usage this month:{" "}
+            {tt("Pitch usage this month:")}{tt(" ")}
             <strong className="font-mono text-sm">
               {usage.usedThisMonth} / {usage.monthlyLimit}
-            </strong>{" "}
+            </strong>{tt(" ")}
             <span className="ml-1 rounded bg-white px-2 py-0.5 text-[11px] font-semibold uppercase text-brand-700">
-              {usage.plan} plan
-            </span>
+              {tt(usage.plan)} {tt(" plan")}</span>
           </div>
           <div className="flex items-center gap-3 text-brand-700">
             <span>
-              <strong>{usage.remaining}</strong> pitch slot(s) remaining this month
-            </span>
+              <strong>{usage.remaining}</strong> {tt(" pitch slot(s) remaining this month")}</span>
             <Link href="/settings/billing" className="font-semibold underline">
-              Upgrade for higher quota →
-            </Link>
+              {tt("Upgrade for higher quota →")}</Link>
           </div>
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-brand-100">
@@ -137,48 +134,42 @@ export function PitchWorkspaceView({
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
               <h2 className="text-sm font-semibold text-gray-900">
-                Create Prospect Pitch Report Wizard
-              </h2>
+                {tt("Create Prospect Pitch Report Wizard")}</h2>
               <p className="text-xs text-gray-500">
-                Enter a prospect website URL to synthesize a shareable AI search visibility audit or
-                before/after AEO content rewrite deck.
-              </p>
+                {tt("Enter a prospect website URL to synthesize a shareable AI search visibility audit or before/after AEO content rewrite deck.")}</p>
             </div>
-            <span className="badge bg-brand-50 text-xs text-brand-700">Step 1–3 Wizard</span>
+            <span className="badge bg-brand-50 text-xs text-brand-700">{tt("Step 1–3 Wizard")}</span>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Step 1: Prospect Website URL *
-              </label>
+                {tt("Step 1: Prospect Website URL *")}</label>
               <input
                 type="text"
                 name="websiteUrl"
                 required
-                placeholder="https://linear.app"
+                placeholder={tt("https://linear.app")}
                 className="input-base w-full text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Prospect Brand Name (auto-detected if blank)
-              </label>
+                {tt("Prospect Brand Name (auto-detected if blank)")}</label>
               <input
                 type="text"
                 name="brandName"
-                placeholder="Linear"
+                placeholder={tt("Linear")}
                 className="input-base w-full text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Industry / Category
-              </label>
+                {tt("Industry / Category")}</label>
               <input
                 type="text"
                 name="industry"
-                placeholder="Product Management & Issue Tracking"
+                placeholder={tt("Product Management & Issue Tracking")}
                 className="input-base w-full text-xs"
               />
             </div>
@@ -186,8 +177,7 @@ export function PitchWorkspaceView({
 
           <div>
             <label className="mb-1.5 block text-xs font-medium text-gray-700">
-              Step 2: Select Pitch Deck Mode
-            </label>
+              {tt("Step 2: Select Pitch Deck Mode")}</label>
             <div className="grid gap-3 md:grid-cols-2">
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-xs transition ${
@@ -206,12 +196,9 @@ export function PitchWorkspaceView({
                 />
                 <div>
                   <div className="font-semibold text-gray-900">
-                    AI Search Visibility Audit Pitch (/report/pitch_...)
-                  </div>
+                    {tt("AI Search Visibility Audit Pitch (/report/pitch_...)")}</div>
                   <div className="mt-0.5 text-gray-500">
-                    Benchmarks the prospect&apos;s Mention Rate, Citation Authority, Competitor Share
-                    of Voice, and Top Cited Domains across ChatGPT, Perplexity &amp; Claude.
-                  </div>
+                    {tt("Benchmarks the prospect's Mention Rate, Citation Authority, Competitor Share of Voice, and Top Cited Domains across ChatGPT, Perplexity & Claude.")}</div>
                 </div>
               </label>
 
@@ -232,12 +219,9 @@ export function PitchWorkspaceView({
                 />
                 <div>
                   <div className="font-semibold text-gray-900">
-                    AEO Content Rewrite Pitch (/report/content/cpitch_...)
-                  </div>
+                    {tt("AEO Content Rewrite Pitch (/report/content/cpitch_...)")}</div>
                   <div className="mt-0.5 text-gray-500">
-                    Generates a side-by-side Before vs. After page rewrite with inverted-pyramid
-                    TL;DR blocks, quantitative benchmarks, and copy-ready FAQPage JSON-LD.
-                  </div>
+                    {tt("Generates a side-by-side Before vs. After page rewrite with inverted-pyramid TL;DR blocks, quantitative benchmarks, and copy-ready FAQPage JSON-LD.")}</div>
                 </div>
               </label>
             </div>
@@ -246,33 +230,30 @@ export function PitchWorkspaceView({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Step 3: Target Page URL for Content Rewrite (optional)
-              </label>
+                {tt("Step 3: Target Page URL for Content Rewrite (optional)")}</label>
               <input
                 type="text"
                 name="targetPageUrl"
-                placeholder="https://linear.app/features"
+                placeholder={tt("https://linear.app/features")}
                 className="input-base w-full text-xs"
               />
               <label className="mb-1 mt-3 block text-xs font-medium text-gray-700">
-                Target AI Search Prompts (comma or newline separated)
-              </label>
+                {tt("Target AI Search Prompts (comma or newline separated)")}</label>
               <textarea
                 name="targetPrompts"
                 rows={2}
-                placeholder="best issue tracking software for enterprise engineering teams 2026"
+                placeholder={tt("best issue tracking software for enterprise engineering teams 2026")}
                 className="input-base w-full text-xs"
               />
             </div>
 
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">
-                Prospect&apos;s Existing Page Copy (Before Rewrite — optional)
-              </label>
+                {tt("Prospect's Existing Page Copy (Before Rewrite — optional)")}</label>
               <textarea
                 name="existingCopy"
                 rows={5}
-                placeholder="Paste the prospect's current hero/feature copy here to generate an answer-first AEO rewrite comparison..."
+                placeholder={tt("Paste the prospect's current hero/feature copy here to generate an answer-first AEO rewrite comparison...")}
                 className="input-base w-full text-xs"
               />
             </div>
@@ -284,14 +265,13 @@ export function PitchWorkspaceView({
               onClick={() => setShowWizard(false)}
               className="btn-secondary !px-3 !py-1.5 text-xs"
             >
-              Cancel
-            </button>
+              {tt("Cancel")}</button>
             <button
               type="submit"
               disabled={createPending || usage.remaining <= 0}
               className="btn-primary !px-4 !py-1.5 text-xs font-semibold disabled:opacity-50"
             >
-              {createPending ? "Generating Pitch Deck..." : "Generate Shareable Pitch Report"}
+              {tt(createPending ? "Generating Pitch Deck..." : "Generate Shareable Pitch Report")}
             </button>
           </div>
         </form>
@@ -323,7 +303,7 @@ export function PitchWorkspaceView({
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {tab.label}
+              {tt(tab.label)}
             </button>
           ))}
         </div>
@@ -334,13 +314,13 @@ export function PitchWorkspaceView({
         <table className="table-base">
           <thead>
             <tr>
-              <th>Prospect Brand</th>
-              <th>Kind</th>
-              <th>Est. Mention / Citation</th>
-              <th>Projected Rewrite Lift</th>
-              <th>Public Share Link</th>
-              <th>Export</th>
-              <th className="text-right">Actions</th>
+              <th>{tt("Prospect Brand")}</th>
+              <th>{tt("Kind")}</th>
+              <th>{tt("Est. Mention / Citation")}</th>
+              <th>{tt("Projected Rewrite Lift")}</th>
+              <th>{tt("Public Share Link")}</th>
+              <th>{tt("Export")}</th>
+              <th className="text-right">{tt("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -366,17 +346,16 @@ export function PitchWorkspaceView({
                           : "bg-brand-50 text-brand-700"
                       }`}
                     >
-                      {p.kind === "content" ? "content rewrite" : "visibility"}
+                      {tt(p.kind === "content" ? "content rewrite" : "visibility")}
                     </span>
                   </td>
                   <td className="font-mono text-xs text-gray-700">
-                    {p.payload.kpis.mentionRatePct.toFixed(1)}% /{" "}
+                    {p.payload.kpis.mentionRatePct.toFixed(1)}% /{tt(" ")}
                     {p.payload.kpis.citationRatePct.toFixed(1)}%
                   </td>
                   <td>
                     <span className="badge bg-emerald-50 font-mono text-xs text-emerald-700">
-                      +{p.payload.contentRewrite.projectedCitationLiftPct}% lift
-                    </span>
+                      +{p.payload.contentRewrite.projectedCitationLiftPct}{tt("% lift")}</span>
                   </td>
                   <td>
                     <a
@@ -393,8 +372,7 @@ export function PitchWorkspaceView({
                       onClick={(e) => e.stopPropagation()}
                       className="btn-secondary !px-2.5 !py-1 text-xs"
                     >
-                      ⬇ PDF
-                    </a>
+                      {tt("⬇ PDF")}</a>
                   </td>
                   <td className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-1.5">
@@ -403,8 +381,7 @@ export function PitchWorkspaceView({
                         onClick={() => setSelectedPitchId(p.id)}
                         className="btn-secondary !px-2.5 !py-1 text-xs"
                       >
-                        Inspect Rewrite
-                      </button>
+                        {tt("Inspect Rewrite")}</button>
                       <form action={deleteFormAction}>
                         <input type="hidden" name="pitchId" value={p.id} />
                         <button
@@ -412,8 +389,7 @@ export function PitchWorkspaceView({
                           disabled={deletePending}
                           className="btn-secondary !px-2.5 !py-1 text-xs text-red-600 hover:bg-red-50"
                         >
-                          Delete
-                        </button>
+                          {tt("Delete")}</button>
                       </form>
                     </div>
                   </td>
@@ -423,9 +399,7 @@ export function PitchWorkspaceView({
             {filteredPitches.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-xs text-gray-400">
-                  No pitches match the selected filter. Click &ldquo;+ Create Pitch&rdquo; to
-                  generate a prospect report.
-                </td>
+                  {tt("No pitches match the selected filter. Click “+ Create Pitch“ to generate a prospect report.")}</td>
               </tr>
             ) : null}
           </tbody>
@@ -439,19 +413,17 @@ export function PitchWorkspaceView({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-gray-900">
-                  Content Rewrite Pitch Studio — {activePitch.brandName}
+                  {tt("Content Rewrite Pitch Studio — ")}{activePitch.brandName}
                 </h3>
                 <span className="badge bg-emerald-50 text-xs font-semibold text-emerald-700">
-                  +{activePitch.payload.contentRewrite.projectedCitationLiftPct}% Projected Citation
-                  Lift
-                </span>
+                  +{activePitch.payload.contentRewrite.projectedCitationLiftPct}{tt("% Projected Citation Lift")}</span>
               </div>
               <p className="mt-0.5 text-xs text-gray-500">
-                Target Page:{" "}
+                {tt("Target Page:")}{tt(" ")}
                 <span className="font-mono text-brand-600">
                   {activePitch.payload.contentRewrite.targetPageUrl}
-                </span>{" "}
-                · Public Deck:{" "}
+                </span>{tt(" ")}
+                {tt("· Public Deck:")}{tt(" ")}
                 <a href={activePitch.sharePath} className="font-mono text-brand-600 underline">
                   {activePitch.sharePath}
                 </a>
@@ -461,15 +433,13 @@ export function PitchWorkspaceView({
               href={activePitch.sharePath}
               className="btn-primary !px-3.5 !py-1.5 text-xs font-medium"
             >
-              Open Public Pitch View →
-            </a>
+              {tt("Open Public Pitch View →")}</a>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-red-100 bg-red-50/30 p-3.5">
               <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-red-700">
-                Before (Prospect&apos;s Existing Copy)
-              </div>
+                {tt("Before (Prospect's Existing Copy)")}</div>
               <div className="whitespace-pre-wrap text-xs leading-relaxed text-gray-700">
                 {activePitch.payload.contentRewrite.beforeCopy}
               </div>
@@ -477,8 +447,7 @@ export function PitchWorkspaceView({
 
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-3.5">
               <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                After (AEO Answer-First Rewrite for AI Citations)
-              </div>
+                {tt("After (AEO Answer-First Rewrite for AI Citations)")}</div>
               <div className="whitespace-pre-wrap text-xs leading-relaxed text-gray-800">
                 {activePitch.payload.contentRewrite.afterCopy}
               </div>
@@ -493,12 +462,10 @@ export function PitchWorkspaceView({
             >
               <input type="hidden" name="pitchId" value={activePitch.id} />
               <div className="text-xs font-semibold text-gray-900">
-                Customize &amp; Regenerate Content Rewrite Pitch
-              </div>
+                {tt("Customize & Regenerate Content Rewrite Pitch")}</div>
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                  Target Prospect URL
-                </label>
+                  {tt("Target Prospect URL")}</label>
                 <input
                   type="text"
                   name="targetPageUrl"
@@ -509,8 +476,7 @@ export function PitchWorkspaceView({
               </div>
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                  Focus High-Intent Prompt
-                </label>
+                  {tt("Focus High-Intent Prompt")}</label>
                 <input
                   type="text"
                   name="focusPrompt"
@@ -521,8 +487,7 @@ export function PitchWorkspaceView({
               </div>
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                  Prospect&apos;s Original Copy
-                </label>
+                  {tt("Prospect's Original Copy")}</label>
                 <textarea
                   name="existingCopy"
                   rows={2}
@@ -536,17 +501,16 @@ export function PitchWorkspaceView({
                 disabled={rewritePending}
                 className="btn-secondary w-full !py-1.5 text-xs font-semibold"
               >
-                {rewritePending
+                {tt(rewritePending
                   ? "Regenerating AEO Rewrite..."
-                  : "✨ Regenerate Content Rewrite Pitch"}
+                  : "✨ Regenerate Content Rewrite Pitch")}
               </button>
             </form>
 
             {/* Recommended FAQPage JSON-LD Schema */}
             <div className="rounded-lg border border-gray-100 bg-gray-900 p-3.5 text-gray-100">
               <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-300">
-                Copy-Ready FAQPage JSON-LD Schema
-              </div>
+                {tt("Copy-Ready FAQPage JSON-LD Schema")}</div>
               <pre className="max-h-56 overflow-auto font-mono text-[11px] leading-relaxed text-emerald-300">
                 {activePitch.payload.contentRewrite.jsonLdSchema}
               </pre>

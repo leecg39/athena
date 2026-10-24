@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, locations, personas } from "@athena/db";
 import type { WebsiteRow } from "@athena/core/tenancy";
@@ -9,6 +10,7 @@ import { SourceNote } from "./frame";
 const COUNTRIES = ["US", "GB", "CA", "AU", "DE", "FR", "ES", "IT", "NL", "SE", "JP", "KR", "SG", "IN", "BR", "MX"];
 
 export async function AudienceStep({ site }: { site: WebsiteRow }) {
+  const tt = await getTranslations();
   const [locs, pers, suggestions] = await Promise.all([
     db.select().from(locations).where(and(eq(locations.websiteId, site.id), isNull(locations.deletedAt))),
     db.select().from(personas).where(and(eq(personas.websiteId, site.id), isNull(personas.deletedAt))),
@@ -18,10 +20,10 @@ export async function AudienceStep({ site }: { site: WebsiteRow }) {
   const names = new Intl.DisplayNames(["en"], { type: "region" });
   const options = COUNTRIES.includes(site.country) ? COUNTRIES : [site.country, ...COUNTRIES];
   return (
-    <ActionForm action={saveAudienceStep} submitLabel="Save and continue" className="space-y-5">
+    <ActionForm action={saveAudienceStep} submitLabel={tt("Save and continue")} className="space-y-5">
       <input type="hidden" name="websiteId" value={site.id} />
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-gray-600">Primary market</span>
+        <span className="mb-1 block text-xs font-medium text-gray-600">{tt("Primary market")}</span>
         <select name="country" className="input" defaultValue={site.country}>
           {options.map((c) => (
             <option key={c} value={c}>
@@ -31,24 +33,24 @@ export async function AudienceStep({ site }: { site: WebsiteRow }) {
         </select>
       </label>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-gray-600">Locations to track (optional, one per line — e.g. cities or regions)</span>
+        <span className="mb-1 block text-xs font-medium text-gray-600">{tt("Locations to track (optional, one per line — e.g. cities or regions)")}</span>
         <textarea name="locations" className="input" rows={3} defaultValue={locs.map((l) => l.name).join("\n")} />
       </label>
       <div className="space-y-2">
-        <span className="block text-xs font-medium text-gray-600">Buyer personas</span>
+        <span className="block text-xs font-medium text-gray-600">{tt("Buyer personas")}</span>
         <SourceNote source={suggestions.source} provider={suggestions.provider} />
-        {pers.length ? <p className="text-xs text-gray-500">Saved: {pers.map((p) => p.name).join(", ")}</p> : null}
+        {pers.length ? <p className="text-xs text-gray-500">{tt("Saved: ")}{pers.map((p) => p.name).join(", ")}</p> : null}
         {suggestions.data
           .filter((p) => !have.has(p.name.toLowerCase()))
           .map((p) => (
             <label key={p.name} className="flex items-start gap-2 text-sm">
               <input type="checkbox" name="suggested" value={`${p.name}|${p.description}`} defaultChecked className="mt-1" />
               <span>
-                <span className="font-medium">{p.name}</span> <span className="text-gray-500">— {p.description}</span>
+                <span className="font-medium">{p.name}</span> <span className="text-gray-500">— {tt(p.description)}</span>
               </span>
             </label>
           ))}
-        <textarea name="manual" className="input" rows={3} placeholder={"Persona name: short description\nHead of Marketing: owns brand visibility"} />
+        <textarea name="manual" className="input" rows={3} placeholder={tt("Persona name: short description\nHead of Marketing: owns brand visibility")} />
       </div>
     </ActionForm>
   );

@@ -1,14 +1,22 @@
 ---
-interface Props { title: string }
+import LanguageSwitch from "../components/LanguageSwitch.astro";
+interface Props {
+  locale?: "ko" | "en"; title: string }
 const { title } = Astro.props;
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title}</title>
+    <title>{tt(title)}</title>
     <style is:global>
+      html[lang="ko"] body { word-break:keep-all; overflow-wrap:anywhere; }
       body { font-family: system-ui, sans-serif; margin: 0; display: flex; color: #111; }
       aside { width: 240px; border-right: 1px solid #eee; padding: 24px; height: 100vh; position: sticky; top: 0; }
       aside a { display: block; padding: 6px 10px; font-size: 14px; color: #4b5563; text-decoration: none; border-radius: 8px; }
@@ -21,15 +29,16 @@ const { title } = Astro.props;
   </head>
   <body>
     <aside>
-      <a href="/" style="font-weight:700;color:#111;">📖 Athenum Docs</a>
+      <LanguageSwitch locale={locale} />
+      <a href={hrefFor("/")} style="font-weight:700;color:#111;">{tt("📖 Athenum Docs")}</a>
       <hr style="border:none;border-top:1px solid #eee;margin:12px 0;" />
-      <a href="/">Getting Started</a>
-      <a href="/prompts">Setting Up Prompts</a>
-      <a href="/knowledge-base">Knowledge Base</a>
-      <a href="/oracle">Oracle</a>
-      <a href="/integrations">Integrations</a>
-      <a href="/api">API Reference</a>
-      <a href="/mcp">MCP</a>
+      <a href={hrefFor("/")}>{tt("Getting Started")}</a>
+      <a href={hrefFor("/prompts")}>{tt("Setting Up Prompts")}</a>
+      <a href={hrefFor("/knowledge-base")}>{tt("Knowledge Base")}</a>
+      <a href={hrefFor("/oracle")}>{tt("Oracle")}</a>
+      <a href={hrefFor("/integrations")}>{tt("Integrations")}</a>
+      <a href={hrefFor("/api")}>{tt("API Reference")}</a>
+      <a href={hrefFor("/mcp")}>{tt("MCP")}</a>
     </aside>
     <main><slot /></main>
   </body>

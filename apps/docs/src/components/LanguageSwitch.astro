@@ -1,0 +1,25 @@
+---
+import type { Locale } from "@athena/i18n/locale";
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const path = Astro.url.pathname.replace(/^\/en(?=\/|$)/, "") || "/";
+const query = Astro.url.search;
+---
+<nav class="language-switch" aria-label={locale === "ko" ? "표시 언어" : "Display language"}>
+  <a href={(path === "/" ? "/en" : `/en${path}`) + query} lang="en" data-locale="en" aria-current={locale === "en" ? "true" : undefined} aria-label="English">EN</a>
+  <a href={path + query} lang="ko" data-locale="ko" aria-current={locale === "ko" ? "true" : undefined} aria-label="한국어">KO</a>
+</nav>
+<style>
+  .language-switch { display:inline-flex; align-items:center; gap:4px; padding:4px; border:1px solid #e5e7eb; border-radius:10px; background:white; }
+  .language-switch a { display:inline-block; padding:5px 12px; margin:0; color:#6b7280; font:600 12px system-ui; border-radius:6px; text-decoration:none; }
+  .language-switch a[aria-current="true"] { background:#4f39f6; color:white; }
+  .language-switch a:focus-visible { outline:2px solid #4f39f6; outline-offset:2px; }
+</style>
+<script>
+  import { LOCALE_COOKIE } from "@athena/i18n/locale";
+  document.querySelectorAll<HTMLAnchorElement>("a[data-locale]").forEach(link => {
+    link.addEventListener("click", () => {
+      document.cookie = `${LOCALE_COOKIE}=${link.dataset.locale}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    });
+  });
+</script>

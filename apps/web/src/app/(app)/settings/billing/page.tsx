@@ -1,20 +1,24 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { BILLING_PLAN_CATALOG, getBillingOverview } from "@athena/core/billing";
 import { SettingsShell } from "@/components/settings-shell";
 import { BillingSettingsView } from "@/components/billing-settings-view";
 import { getSettingsContext } from "@/lib/settings-context";
 
-export const metadata = { title: "Settings — Billing" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Settings — Billing") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function BillingSettingsPage() {
+  const tt = await getTranslations();
   const s = await getSettingsContext();
   if (!s.can("billing:read")) {
     return (
-      <SettingsShell active="billing" title="Billing Settings">
+      <SettingsShell active="billing" title={tt("Billing Settings")}>
         <p className="text-sm text-gray-500">
-          You need billing access to view this page. Ask an owner or billing admin.
-        </p>
+          {tt("You need billing access to view this page. Ask an owner or billing admin.")}</p>
       </SettingsShell>
     );
   }
@@ -33,8 +37,8 @@ export default async function BillingSettingsPage() {
   return (
     <SettingsShell
       active="billing"
-      title="Billing Settings"
-      subtitle="Subscription plans (Free / Starter $295 / Enterprise), multi-scope credit pools, add-ons, ledger and invoices"
+      title={tt("Billing Settings")}
+      subtitle={tt("Subscription plans (Free / Starter $295 / Enterprise), multi-scope credit pools, add-ons, ledger and invoices")}
     >
       <BillingSettingsView
         overview={overview}

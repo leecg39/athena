@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
 import { listKnowledgeBase } from "@athena/core/knowledge";
@@ -5,13 +6,17 @@ import { PageHeader } from "@/components/page-header";
 import { KbWorkspace } from "@/components/kb-workspace";
 import { requireWorkspace } from "@/lib/workspace";
 
-export const metadata = { title: "Knowledge Base" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Knowledge Base") };
+}
 
 export default async function KnowledgeBasePage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const initialTab = sp.tab === "review" ? "review" : sp.tab === "links" ? "links" : "pillars";
@@ -25,8 +30,8 @@ export default async function KnowledgeBasePage({
   return (
     <div>
       <PageHeader
-        title="Knowledge Base"
-        subtitle="Verified brand facts, approval queue, and internal link pages that ground AI research, content generation and Oracle accuracy checks"
+        title={tt("Knowledge Base")}
+        subtitle={tt("Verified brand facts, approval queue, and internal link pages that ground AI research, content generation and Oracle accuracy checks")}
       />
       <KbWorkspace
         websiteDomain={ws.website.domain}

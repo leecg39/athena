@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useActionState, useState } from "react";
 import type {
@@ -36,6 +38,7 @@ interface Props {
 }
 
 export function SiteHealthView(props: Props) {
+  const tt = useTranslations();
   const [activeTab, setActiveTab] = useState<
     "overview" | "keywords" | "staging" | "sitemap" | "optimizations"
   >("overview");
@@ -92,7 +95,7 @@ export function SiteHealthView(props: Props) {
                 activeTab === "overview" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Overview &amp; AI Crawlers ({props.pages.length})
+              {tt("Overview & AI Crawlers (")}{props.pages.length})
             </button>
             <button
               type="button"
@@ -102,7 +105,7 @@ export function SiteHealthView(props: Props) {
                 activeTab === "keywords" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Keywords &amp; Rankings ({props.keywords.length})
+              {tt("Keywords & Rankings (")}{props.keywords.length})
             </button>
             <button
               type="button"
@@ -112,8 +115,7 @@ export function SiteHealthView(props: Props) {
                 activeTab === "staging" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Staging Checks (Release Diff)
-            </button>
+              {tt("Staging Checks (Release Diff)")}</button>
             <button
               type="button"
               data-testid="site-health-tab-sitemap"
@@ -122,7 +124,7 @@ export function SiteHealthView(props: Props) {
                 activeTab === "sitemap" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Sitemap &amp; Crawl Scope ({props.properties.length})
+              {tt("Sitemap & Crawl Scope (")}{props.properties.length})
             </button>
             <button
               type="button"
@@ -132,8 +134,7 @@ export function SiteHealthView(props: Props) {
                 activeTab === "optimizations" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Optimization Board &amp; Live Verify
-            </button>
+              {tt("Optimization Board & Live Verify")}</button>
           </div>
         </div>
 
@@ -144,8 +145,7 @@ export function SiteHealthView(props: Props) {
               onClick={() => setShowAddForm((v) => !v)}
               className="btn-secondary !px-3 !py-1.5 text-xs"
             >
-              + Track page path
-            </button>
+              {tt("+ Track page path")}</button>
             <form action={stagingAct} onSubmit={() => setLastKey("staging")}>
               <input type="hidden" name="stagingHost" value={`staging.${props.siteDomain}`} />
               <button
@@ -153,7 +153,7 @@ export function SiteHealthView(props: Props) {
                 disabled={stagingPending}
                 className="btn-secondary !px-3 !py-1.5 text-xs"
               >
-                {stagingPending ? "Checking staging…" : "Staging checks"}
+                {tt(stagingPending ? "Checking staging…" : "Staging checks")}
               </button>
             </form>
             <form action={crawlAct} onSubmit={() => setLastKey("crawl")}>
@@ -162,7 +162,7 @@ export function SiteHealthView(props: Props) {
                 disabled={crawlPending}
                 className="btn-primary !px-3 !py-1.5 text-xs"
               >
-                {crawlPending ? "Crawling…" : "Crawl now"}
+                {tt(crawlPending ? "Crawling…" : "Crawl now")}
               </button>
             </form>
           </div>
@@ -176,7 +176,7 @@ export function SiteHealthView(props: Props) {
           data-testid="site-health-error-banner"
           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
         >
-          {errorMsg}
+          {tt(errorMsg)}
         </div>
       ) : null}
       {!errorMsg && infoMsg ? (
@@ -185,7 +185,7 @@ export function SiteHealthView(props: Props) {
           data-testid="site-health-status-banner"
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
         >
-          {infoMsg}
+          {tt(infoMsg)}
         </div>
       ) : null}
 
@@ -198,23 +198,21 @@ export function SiteHealthView(props: Props) {
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Add Page Path to Site Health &amp; Crawl Scope
-            </div>
+              {tt("Add Page Path to Site Health & Crawl Scope")}</div>
             <button type="button" onClick={() => setShowAddForm(false)} className="text-xs text-gray-400">
-              Close
-            </button>
+              {tt("Close")}</button>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-6">
             <input
               name="url"
               required
-              placeholder="/solutions/enterprise-design"
+              placeholder={tt("/solutions/enterprise-design")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs"
             />
             <input
               name="title"
               required
-              placeholder="Page title (e.g. Enterprise Design Governance)"
+              placeholder={tt("Page title (e.g. Enterprise Design Governance)")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs md:col-span-2"
             />
             <select
@@ -222,17 +220,17 @@ export function SiteHealthView(props: Props) {
               defaultValue="Marketing & Core"
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
             >
-              <option value="Marketing & Core">Marketing &amp; Core</option>
-              <option value="Documentation & Specs">Documentation &amp; Specs</option>
-              <option value="Blog & Guides">Blog &amp; Guides</option>
+              <option value="Marketing & Core">{tt("Marketing & Core")}</option>
+              <option value="Documentation & Specs">{tt("Documentation & Specs")}</option>
+              <option value="Blog & Guides">{tt("Blog & Guides")}</option>
             </select>
             <input
               name="keyword"
-              placeholder="Target keyword (optional)"
+              placeholder={tt("Target keyword (optional)")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs"
             />
             <button type="submit" disabled={createPending} className="btn-primary !px-3 !py-2 text-xs">
-              {createPending ? "Adding…" : "Add Page"}
+              {tt(createPending ? "Adding…" : "Add Page")}
             </button>
           </div>
         </form>
@@ -246,11 +244,9 @@ export function SiteHealthView(props: Props) {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-gray-900">
-                  AI Search Crawler Accessibility (robots.txt &amp; HTTP Evaluation)
-                </div>
+                  {tt("AI Search Crawler Accessibility (robots.txt & HTTP Evaluation)")}</div>
                 <div className="text-xs text-gray-400">
-                  Live access verification for OAI-SearchBot, ChatGPT-User, Claude-SearchBot, PerplexityBot, Google-Extended, and AthenaBot
-                </div>
+                  {tt("Live access verification for OAI-SearchBot, ChatGPT-User, Claude-SearchBot, PerplexityBot, Google-Extended, and AthenaBot")}</div>
               </div>
             </div>
             <div
@@ -279,17 +275,17 @@ export function SiteHealthView(props: Props) {
                             : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {b.status === "allowed"
+                      {tt(b.status === "allowed"
                         ? "Allowed"
                         : b.status === "partial"
                           ? "Partial"
-                          : "Blocked"}
+                          : "Blocked")}
                     </span>
                   </div>
                   <div className="mt-1 text-[11px] font-medium text-gray-600">
-                    {b.owner} · {b.purpose}
+                    {b.owner} · {tt(b.purpose)}
                   </div>
-                  <div className="mt-1.5 text-[11px] text-gray-500">{b.ruleSummary}</div>
+                  <div className="mt-1.5 text-[11px] text-gray-500">{tt(b.ruleSummary)}</div>
                 </div>
               ))}
             </div>
@@ -300,12 +296,12 @@ export function SiteHealthView(props: Props) {
             <table className="table-base" data-testid="site-health-pages-table">
               <thead>
                 <tr>
-                  <th>Page</th>
-                  <th>Crawl Property</th>
-                  <th>Status</th>
-                  <th>HTTP / Sitemap / llms.txt</th>
-                  <th>Diagnostic Detail</th>
-                  {props.canWrite ? <th className="text-right">Live Verification &amp; Action</th> : null}
+                  <th>{tt("Page")}</th>
+                  <th>{tt("Crawl Property")}</th>
+                  <th>{tt("Status")}</th>
+                  <th>{tt("HTTP / Sitemap / llms.txt")}</th>
+                  <th>{tt("Diagnostic Detail")}</th>
+                  {props.canWrite ? <th className="text-right">{tt("Live Verification & Action")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -316,7 +312,7 @@ export function SiteHealthView(props: Props) {
                       <div className="text-xs text-gray-500">{p.title}</div>
                     </td>
                     <td>
-                      <span className="badge bg-gray-100 text-gray-700">{p.property}</span>
+                      <span className="badge bg-gray-100 text-gray-700">{tt(p.property)}</span>
                     </td>
                     <td>
                       <span
@@ -328,29 +324,29 @@ export function SiteHealthView(props: Props) {
                               : "bg-red-50 text-red-700"
                         }`}
                       >
-                        {p.healthStatus}
+                        {tt(p.healthStatus)}
                       </span>
                     </td>
                     <td>
                       <div className="flex flex-wrap gap-1 text-[11px]">
-                        <span className="badge bg-gray-100 text-gray-700">HTTP {p.statusCode}</span>
+                        <span className="badge bg-gray-100 text-gray-700">{tt("HTTP ")}{p.statusCode}</span>
                         <span
                           className={`badge ${
                             p.inSitemap ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                           }`}
                         >
-                          {p.inSitemap ? "In sitemap.xml" : "Not in sitemap"}
+                          {tt(p.inSitemap ? "In sitemap.xml" : "Not in sitemap")}
                         </span>
                         <span
                           className={`badge ${
                             p.llmsTxtPresent ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
                           }`}
                         >
-                          {p.llmsTxtPresent ? "llms.txt ✓" : "llms.txt missing"}
+                          {tt(p.llmsTxtPresent ? "llms.txt ✓" : "llms.txt missing")}
                         </span>
                       </div>
                     </td>
-                    <td className="max-w-xs text-xs text-gray-600">{p.healthDetail}</td>
+                    <td className="max-w-xs text-xs text-gray-600">{tt(p.healthDetail)}</td>
                     {props.canWrite ? (
                       <td className="text-right">
                         <div className="inline-flex items-center gap-2">
@@ -361,8 +357,7 @@ export function SiteHealthView(props: Props) {
                               disabled={verifyPending}
                               className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
                             >
-                              ✓ Verify live
-                            </button>
+                              {tt("✓ Verify live")}</button>
                           </form>
                           <form action={deleteAct} onSubmit={() => setLastKey("delete")}>
                             <input type="hidden" name="pageId" value={p.id} />
@@ -371,8 +366,7 @@ export function SiteHealthView(props: Props) {
                               disabled={deletePending}
                               className="text-xs text-red-500 hover:text-red-700"
                             >
-                              Remove
-                            </button>
+                              {tt("Remove")}</button>
                           </form>
                         </div>
                       </td>
@@ -391,12 +385,12 @@ export function SiteHealthView(props: Props) {
           <table className="table-base" data-testid="site-health-keywords-table">
             <thead>
               <tr>
-                <th>Keyword</th>
-                <th>Rank Position</th>
-                <th>7d Change</th>
-                <th>Monthly Volume</th>
-                <th>Target Page</th>
-                <th>AI Accessible</th>
+                <th>{tt("Keyword")}</th>
+                <th>{tt("Rank Position")}</th>
+                <th>{tt("7d Change")}</th>
+                <th>{tt("Monthly Volume")}</th>
+                <th>{tt("Target Page")}</th>
+                <th>{tt("AI Accessible")}</th>
               </tr>
             </thead>
             <tbody>
@@ -428,7 +422,7 @@ export function SiteHealthView(props: Props) {
                         k.aiAccessible ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                       }`}
                     >
-                      {k.aiAccessible ? "Accessible" : "Blocked"}
+                      {tt(k.aiAccessible ? "Accessible" : "Blocked")}
                     </span>
                   </td>
                 </tr>
@@ -444,13 +438,11 @@ export function SiteHealthView(props: Props) {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4">
             <div>
               <div className="text-sm font-semibold text-gray-900">
-                Staging vs. Production Release Comparison
-              </div>
+                {tt("Staging vs. Production Release Comparison")}</div>
               <div className="text-xs text-gray-500">
-                Compare HTTP status codes, robots.txt AI crawler rules, and schema markup between{" "}
-                <span className="font-mono font-medium">{props.siteDomain}</span> and{" "}
-                <span className="font-mono font-medium">staging.{props.siteDomain}</span> before deploying
-              </div>
+                {tt("Compare HTTP status codes, robots.txt AI crawler rules, and schema markup between")}{tt(" ")}
+                <span className="font-mono font-medium">{props.siteDomain}</span> {tt(" and")}{tt(" ")}
+                <span className="font-mono font-medium">{tt("staging.")}{props.siteDomain}</span> {tt(" before deploying")}</div>
             </div>
             {props.canWrite ? (
               <form
@@ -464,7 +456,7 @@ export function SiteHealthView(props: Props) {
                   className="rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-xs"
                 />
                 <button type="submit" disabled={stagingPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                  {stagingPending ? "Comparing…" : "Run Release Diff"}
+                  {tt(stagingPending ? "Comparing…" : "Run Release Diff")}
                 </button>
               </form>
             ) : null}
@@ -474,12 +466,12 @@ export function SiteHealthView(props: Props) {
             <table className="table-base" data-testid="site-health-staging-table">
               <thead>
                 <tr>
-                  <th>Page</th>
-                  <th>Production</th>
-                  <th>Staging</th>
-                  <th>Release Gate</th>
-                  <th>Comparison Summary</th>
-                  {props.canWrite ? <th className="text-right">Remediate</th> : null}
+                  <th>{tt("Page")}</th>
+                  <th>{tt("Production")}</th>
+                  <th>{tt("Staging")}</th>
+                  <th>{tt("Release Gate")}</th>
+                  <th>{tt("Comparison Summary")}</th>
+                  {props.canWrite ? <th className="text-right">{tt("Remediate")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -491,12 +483,12 @@ export function SiteHealthView(props: Props) {
                     </td>
                     <td>
                       <span className="badge bg-gray-100 text-gray-700">
-                        HTTP {s.prodStatus} · {s.prodAiAccessible ? "AI OK" : "Blocked"}
+                        {tt("HTTP ")}{s.prodStatus} · {tt(s.prodAiAccessible ? "AI OK" : "Blocked")}
                       </span>
                     </td>
                     <td>
                       <span className="badge bg-gray-100 text-gray-700">
-                        HTTP {s.stagingStatus} · {s.stagingAiAccessible ? "AI OK" : "Blocked"}
+                        {tt("HTTP ")}{s.stagingStatus} · {tt(s.stagingAiAccessible ? "AI OK" : "Blocked")}
                       </span>
                     </td>
                     <td>
@@ -505,10 +497,10 @@ export function SiteHealthView(props: Props) {
                           s.hasRegression ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
                         }`}
                       >
-                        {s.hasRegression ? "Regression" : "Ready to ship"}
+                        {tt(s.hasRegression ? "Regression" : "Ready to ship")}
                       </span>
                     </td>
-                    <td className="text-xs text-gray-600">{s.diffSummary}</td>
+                    <td className="text-xs text-gray-600">{tt(s.diffSummary)}</td>
                     {props.canWrite ? (
                       <td className="text-right">
                         {s.hasRegression ? (
@@ -519,11 +511,10 @@ export function SiteHealthView(props: Props) {
                               disabled={verifyPending}
                               className="rounded border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100"
                             >
-                              Fix &amp; Verify Live
-                            </button>
+                              {tt("Fix & Verify Live")}</button>
                           </form>
                         ) : (
-                          <span className="text-xs text-emerald-600">Passing ✓</span>
+                          <span className="text-xs text-emerald-600">{tt("Passing ✓")}</span>
                         )}
                       </td>
                     ) : null}
@@ -545,22 +536,22 @@ export function SiteHealthView(props: Props) {
             {props.properties.map((prop) => (
               <div key={prop.property} className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">{prop.property}</span>
-                  <span className="badge bg-brand-50 text-brand-700">{prop.pageCount} pages</span>
+                  <span className="text-sm font-semibold text-gray-900">{tt(prop.property)}</span>
+                  <span className="badge bg-brand-50 text-brand-700">{prop.pageCount} {tt(" pages")}</span>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg bg-gray-50 p-2">
-                    <div className="text-[10px] text-gray-400">Healthy</div>
+                    <div className="text-[10px] text-gray-400">{tt("Healthy")}</div>
                     <div className="text-sm font-bold text-emerald-700">
                       {prop.healthyCount}/{prop.pageCount}
                     </div>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-2">
-                    <div className="text-[10px] text-gray-400">AI Access</div>
+                    <div className="text-[10px] text-gray-400">{tt("AI Access")}</div>
                     <div className="text-sm font-bold text-gray-900">{prop.aiAccessiblePct}%</div>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-2">
-                    <div className="text-[10px] text-gray-400">In Sitemap</div>
+                    <div className="text-[10px] text-gray-400">{tt("In Sitemap")}</div>
                     <div className="text-sm font-bold text-brand-700">
                       {prop.inSitemapCount}/{prop.pageCount}
                     </div>
@@ -574,18 +565,18 @@ export function SiteHealthView(props: Props) {
             <table className="table-base">
               <thead>
                 <tr>
-                  <th>Sitemap URL</th>
-                  <th>Crawl Scope Property</th>
-                  <th>Sitemap Status</th>
-                  <th>llms.txt Index</th>
-                  <th>Structured Schema</th>
+                  <th>{tt("Sitemap URL")}</th>
+                  <th>{tt("Crawl Scope Property")}</th>
+                  <th>{tt("Sitemap Status")}</th>
+                  <th>{tt("llms.txt Index")}</th>
+                  <th>{tt("Structured Schema")}</th>
                 </tr>
               </thead>
               <tbody>
                 {props.pages.map((p) => (
                   <tr key={p.id}>
                     <td className="font-mono text-xs text-brand-700">{p.url}</td>
-                    <td className="text-xs text-gray-600">{p.property}</td>
+                    <td className="text-xs text-gray-600">{tt(p.property)}</td>
                     <td>
                       <span
                         className={`badge ${
@@ -594,9 +585,9 @@ export function SiteHealthView(props: Props) {
                             : "bg-red-50 text-red-700"
                         }`}
                       >
-                        {p.inSitemap && p.statusCode === 200
+                        {tt(p.inSitemap && p.statusCode === 200
                           ? "Indexed in /sitemap.xml"
-                          : `HTTP ${p.statusCode} · Sitemap issue`}
+                          : `HTTP ${p.statusCode} · Sitemap issue`)}
                       </span>
                     </td>
                     <td>
@@ -605,7 +596,7 @@ export function SiteHealthView(props: Props) {
                           p.llmsTxtPresent ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
                         }`}
                       >
-                        {p.llmsTxtPresent ? "Listed in /llms.txt" : "Missing from /llms.txt"}
+                        {tt(p.llmsTxtPresent ? "Listed in /llms.txt" : "Missing from /llms.txt")}
                       </span>
                     </td>
                     <td>
@@ -617,7 +608,7 @@ export function SiteHealthView(props: Props) {
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-400">None</span>
+                          <span className="text-xs text-gray-400">{tt("None")}</span>
                         )}
                       </div>
                     </td>
@@ -639,10 +630,9 @@ export function SiteHealthView(props: Props) {
           <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-gray-800">Needs Edit</div>
+                <div className="text-sm font-semibold text-gray-800">{tt("Needs Edit")}</div>
                 <div className="text-[11px] text-gray-400">
-                  Pages with blocked AI bots, 404s, or missing llms.txt
-                </div>
+                  {tt("Pages with blocked AI bots, 404s, or missing llms.txt")}</div>
               </div>
               <span className="badge bg-white text-gray-700">
                 {props.optimizations.needsEdit.length}
@@ -654,7 +644,7 @@ export function SiteHealthView(props: Props) {
                   <div className="font-mono text-xs font-semibold text-brand-700">{p.path}</div>
                   <div className="mt-0.5 text-xs font-medium text-gray-800">{p.title}</div>
                   <div className="mt-1.5 text-[11px] text-amber-700">
-                    {p.optimizationRecommendation}
+                    {tt(p.optimizationRecommendation)}
                   </div>
                   {props.canWrite ? (
                     <div className="mt-2.5 flex items-center gap-1.5">
@@ -666,8 +656,7 @@ export function SiteHealthView(props: Props) {
                           disabled={optPending}
                           className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-100"
                         >
-                          → Stage Fix
-                        </button>
+                          {tt("→ Stage Fix")}</button>
                       </form>
                       <form action={verifyAct} onSubmit={() => setLastKey("verify")}>
                         <input type="hidden" name="pageId" value={p.id} />
@@ -676,8 +665,7 @@ export function SiteHealthView(props: Props) {
                           disabled={verifyPending}
                           className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
                         >
-                          ✓ Verify Live
-                        </button>
+                          {tt("✓ Verify Live")}</button>
                       </form>
                     </div>
                   ) : null}
@@ -690,10 +678,9 @@ export function SiteHealthView(props: Props) {
           <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-gray-800">Staged for Verification</div>
+                <div className="text-sm font-semibold text-gray-800">{tt("Staged for Verification")}</div>
                 <div className="text-[11px] text-gray-400">
-                  Edits staged — run live content verification
-                </div>
+                  {tt("Edits staged — run live content verification")}</div>
               </div>
               <span className="badge bg-white text-gray-700">
                 {props.optimizations.staged.length}
@@ -705,7 +692,7 @@ export function SiteHealthView(props: Props) {
                   <div className="font-mono text-xs font-semibold text-brand-700">{p.path}</div>
                   <div className="mt-0.5 text-xs font-medium text-gray-800">{p.title}</div>
                   <div className="mt-1.5 text-[11px] text-gray-600">
-                    {p.optimizationRecommendation}
+                    {tt(p.optimizationRecommendation)}
                   </div>
                   {props.canWrite ? (
                     <div className="mt-2.5">
@@ -716,8 +703,7 @@ export function SiteHealthView(props: Props) {
                           disabled={verifyPending}
                           className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
                         >
-                          ✓ Run Live Content Verification
-                        </button>
+                          {tt("✓ Run Live Content Verification")}</button>
                       </form>
                     </div>
                   ) : null}
@@ -730,10 +716,9 @@ export function SiteHealthView(props: Props) {
           <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-gray-800">Verified Live</div>
+                <div className="text-sm font-semibold text-gray-800">{tt("Verified Live")}</div>
                 <div className="text-[11px] text-gray-400">
-                  Cryptographically verified on live domain
-                </div>
+                  {tt("Cryptographically verified on live domain")}</div>
               </div>
               <span className="badge bg-white text-emerald-700">
                 {props.optimizations.verifiedLive.length}
@@ -745,13 +730,12 @@ export function SiteHealthView(props: Props) {
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-semibold text-brand-700">{p.path}</span>
                     <span className="badge bg-emerald-50 text-[10px] text-emerald-700">
-                      Verified ✓
-                    </span>
+                      {tt("Verified ✓")}</span>
                   </div>
                   <div className="mt-0.5 text-xs font-medium text-gray-800">{p.title}</div>
                   {p.verificationHash ? (
                     <div className="mt-1.5 font-mono text-[10px] text-gray-400">
-                      Hash: {p.verificationHash}
+                      {tt("Hash: ")}{p.verificationHash}
                     </div>
                   ) : null}
                 </div>

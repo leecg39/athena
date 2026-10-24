@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex">
+    <div className="app-shell flex">
       <Sidebar
         currentId={ws.websiteId}
         websites={ws.sites.map((s) => ({ id: s.id, name: s.name, domain: s.domain }))}

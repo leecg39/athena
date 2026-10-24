@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ActionState } from "@/lib/action-state";
@@ -28,6 +30,7 @@ export function ActionForm({
   /** clear the fields after a successful submit (for "add" forms) */
   resetOnSuccess?: boolean;
 }) {
+  const tt = useTranslations();
   const [state, formAction, pending] = useActionState(action, { ok: false });
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -49,7 +52,7 @@ export function ActionForm({
         // uncontrolled fields after an action completes, which would wipe the
         // user's input whenever the server returns a validation error.
         e.preventDefault();
-        if (confirm && !window.confirm(confirm)) return;
+        if (confirm && !window.confirm(tt(confirm))) return;
         const fd = new FormData(e.currentTarget);
         const submitter = (e.nativeEvent as SubmitEvent).submitter;
         if (submitter instanceof HTMLButtonElement && submitter.name) fd.set(submitter.name, submitter.value);
@@ -59,18 +62,18 @@ export function ActionForm({
       {children}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className={btn} disabled={pending}>
-          {pending ? "Working…" : submitLabel}
+          {tt(pending ? "Working…" : submitLabel)}
         </button>
         {state.error ? (
           <span role="alert" className="text-xs text-red-600">
-            {state.error}
+            {tt(state.error)}
           </span>
         ) : null}
-        {state.ok && state.message ? <span className="text-xs text-emerald-600">{state.message}</span> : null}
+        {state.ok && state.message ? <span className="text-xs text-emerald-600">{tt(state.message)}</span> : null}
       </div>
       {state.ok && state.secret ? (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-medium text-amber-800">Copy this now — it will not be shown again.</p>
+          <p className="text-xs font-medium text-amber-800">{tt("Copy this now — it will not be shown again.")}</p>
           <div className="mt-2 flex items-center gap-2">
             <code className="min-w-0 flex-1 break-all rounded bg-white px-2 py-1 font-mono text-xs">{state.secret}</code>
             <button
@@ -81,7 +84,7 @@ export function ActionForm({
                 setCopied(true);
               }}
             >
-              {copied ? "Copied" : "Copy"}
+              {tt(copied ? "Copied" : "Copy")}
             </button>
           </div>
         </div>

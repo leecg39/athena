@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useActionState, useState } from "react";
 import type {
@@ -24,6 +26,7 @@ interface Props {
 }
 
 export function ShoppingInsightsView(props: Props) {
+  const tt = useTranslations();
   const [activeTab, setActiveTab] = useState<"leaderboard" | "brands" | "retailers">("leaderboard");
   const [ownershipFilter, setOwnershipFilter] = useState<"all" | "own" | "competitor">("all");
   const [retailerFilter, setRetailerFilter] = useState<string>("all");
@@ -77,7 +80,7 @@ export function ShoppingInsightsView(props: Props) {
                 activeTab === "leaderboard" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Carousel Leaderboard ({props.products.length})
+              {tt("Carousel Leaderboard (")}{props.products.length})
             </button>
             <button
               type="button"
@@ -87,7 +90,7 @@ export function ShoppingInsightsView(props: Props) {
                 activeTab === "brands" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Brand vs Competitor ({props.brandComparison.length})
+              {tt("Brand vs Competitor (")}{props.brandComparison.length})
             </button>
             <button
               type="button"
@@ -97,7 +100,7 @@ export function ShoppingInsightsView(props: Props) {
                 activeTab === "retailers" ? "bg-brand-600 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              Retailer Distribution ({props.retailerDistribution.length})
+              {tt("Retailer Distribution (")}{props.retailerDistribution.length})
             </button>
           </div>
 
@@ -106,21 +109,21 @@ export function ShoppingInsightsView(props: Props) {
               <select
                 value={ownershipFilter}
                 onChange={(e) => setOwnershipFilter(e.target.value as "all" | "own" | "competitor")}
-                aria-label="Filter by ownership"
+                aria-label={tt("Filter by ownership")}
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700"
               >
-                <option value="all">All Brands</option>
-                <option value="own">Own Products Only</option>
-                <option value="competitor">Competitors Only</option>
+                <option value="all">{tt("All Brands")}</option>
+                <option value="own">{tt("Own Products Only")}</option>
+                <option value="competitor">{tt("Competitors Only")}</option>
               </select>
 
               <select
                 value={retailerFilter}
                 onChange={(e) => setRetailerFilter(e.target.value)}
-                aria-label="Filter by retailer"
+                aria-label={tt("Filter by retailer")}
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700"
               >
-                <option value="all">All Retailers ({props.retailers.length})</option>
+                <option value="all">{tt("All Retailers (")}{props.retailers.length})</option>
                 {props.retailers.map((r) => (
                   <option key={r} value={r}>
                     {r}
@@ -132,7 +135,7 @@ export function ShoppingInsightsView(props: Props) {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search product, brand, or retailer…"
+                placeholder={tt("Search product, brand, or retailer…")}
                 className="w-52 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-800"
               />
             </>
@@ -146,15 +149,14 @@ export function ShoppingInsightsView(props: Props) {
               onClick={() => setShowAddForm((v) => !v)}
               className="btn-secondary !px-3 !py-1.5 text-xs"
             >
-              + Track product
-            </button>
+              {tt("+ Track product")}</button>
             <form action={syncAct} onSubmit={() => setLastKey("sync")}>
               <button
                 type="submit"
                 disabled={syncPending}
                 className="btn-primary !px-3 !py-1.5 text-xs"
               >
-                {syncPending ? "Syncing…" : "Sync from collected answers"}
+                {tt(syncPending ? "Syncing…" : "Sync from collected answers")}
               </button>
             </form>
           </div>
@@ -168,7 +170,7 @@ export function ShoppingInsightsView(props: Props) {
           data-testid="shopping-error-banner"
           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
         >
-          {errorMsg}
+          {tt(errorMsg)}
         </div>
       ) : null}
       {!errorMsg && infoMsg ? (
@@ -177,7 +179,7 @@ export function ShoppingInsightsView(props: Props) {
           data-testid="shopping-status-banner"
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
         >
-          {infoMsg}
+          {tt(infoMsg)}
         </div>
       ) : null}
 
@@ -190,23 +192,21 @@ export function ShoppingInsightsView(props: Props) {
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Track Product in AI Shopping Carousel
-            </div>
+              {tt("Track Product in AI Shopping Carousel")}</div>
             <button type="button" onClick={() => setShowAddForm(false)} className="text-xs text-gray-400">
-              Close
-            </button>
+              {tt("Close")}</button>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-6">
             <input
               name="title"
               required
-              placeholder="Product title (e.g. Canvasly Design System Kit)"
+              placeholder={tt("Product title (e.g. Canvasly Design System Kit)")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs md:col-span-2"
             />
             <input
               name="retailer"
               required
-              placeholder="Retailer (e.g. Amazon, G2 Marketplace)"
+              placeholder={tt("Retailer (e.g. Amazon, G2 Marketplace)")}
               defaultValue="Amazon"
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs"
             />
@@ -216,7 +216,7 @@ export function ShoppingInsightsView(props: Props) {
               step="0.01"
               min="0"
               defaultValue="22.00"
-              placeholder="Price ($)"
+              placeholder={tt("Price ($)")}
               className="rounded-lg border border-gray-200 px-3 py-2 text-xs"
             />
             <select
@@ -224,11 +224,11 @@ export function ShoppingInsightsView(props: Props) {
               defaultValue="true"
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
             >
-              <option value="true">Own Brand Product</option>
-              <option value="false">Competitor Product</option>
+              <option value="true">{tt("Own Brand Product")}</option>
+              <option value="false">{tt("Competitor Product")}</option>
             </select>
             <button type="submit" disabled={createPending} className="btn-primary !px-3 !py-2 text-xs">
-              {createPending ? "Adding…" : "Add Product"}
+              {tt(createPending ? "Adding…" : "Add Product")}
             </button>
           </div>
         </form>
@@ -240,14 +240,14 @@ export function ShoppingInsightsView(props: Props) {
           <table className="table-base">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Brand</th>
-                <th>Retailer</th>
-                <th>Carousel Appearances</th>
-                <th>Share</th>
-                <th>Avg Position</th>
-                <th>Price & Market Tier</th>
-                {props.canWrite ? <th className="text-right">Action</th> : null}
+                <th>{tt("Product")}</th>
+                <th>{tt("Brand")}</th>
+                <th>{tt("Retailer")}</th>
+                <th>{tt("Carousel Appearances")}</th>
+                <th>{tt("Share")}</th>
+                <th>{tt("Avg Position")}</th>
+                <th>{tt("Price & Market Tier")}</th>
+                {props.canWrite ? <th className="text-right">{tt("Action")}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -262,7 +262,7 @@ export function ShoppingInsightsView(props: Props) {
                         p.isOwn ? "bg-brand-50 text-brand-700" : "bg-gray-100 text-gray-700"
                       }`}
                     >
-                      {p.isOwn ? `★ ${p.brand} (Own)` : p.brand}
+                      {tt(p.isOwn ? `★ ${p.brand} (Own)` : p.brand)}
                     </span>
                   </td>
                   <td className="text-xs text-gray-600">{p.retailer}</td>
@@ -295,11 +295,11 @@ export function ShoppingInsightsView(props: Props) {
                               : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {p.pricePositioning === "below_market"
+                        {tt(p.pricePositioning === "below_market"
                           ? "Below avg"
                           : p.pricePositioning === "above_market"
                             ? "Premium"
-                            : "Market avg"}
+                            : "Market avg")}
                       </span>
                     </div>
                   </td>
@@ -312,8 +312,7 @@ export function ShoppingInsightsView(props: Props) {
                           disabled={deletePending}
                           className="text-xs text-red-500 hover:text-red-700"
                         >
-                          Remove
-                        </button>
+                          {tt("Remove")}</button>
                       </form>
                     </td>
                   ) : null}
@@ -330,14 +329,14 @@ export function ShoppingInsightsView(props: Props) {
           <table className="table-base" data-testid="shopping-brand-comparison-table">
             <thead>
               <tr>
-                <th>Brand</th>
-                <th>Role</th>
-                <th>Products in Carousel</th>
-                <th>Total Appearances</th>
-                <th>Share of Carousel</th>
-                <th>Weighted Avg Position</th>
-                <th>Avg Price Shown</th>
-                <th>Primary Retailer</th>
+                <th>{tt("Brand")}</th>
+                <th>{tt("Role")}</th>
+                <th>{tt("Products in Carousel")}</th>
+                <th>{tt("Total Appearances")}</th>
+                <th>{tt("Share of Carousel")}</th>
+                <th>{tt("Weighted Avg Position")}</th>
+                <th>{tt("Avg Price Shown")}</th>
+                <th>{tt("Primary Retailer")}</th>
               </tr>
             </thead>
             <tbody>
@@ -350,7 +349,7 @@ export function ShoppingInsightsView(props: Props) {
                         b.isOwn ? "bg-brand-50 text-brand-700" : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {b.isOwn ? "Own Brand" : "Competitor"}
+                      {tt(b.isOwn ? "Own Brand" : "Competitor")}
                     </span>
                   </td>
                   <td className="font-mono text-xs">{b.productCount}</td>
@@ -384,13 +383,13 @@ export function ShoppingInsightsView(props: Props) {
           <table className="table-base" data-testid="shopping-retailer-distribution-table">
             <thead>
               <tr>
-                <th>Retailer / Marketplace</th>
-                <th>Total Appearances</th>
-                <th>Retailer Share</th>
-                <th>Own vs Competitor Split</th>
-                <th>Own Brand Share in Retailer</th>
-                <th>Products Listed</th>
-                <th>Avg Price</th>
+                <th>{tt("Retailer / Marketplace")}</th>
+                <th>{tt("Total Appearances")}</th>
+                <th>{tt("Retailer Share")}</th>
+                <th>{tt("Own vs Competitor Split")}</th>
+                <th>{tt("Own Brand Share in Retailer")}</th>
+                <th>{tt("Products Listed")}</th>
+                <th>{tt("Avg Price")}</th>
               </tr>
             </thead>
             <tbody>
@@ -406,10 +405,10 @@ export function ShoppingInsightsView(props: Props) {
                   <td>
                     <div className="flex items-center gap-2 text-xs text-gray-600">
                       <span className="font-medium text-brand-700">
-                        Own: {r.ownAppearances.toLocaleString()}
+                        {tt("Own: ")}{r.ownAppearances.toLocaleString()}
                       </span>
                       <span>·</span>
-                      <span>Comp: {r.competitorAppearances.toLocaleString()}</span>
+                      <span>{tt("Comp: ")}{r.competitorAppearances.toLocaleString()}</span>
                     </div>
                   </td>
                   <td>

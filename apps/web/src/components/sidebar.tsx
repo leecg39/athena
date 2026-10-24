@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -51,6 +53,7 @@ export function Sidebar({
   switchAction: (formData: FormData) => Promise<void>;
   logoutAction: () => Promise<void>;
 }) {
+  const tt = useTranslations();
   const pathname = usePathname();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const current = websites.find((w) => w.id === currentId) ?? websites[0];
@@ -95,8 +98,7 @@ export function Sidebar({
               </form>
             ))}
             <Link href="/onboarding" className="block border-t border-gray-50 px-3 py-2 text-sm text-brand-600 hover:bg-gray-50" onClick={() => setSwitcherOpen(false)}>
-              + Add website
-            </Link>
+              {tt("+ Add website")}</Link>
           </div>
         ) : null}
       </div>
@@ -106,7 +108,7 @@ export function Sidebar({
         {NAV.map((group) => (
           <div key={group.section} className="mb-4">
             <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              {group.section}
+              {tt(group.section)}
             </div>
             {group.items.map((item) => {
               const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -119,7 +121,7 @@ export function Sidebar({
                   }`}
                 >
                   <span className="text-[13px]">{item.icon}</span>
-                  {item.label}
+                  {tt(item.label)}
                 </Link>
               );
             })}
@@ -131,7 +133,7 @@ export function Sidebar({
       <div className="border-t border-gray-100 p-3">
         <div className="mb-2 rounded-lg bg-white p-3 text-xs text-gray-500 shadow-sm">
           <div className="flex justify-between">
-            <span>Credits</span>
+            <span>{tt("Credits")}</span>
             <span className="font-semibold text-gray-900">{credits.toLocaleString()}</span>
           </div>
           <div className="mt-1 h-1.5 rounded-full bg-gray-100">
@@ -143,12 +145,10 @@ export function Sidebar({
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-600">
               {(userEmail || "U").slice(0, 2).toUpperCase()}
             </span>
-            Settings
-          </Link>
+            {tt("Settings")}</Link>
           <form action={logoutAction}>
-            <button type="submit" className="rounded-lg px-2 py-1.5 text-xs text-gray-400 hover:bg-gray-100" title={`Sign out ${userEmail}`}>
-              Sign out
-            </button>
+            <button type="submit" className="rounded-lg px-2 py-1.5 text-xs text-gray-400 hover:bg-gray-100" title={tt("Sign out {0}", { 0: userEmail })}>
+              {tt("Sign out")}</button>
           </form>
         </div>
       </div>

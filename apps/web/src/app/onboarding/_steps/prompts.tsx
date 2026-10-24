@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, prompts, organizations } from "@athena/db";
 import { PROMPT_LIMITS } from "@athena/core/onboarding";
@@ -9,6 +10,7 @@ import { savePromptStep } from "../actions";
 import { SourceNote } from "./frame";
 
 export async function PromptsStep({ site }: { site: WebsiteRow }) {
+  const tt = await getTranslations();
   const [comps, tracked, [org]] = await Promise.all([
     getCompetitorList(site.id),
     db.select({ text: prompts.text }).from(prompts).where(and(eq(prompts.websiteId, site.id), isNull(prompts.deletedAt))),
@@ -18,13 +20,12 @@ export async function PromptsStep({ site }: { site: WebsiteRow }) {
   const suggestions = await promptSuggestions(site, comps);
   const limit = PROMPT_LIMITS[org?.plan ?? "free"];
   return (
-    <ActionForm action={savePromptStep} submitLabel="Save and continue" className="space-y-5">
+    <ActionForm action={savePromptStep} submitLabel={tt("Save and continue")} className="space-y-5">
       <input type="hidden" name="websiteId" value={site.id} />
       <div className="flex items-center justify-between">
         <SourceNote source={suggestions.source} provider={suggestions.provider} />
         <span className="text-xs text-gray-400">
-          {tracked.length}/{limit} prompts tracked on your plan
-        </span>
+          {tracked.length}/{limit} {tt(" prompts tracked on your plan")}</span>
       </div>
       {suggestions.data.map((topic) => {
         const items = topic.prompts.filter((p) => !have.has(p.toLowerCase()));
@@ -45,15 +46,15 @@ export async function PromptsStep({ site }: { site: WebsiteRow }) {
       })}
       <div className="grid gap-2">
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-600">Your own prompts — topic</span>
-          <input name="manualTopic" className="input" placeholder="e.g. Pricing questions" maxLength={80} />
+          <span className="mb-1 block text-xs font-medium text-gray-600">{tt("Your own prompts — topic")}</span>
+          <input name="manualTopic" className="input" placeholder={tt("e.g. Pricing questions")} maxLength={80} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-600">One prompt per line, phrased the way buyers ask AI assistants</span>
-          <textarea name="manual" className="input" rows={4} placeholder={"which tools help product teams prototype faster?\nis there a free alternative to …"} />
+          <span className="mb-1 block text-xs font-medium text-gray-600">{tt("One prompt per line, phrased the way buyers ask AI assistants")}</span>
+          <textarea name="manual" className="input" rows={4} placeholder={tt("which tools help product teams prototype faster?\nis there a free alternative to …")} />
         </label>
       </div>
-      <p className="text-xs text-gray-400">Each prompt is asked to every AI model you track; one answer costs one credit.</p>
+      <p className="text-xs text-gray-400">{tt("Each prompt is asked to every AI model you track; one answer costs one credit.")}</p>
     </ActionForm>
   );
 }

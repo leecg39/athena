@@ -1,0 +1,21 @@
+---
+import Page0 from "./api.astro";
+import Page1 from "./index.astro";
+import Page2 from "./integrations.astro";
+import Page3 from "./knowledge-base.astro";
+import Page4 from "./mcp.astro";
+import Page5 from "./oracle.astro";
+import Page6 from "./prompts.astro";
+const pages = {"api": Page0,
+"": Page1,
+"integrations": Page2,
+"knowledge-base": Page3,
+"mcp": Page4,
+"oracle": Page5,
+"prompts": Page6};
+export function getStaticPaths() {
+  return ["api","","integrations","knowledge-base","mcp","oracle","prompts"].map(slug => ({ params: { english: slug ? 'en/' + slug : 'en' }, props: { slug } }));
+}
+const Page = pages[Astro.props.slug as keyof typeof pages];
+---
+<Page locale="en" />

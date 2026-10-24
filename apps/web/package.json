@@ -35,7 +35,8 @@
     "zod": "^3.25.76",
     "@ai-sdk/openai": "^1.0.0",
     "@auth/drizzle-adapter": "^1.11.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "@athena/i18n": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

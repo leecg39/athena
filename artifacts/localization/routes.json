@@ -1,0 +1,231 @@
+[
+  {
+    "path": "/home",
+    "lang": "ko",
+    "heading": "좋은 저녁이에요",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/responses",
+    "lang": "ko",
+    "heading": "답변",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/sources",
+    "lang": "ko",
+    "heading": "출처",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/competitors",
+    "lang": "ko",
+    "heading": "경쟁사",
+    "error": false,
+    "english": [
+      "Canvasly",
+      "Figma",
+      "Canva",
+      "Adobe Express"
+    ]
+  },
+  {
+    "path": "/insights",
+    "lang": "ko",
+    "heading": "인사이트",
+    "error": false,
+    "english": [
+      "Figma leads \"Alternatives\" topic by 17.8 pts (82.1% vs 64.3%)",
+      "Across 28 answers in the \"Alternatives\" topic, Figma is mentioned in 82.1% of responses compared to 64.3% for Canvasly. Expanding topic-specific pillar content and FAQs for \"Alternatives\" can close this 17.8pt visibility gap.",
+      "Citation gap on techcrunch.com (95.1% competitor vs 61% Canvasly)",
+      "techcrunch.com is cited in 41 of 98 AI answers (41.8% citation rate), where competitors are mentioned 95.1% of the time compared to 61% for Canvasly. Earning coverage or a mention on techcrunch.com can lift AI visibility across those answers.",
+      "Canva leads \"Design systems\" topic by 17.8 pts (60.7% vs 42.9%)",
+      "Across 28 answers in the \"Design systems\" topic, Canva is mentioned in 60.7% of responses compared to 42.9% for Canvasly. Expanding topic-specific pillar content and FAQs for \"Design systems\" can close this 17.8pt visibility gap.",
+      "Convert 59.2pt uncited mention gap into domain citations",
+      "Canvasly is mentioned in 59.2% of sampled AI answers (98 responses) but canvasly.io is cited in only 0%. Publishing authoritative reference pages, schema markup, and direct answer blocks on canvasly.io can turn unlinked mentions into direct citations.",
+      "Citation gap on youtube.com (95.1% competitor vs 63.4% Canvasly)",
+      "youtube.com is cited in 41 of 98 AI answers (41.8% citation rate), where competitors are mentioned 95.1% of the time compared to 63.4% for Canvasly. Earning coverage or a mention on youtube.com can lift AI visibility across those answers.",
+      "Citation gap on wikipedia.org (94.7% competitor vs 71.1% Canvasly)",
+      "wikipedia.org is cited in 38 of 98 AI answers (38.8% citation rate), where competitors are mentioned 94.7% of the time compared to 71.1% for Canvasly. Earning coverage or a mention on wikipedia.org can lift AI visibility across those answers.",
+      "Canva leads Canvasly by 5.1 pts in AI mentions (64.3% vs 59.2%)",
+      "Canva appears in 64.3% of AI answers (26% share of voice, avg position #2) compared to Canvasly's 59.2% (24% SoV). Publishing head-to-head comparison pages and targeting shared citations can recapture share of voice."
+    ]
+  },
+  {
+    "path": "/outreach",
+    "lang": "ko",
+    "heading": "아웃리치",
+    "error": false,
+    "english": [
+      "smashingmagazine.com/2026/09/best-design-tools",
+      "youtube.com/watch?v=ai-design-tools-2026",
+      "techcrunch.com/2026/08/best-ai-design-platforms-for-product-teams"
+    ]
+  },
+  {
+    "path": "/knowledge-base",
+    "lang": "ko",
+    "heading": "지식 베이스",
+    "error": false,
+    "english": [
+      "Pillars & Facts (4)",
+      "Review pending claims (2)",
+      "Internal link pages (2)",
+      "Company & Brand",
+      "# Company & Brand\nCore company background, positioning, and target audience for Canvasly.",
+      "Product & Features",
+      "# Product & Features\nVerified product capabilities, workflows, and differentiators for Canvasly.",
+      "Pricing & Plans",
+      "# Pricing & Plans\nOfficial pricing tiers and workspace limits for Canvasly.",
+      "Security & Enterprise",
+      "# Security & Enterprise\nEnterprise security certifications, access controls, and compliance facts for Canvasly."
+    ]
+  },
+  {
+    "path": "/oracle",
+    "lang": "ko",
+    "heading": "Oracle 검증",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/shopping",
+    "lang": "ko",
+    "heading": "쇼핑 인사이트",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/ads",
+    "lang": "ko",
+    "heading": "광고",
+    "error": false,
+    "english": [
+      "ChatGPT (1)",
+      "AI Mode (0)",
+      "AI Overview (0)"
+    ]
+  },
+  {
+    "path": "/pitches",
+    "lang": "ko",
+    "heading": "제안서 작업 공간",
+    "error": false,
+    "english": [
+      "All Pitches (3)",
+      "Visibility Audits (1)",
+      "Content Rewrites (2)"
+    ]
+  },
+  {
+    "path": "/group",
+    "lang": "ko",
+    "heading": "그룹 대시보드 — Core Brand Portfolio",
+    "error": false,
+    "english": [
+      "Canvasly Focus (canvasly.io)"
+    ]
+  },
+  {
+    "path": "/settings/profile",
+    "lang": "ko",
+    "heading": "프로필 설정",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/settings/users",
+    "lang": "ko",
+    "heading": "사용자",
+    "error": false,
+    "english": [
+      "prompts:read",
+      "prompts:write",
+      "content:read",
+      "content:write",
+      "outreach:read",
+      "outreach:write",
+      "billing:read",
+      "billing:write",
+      "members:read",
+      "members:write",
+      "api:manage",
+      "settings:write",
+      "websites:write",
+      "activity:read"
+    ]
+  },
+  {
+    "path": "/settings/api",
+    "lang": "ko",
+    "heading": "API, MCP 및 BI 연결",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/settings/integrations",
+    "lang": "ko",
+    "heading": "연동 설정",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/settings/observability",
+    "lang": "ko",
+    "heading": "모니터링, 사용 분석 및 이메일 템플릿",
+    "error": false,
+    "english": [
+      "Analytics",
+      "Team & RBAC",
+      "Onboarding",
+      "Canvasly — AI Search Weekly",
+      "Week of 2026-10-23 · Automated Executive Digest",
+      "Top citing source this week: g2.com"
+    ]
+  },
+  {
+    "path": "/settings/security",
+    "lang": "ko",
+    "heading": "로그인 및 접근 권한",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/settings/activity",
+    "lang": "ko",
+    "heading": "활동 기록",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/glossary",
+    "lang": "ko",
+    "heading": "용어집",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/onboarding",
+    "lang": "ko",
+    "heading": "웹사이트를 추가하세요",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/landing",
+    "lang": "ko",
+    "heading": "AI 검색에서 브랜드의 존재감을 높이세요",
+    "error": false,
+    "english": []
+  },
+  {
+    "path": "/bot",
+    "lang": "ko",
+    "heading": "AthenaBot 크롤러 안내",
+    "error": false,
+    "english": []
+  }
+]

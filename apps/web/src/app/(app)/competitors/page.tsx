@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
@@ -12,7 +13,10 @@ import { HeatmapSection, type HeatmapMetric } from "./_sections/heatmap";
 import { TrackedCompetitors } from "./_sections/tracked";
 import { DiscoveredCompetitors } from "./_sections/discovered";
 
-export const metadata = { title: "Competitors" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Competitors") };
+}
 
 const RANGES = ["7d", "14d", "30d", "90d"] as const;
 
@@ -40,20 +44,22 @@ function acceptableSuggestions(site: WebsiteRow, tracked: CompetitorEntry[], sug
   }, []);
 }
 
-function RangeBar({ range, total, href }: { range: string; total: number; href: (r: string) => string }) {
+async function RangeBar({ range, total, href }: { range: string; total: number; href: (r: string) => string }) {
+  const tt = await getTranslations();
   return (
     <div className="flex flex-wrap gap-2 text-xs">
       {RANGES.map((r) => (
         <Link key={r} href={href(r)} className={`badge ${range === r ? "bg-brand-50 text-brand-600" : "bg-gray-100 text-gray-600"}`}>
-          Last {r.replace("d", " days")}
+          {tt("Last ")}{tt(r.replace("d", " days"))}
         </Link>
       ))}
-      <span className="text-gray-400">{total} answers</span>
+      <span className="text-gray-400">{total} {tt(" answers")}</span>
     </div>
   );
 }
 
 export default async function CompetitorsPage({ searchParams }: { searchParams: Promise<{ range?: string; metric?: string }> }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const { range, filters } = windowFor(sp.range);
@@ -71,7 +77,7 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
   const href = (patch: Record<string, string>) => `/competitors?${new URLSearchParams({ range, metric, ...patch }).toString()}`;
   return (
     <div>
-      <PageHeader title="Competitors" subtitle="How your brand compares with competitors in AI answers" />
+      <PageHeader title={tt("Competitors")} subtitle={tt("How your brand compares with competitors in AI answers")} />
       <div className="space-y-6 p-6">
         <RangeBar range={range} total={comparison.totalResponses} href={(r) => href({ range: r })} />
         <ComparisonTable entities={comparison.entities} />

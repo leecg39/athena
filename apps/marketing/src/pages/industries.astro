@@ -27,31 +27,32 @@ const verticals = [
     solution: "Oracle continuously cross-checks AI responses against your approved Knowledge Base facts and flags Confirmed Inaccuracies for immediate remediation.",
   },
 ];
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base title="Industries | Athenum AI Search Solutions">
+<Base locale={locale} title={tt("Industries | Athenum AI Search Solutions")}>
   <section class="wrap" style="padding:64px 24px 32px;">
-    <span class="badge">Industry Playbooks</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
-      Tailored AI Visibility Workflows for Every Sector
-    </h1>
-    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">
-      From high-growth SaaS and Shopify merchants to multi-client agencies and regulated financial institutions, Athenum adapts to your vertical&apos;s citation landscape.
-    </p>
+    <span class="badge">{tt("Industry Playbooks")}</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" Tailored AI Visibility Workflows for Every Sector ")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt(" From high-growth SaaS and Shopify merchants to multi-client agencies and regulated financial institutions, Athenum adapts to your vertical's citation landscape. ")}</p>
   </section>
 
   <section class="wrap grid-2" style="padding:16px 24px 48px;">
     {verticals.map((v) => (
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span class="badge">{v.sector}</span>
-          <strong style="font-size:13px;color:#059669;">{v.kpi}</strong>
+          <span class="badge">{tt(v.sector)}</span>
+          <strong style="font-size:13px;color:#059669;">{tt(v.kpi)}</strong>
         </div>
-        <h2 style="font-size:19px;margin:14px 0 8px;">{v.sector}</h2>
+        <h2 style="font-size:19px;margin:14px 0 8px;">{tt(v.sector)}</h2>
         <p style="font-size:13px;color:#64748b;margin-bottom:10px;">
-          <strong>Challenge:</strong> {v.challenge}
+          <strong>{tt("Challenge:")}</strong> {tt(v.challenge)}
         </p>
         <p style="font-size:14px;color:#334155;line-height:1.6;">
-          <strong>Athenum Solution:</strong> {v.solution}
+          <strong>{tt("Athenum Solution:")}</strong> {tt(v.solution)}
         </p>
       </div>
     ))}

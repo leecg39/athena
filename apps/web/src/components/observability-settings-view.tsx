@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useState } from "react";
 import { ActionForm } from "@/components/action-form";
@@ -48,6 +50,7 @@ export function ObservabilitySettingsView(props: {
   triggerDiagnosticTraceAction: ServerAction;
   sendTestEmailTemplateAction: ServerAction;
 }) {
+  const tt = useTranslations();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     props.emailTemplates[0]?.id ?? "weekly_report",
   );
@@ -59,34 +62,33 @@ export function ObservabilitySettingsView(props: {
       {/* Top KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="metric-card">
-          <div className="text-xs text-gray-500">PostHog Events & Replays</div>
+          <div className="text-xs text-gray-500">{tt("PostHog Events & Replays")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900" data-testid="obs-events-count">
             {props.summary.eventsCount} / {props.summary.sessionReplaysCount}
           </div>
-          <div className="mt-1 text-[11px] text-emerald-700">Input Masking Enforced</div>
+          <div className="mt-1 text-[11px] text-emerald-700">{tt("Input Masking Enforced")}</div>
         </div>
         <div className="metric-card">
-          <div className="text-xs text-gray-500">Product Survey NPS</div>
+          <div className="text-xs text-gray-500">{tt("Product Survey NPS")}</div>
           <div className="mt-1 text-xl font-bold text-brand-700" data-testid="obs-survey-nps">
             {props.summary.avgSurveyScore.toFixed(1)} / 10
           </div>
           <div className="mt-1 text-[11px] text-gray-500">
-            {props.summary.surveysCount} survey responses
-          </div>
+            {props.summary.surveysCount} {tt(" survey responses")}</div>
         </div>
         <div className="metric-card">
-          <div className="text-xs text-gray-500">OpenTelemetry Spans</div>
+          <div className="text-xs text-gray-500">{tt("OpenTelemetry Spans")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900" data-testid="obs-otel-count">
             {props.summary.otelSpansCount}
           </div>
-          <div className="mt-1 text-[11px] text-gray-500">/api/otel/traces OTLP</div>
+          <div className="mt-1 text-[11px] text-gray-500">{tt("/api/otel/traces OTLP")}</div>
         </div>
         <div className="metric-card">
-          <div className="text-xs text-gray-500">CSP Security Reports</div>
+          <div className="text-xs text-gray-500">{tt("CSP Security Reports")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900" data-testid="obs-csp-count">
             {props.summary.cspReportsCount}
           </div>
-          <div className="mt-1 text-[11px] text-gray-500">/api/csp-report URI-sanitized</div>
+          <div className="mt-1 text-[11px] text-gray-500">{tt("/api/csp-report URI-sanitized")}</div>
         </div>
       </div>
 
@@ -95,21 +97,18 @@ export function ObservabilitySettingsView(props: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              PostHog Telemetry — Events, Session Replays & Product Surveys
-            </h2>
+              {tt("PostHog Telemetry — Events, Session Replays & Product Surveys")}</h2>
             <p className="text-xs text-gray-500">
-              Automatic PII/Secret key redaction (<code className="font-mono">[REDACTED]</code>) and{" "}
-              <code className="font-mono">maskAllInputs: true</code> on all recorded sessions.
-            </p>
+              {tt("Automatic PII/Secret key redaction (")}<code className="font-mono">[REDACTED]</code>{tt(") and")}{tt(" ")}
+              <code className="font-mono">maskAllInputs: true</code> {tt(" on all recorded sessions.")}</p>
           </div>
           <span className="badge bg-emerald-50 text-xs text-emerald-700">
-            Session Replay: Masked
-          </span>
+            {tt("Session Replay: Masked")}</span>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-gray-100 p-3">
-            <div className="mb-2 text-xs font-semibold text-gray-800">Recent PostHog Events</div>
+            <div className="mb-2 text-xs font-semibold text-gray-800">{tt("Recent PostHog Events")}</div>
             <div className="space-y-1.5">
               {props.events.slice(0, 5).map((e) => (
                 <div
@@ -130,27 +129,25 @@ export function ObservabilitySettingsView(props: {
 
           <div className="rounded-xl border border-gray-100 p-3">
             <div className="mb-2 text-xs font-semibold text-gray-800">
-              Submit Product Survey (PostHog Survey Widget)
-            </div>
+              {tt("Submit Product Survey (PostHog Survey Widget)")}</div>
             <ActionForm
               action={props.submitProductSurveyAction}
-              submitLabel="Submit Survey Feedback"
+              submitLabel={tt("Submit Survey Feedback")}
               className="space-y-2.5"
             >
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-medium text-gray-600">Category</label>
+                  <label className="block text-[11px] font-medium text-gray-600">{tt("Category")}</label>
                   <select name="category" className="input-base mt-1 text-xs" defaultValue="nps">
-                    <option value="nps">NPS Score (0-10)</option>
-                    <option value="feature_request">Feature Request</option>
-                    <option value="ux_feedback">UX / Workflow</option>
-                    <option value="data_accuracy">AI Citation Accuracy</option>
+                    <option value="nps">{tt("NPS Score (0-10)")}</option>
+                    <option value="feature_request">{tt("Feature Request")}</option>
+                    <option value="ux_feedback">{tt("UX / Workflow")}</option>
+                    <option value="data_accuracy">{tt("AI Citation Accuracy")}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-gray-600">
-                    Score (0–10)
-                  </label>
+                    {tt("Score (0–10)")}</label>
                   <input
                     name="score"
                     type="number"
@@ -163,11 +160,11 @@ export function ObservabilitySettingsView(props: {
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-medium text-gray-600">Feedback</label>
+                <label className="block text-[11px] font-medium text-gray-600">{tt("Feedback")}</label>
                 <input
                   name="feedback"
                   className="input-base mt-1 text-xs"
-                  placeholder="Share product feedback on Athenum AI visibility & MCP..."
+                  placeholder={tt("Share product feedback on Athenum AI visibility & MCP...")}
                   required
                   minLength={3}
                   maxLength={500}
@@ -183,17 +180,17 @@ export function ObservabilitySettingsView(props: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              Vercel Speed Insights (Web Vitals) & OpenTelemetry Tracing (<code className="font-mono">/api/otel/traces</code>)
+              {tt("Vercel Speed Insights (Web Vitals) & OpenTelemetry Tracing (")}<code className="font-mono">/api/otel/traces</code>)
             </h2>
             <p className="text-xs text-gray-500">
-              Real-time Core Web Vitals and distributed OTLP spans across{" "}
-              <code className="font-mono">@athena/web</code> and{" "}
+              {tt("Real-time Core Web Vitals and distributed OTLP spans across")}{tt(" ")}
+              <code className="font-mono">@athena/web</code> {tt(" and")}{tt(" ")}
               <code className="font-mono">@athena/jobs</code>.
             </p>
           </div>
           <ActionForm
             action={props.triggerDiagnosticTraceAction}
-            submitLabel="Run Diagnostic OTel Span"
+            submitLabel={tt("Run Diagnostic OTel Span")}
             variant="secondary"
             className="flex items-center gap-2"
           >
@@ -211,11 +208,11 @@ export function ObservabilitySettingsView(props: {
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-semibold text-gray-800">{w.name}</span>
                 <span className="badge bg-emerald-50 text-[10px] text-emerald-700">
-                  {w.rating}
+                  {tt(w.rating)}
                 </span>
               </div>
               <div className="mt-1 font-mono text-base font-bold text-gray-900">
-                {w.name === "CLS" ? w.value : `${w.value}ms`}
+                {tt(w.name === "CLS" ? w.value : `${w.value}ms`)}
               </div>
               <div className="text-[11px] text-gray-400">{w.pagePath}</div>
             </div>
@@ -226,11 +223,11 @@ export function ObservabilitySettingsView(props: {
           <table className="table-base">
             <thead>
               <tr>
-                <th>Trace ID</th>
-                <th>Service</th>
-                <th>Span Name</th>
-                <th>Duration</th>
-                <th>Status</th>
+                <th>{tt("Trace ID")}</th>
+                <th>{tt("Service")}</th>
+                <th>{tt("Span Name")}</th>
+                <th>{tt("Duration")}</th>
+                <th>{tt("Status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -243,7 +240,7 @@ export function ObservabilitySettingsView(props: {
                     </span>
                   </td>
                   <td className="font-mono text-xs font-medium text-gray-900">{sp.name}</td>
-                  <td className="font-mono text-xs text-gray-600">{sp.durationMs}ms</td>
+                  <td className="font-mono text-xs text-gray-600">{sp.durationMs}{tt("ms")}</td>
                   <td>
                     <span
                       className={`badge text-xs ${
@@ -252,7 +249,7 @@ export function ObservabilitySettingsView(props: {
                           : "bg-red-50 text-red-700"
                       }`}
                     >
-                      {sp.status}
+                      {tt(sp.status)}
                     </span>
                   </td>
                 </tr>
@@ -267,12 +264,10 @@ export function ObservabilitySettingsView(props: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              React Email Templates (<code className="font-mono">@athena/emails</code>)
+              {tt("React Email Templates (")}<code className="font-mono">@athena/emails</code>)
             </h2>
             <p className="text-xs text-gray-500">
-              Preview and test-dispatch transactional emails (Weekly Report, Invite, Onboarding,
-              Oracle Alert, Billing Receipt).
-            </p>
+              {tt("Preview and test-dispatch transactional emails (Weekly Report, Invite, Onboarding, Oracle Alert, Billing Receipt).")}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {props.emailTemplates.map((tpl) => (
@@ -286,7 +281,7 @@ export function ObservabilitySettingsView(props: {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {tpl.category}
+                {tt(tpl.category)}
               </button>
             ))}
           </div>
@@ -296,14 +291,14 @@ export function ObservabilitySettingsView(props: {
           <div className="space-y-3 rounded-xl border border-gray-100 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
               <div>
-                <div className="text-xs font-semibold text-gray-900">{selectedTemplate.name}</div>
+                <div className="text-xs font-semibold text-gray-900">{tt(selectedTemplate.name)}</div>
                 <div className="font-mono text-xs text-gray-500">
-                  Subject: {selectedTemplate.subject}
+                  {tt("Subject: ")}{selectedTemplate.subject}
                 </div>
               </div>
               <ActionForm
                 action={props.sendTestEmailTemplateAction}
-                submitLabel="Send Test Email"
+                submitLabel={tt("Send Test Email")}
                 className="flex items-center gap-2"
               >
                 <input type="hidden" name="templateId" value={selectedTemplate.id} />

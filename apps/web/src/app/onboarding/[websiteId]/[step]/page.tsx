@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { db } from "@athena/db";
@@ -11,7 +12,10 @@ import { AudienceStep } from "../../_steps/audience";
 import { SearchConsoleStep } from "../../_steps/search-console";
 import { ScheduleStep } from "../../_steps/schedule";
 
-export const metadata = { title: "Set up tracking" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Set up tracking") };
+}
 
 const COPY: Record<Exclude<StepId, "website">, { title: string; subtitle: string }> = {
   brand: { title: "Confirm your brand profile", subtitle: "Used to detect mentions of your brand in AI answers." },
@@ -22,8 +26,9 @@ const COPY: Record<Exclude<StepId, "website">, { title: string; subtitle: string
   schedule: { title: "Monitoring schedule", subtitle: "How often answers are collected. You can change this anytime." },
 };
 
-function Loading() {
-  return <p className="text-sm text-gray-400">Preparing suggestions…</p>;
+async function Loading() {
+  const tt = await getTranslations();
+  return <p className="text-sm text-gray-400">{tt("Preparing suggestions…")}</p>;
 }
 
 export default async function StepPage({
@@ -33,6 +38,7 @@ export default async function StepPage({
   params: Promise<{ websiteId: string; step: string }>;
   searchParams: Promise<{ gsc?: string }>;
 }) {
+  const tt = await getTranslations();
   const { websiteId, step } = await params;
   const user = await requireUser(`/onboarding/${websiteId}/${step}`);
   const site = await getWebsiteForUser(db, user.id, websiteId);
@@ -48,7 +54,7 @@ export default async function StepPage({
     schedule: <ScheduleStep site={site} />,
   }[id];
   return (
-    <OnboardingFrame step={id} websiteId={site.id} reached={site.onboardingStep + 1} title={COPY[id].title} subtitle={COPY[id].subtitle}>
+    <OnboardingFrame step={id} websiteId={site.id} reached={site.onboardingStep + 1} title={tt(COPY[id].title)} subtitle={tt(COPY[id].subtitle)}>
       <Suspense fallback={<Loading />}>{body}</Suspense>
     </OnboardingFrame>
   );

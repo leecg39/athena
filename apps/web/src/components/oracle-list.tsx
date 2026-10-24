@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -47,6 +49,7 @@ export function OracleList(props: {
   currentType: OracleFindingType | "all";
   canWrite: boolean;
 }) {
+  const tt = useTranslations();
   const router = useRouter();
   const [scanState, scanAct, scanPending] = useActionState(runOracleScanAction, idle);
   const [statusState, statusAct, statusPending] = useActionState(updateOracleStatusAction, idle);
@@ -122,7 +125,7 @@ export function OracleList(props: {
     <div className="space-y-5">
       {/* Top toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3">
-        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Oracle finding status">
+        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label={tt("Oracle finding status")}>
           {statusTabs.map((t) => {
             const active = props.currentStatus === t.key;
             return (
@@ -135,7 +138,7 @@ export function OracleList(props: {
                   active ? "bg-brand-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                <span>{t.label}</span>
+                <span>{tt(t.label)}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                     active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
@@ -150,26 +153,24 @@ export function OracleList(props: {
 
         <div className="flex items-center gap-2">
           <Link href="/knowledge-base" className="btn-secondary !px-3 !py-1.5 text-xs">
-            Manage Knowledge Base →
-          </Link>
+            {tt("Manage Knowledge Base →")}</Link>
           {props.canWrite ? (
             <form action={scanAct} onSubmit={() => setLastAction("scan")} className="flex items-center gap-2">
               <label htmlFor="oracle-days" className="sr-only">
-                Lookback window
-              </label>
+                {tt("Lookback window")}</label>
               <select
                 id="oracle-days"
                 name="days"
                 defaultValue="30"
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700"
               >
-                <option value="7">Last 7 days</option>
-                <option value="14">Last 14 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="90">Last 90 days</option>
+                <option value="7">{tt("Last 7 days")}</option>
+                <option value="14">{tt("Last 14 days")}</option>
+                <option value="30">{tt("Last 30 days")}</option>
+                <option value="90">{tt("Last 90 days")}</option>
               </select>
               <button type="submit" disabled={scanPending} className="btn-primary !px-3 !py-1.5 text-xs">
-                {scanPending ? "Scanning…" : "Run scan"}
+                {tt(scanPending ? "Scanning…" : "Run scan")}
               </button>
             </form>
           ) : null}
@@ -177,7 +178,7 @@ export function OracleList(props: {
       </div>
 
       {/* Type filter pills */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Oracle finding type">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={tt("Oracle finding type")}>
         {typeTabs.map((t) => {
           const active = props.currentType === t.key;
           return (
@@ -190,7 +191,7 @@ export function OracleList(props: {
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
               }`}
             >
-              <span>{t.label}</span>
+              <span>{tt(t.label)}</span>
               <span className="text-[11px] text-gray-400">({t.count})</span>
             </Link>
           );
@@ -199,12 +200,12 @@ export function OracleList(props: {
 
       {banner ? (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {banner}
+          {tt(banner)}
         </div>
       ) : null}
       {!banner && notice ? (
         <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-          {notice}
+          {tt(notice)}
         </div>
       ) : null}
 
@@ -220,9 +221,9 @@ export function OracleList(props: {
               <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`badge ${typeMeta.badge}`}>{typeMeta.label}</span>
+                    <span className={`badge ${typeMeta.badge}`}>{tt(typeMeta.label)}</span>
                     {props.currentStatus === "all" || f.status !== "open" ? (
-                      <span className={`badge ${statusMeta.badge}`}>{statusMeta.label}</span>
+                      <span className={`badge ${statusMeta.badge}`}>{tt(statusMeta.label)}</span>
                     ) : null}
                     <div className="text-sm font-semibold text-gray-900">{f.claim}</div>
                   </div>
@@ -234,13 +235,12 @@ export function OracleList(props: {
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     {f.models.map((m) => (
                       <span key={m} className="badge bg-gray-100 text-gray-600">
-                        {m}
+                        {tt(m)}
                       </span>
                     ))}
                     {f.responseId ? (
                       <Link href={`/responses/${f.responseId}`} className="text-xs font-medium text-brand-600 hover:underline">
-                        View AI response →
-                      </Link>
+                        {tt("View AI response →")}</Link>
                     ) : null}
                   </div>
                 </div>
@@ -252,7 +252,7 @@ export function OracleList(props: {
                       onClick={() => setFixingId(isFixing ? null : f.id)}
                       className="btn-primary !px-3 !py-1.5 text-xs"
                     >
-                      {isFixing ? "Close KB editor" : "Fix KB & Resolve"}
+                      {tt(isFixing ? "Close KB editor" : "Fix KB & Resolve")}
                     </button>
                   ) : null}
 
@@ -262,7 +262,7 @@ export function OracleList(props: {
                     onClick={() => void askAthena(f.id, f.claim, f.evidence)}
                     className="btn-secondary !px-3 !py-1.5 text-xs"
                   >
-                    {askingId === f.id ? "Opening chat…" : "Ask Athena"}
+                    {tt(askingId === f.id ? "Opening chat…" : "Ask Athena")}
                   </button>
 
                   {props.canWrite ? (
@@ -272,8 +272,7 @@ export function OracleList(props: {
                           <input type="hidden" name="findingId" value={f.id} />
                           <input type="hidden" name="status" value="resolving" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Start resolving
-                          </button>
+                            {tt("Start resolving")}</button>
                         </form>
                       ) : null}
 
@@ -282,8 +281,7 @@ export function OracleList(props: {
                           <input type="hidden" name="findingId" value={f.id} />
                           <input type="hidden" name="status" value="resolved" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Resolve
-                          </button>
+                            {tt("Resolve")}</button>
                         </form>
                       ) : null}
 
@@ -292,8 +290,7 @@ export function OracleList(props: {
                           <input type="hidden" name="findingId" value={f.id} />
                           <input type="hidden" name="status" value="dismissed" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Dismiss
-                          </button>
+                            {tt("Dismiss")}</button>
                         </form>
                       ) : null}
 
@@ -302,8 +299,7 @@ export function OracleList(props: {
                           <input type="hidden" name="findingId" value={f.id} />
                           <input type="hidden" name="status" value="open" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Reopen
-                          </button>
+                            {tt("Reopen")}</button>
                         </form>
                       ) : null}
                     </>
@@ -322,8 +318,7 @@ export function OracleList(props: {
                 >
                   <input type="hidden" name="findingId" value={f.id} />
                   <div className="text-xs font-medium text-gray-700">
-                    Confirm the authoritative brand fact in Knowledge Base and mark this finding resolved:
-                  </div>
+                    {tt("Confirm the authoritative brand fact in Knowledge Base and mark this finding resolved:")}</div>
                   <div className="grid gap-2 md:grid-cols-4">
                     <select
                       name="pillarId"
@@ -345,12 +340,11 @@ export function OracleList(props: {
                     <div className="flex gap-2">
                       <input
                         name="sourceUrl"
-                        placeholder="Source URL (optional)"
+                        placeholder={tt("Source URL (optional)")}
                         className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs"
                       />
                       <button type="submit" disabled={resolveFactPending} className="btn-primary shrink-0 !px-3 !py-1.5 text-xs">
-                        Save & Resolve
-                      </button>
+                        {tt("Save & Resolve")}</button>
                     </div>
                   </div>
                 </form>
@@ -361,8 +355,7 @@ export function OracleList(props: {
 
         {props.findings.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-400">
-            No {props.currentStatus === "all" ? "" : `${props.currentStatus} `}findings for this filter. Oracle scans AI responses against your knowledge base every run.
-          </div>
+            {tt("No ")}{tt(props.currentStatus === "all" ? "" : `${props.currentStatus} `)}{tt("findings for this filter. Oracle scans AI responses against your knowledge base every run.")}</div>
         ) : null}
       </div>
     </div>

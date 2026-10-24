@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -92,6 +94,7 @@ export function InsightsList(props: {
   currentKind: InsightKind | "all";
   canWrite: boolean;
 }) {
+  const tt = useTranslations();
   const router = useRouter();
   const [genState, genAction, genPending] = useActionState(generateInsightsAction, idle);
   const [statusState, statusAction, statusPending] = useActionState(updateInsightStatusAction, idle);
@@ -158,7 +161,7 @@ export function InsightsList(props: {
     <div className="space-y-5">
       {/* Top toolbar: status tabs + refresh button */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3">
-        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Insight status">
+        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label={tt("Insight status")}>
           {statusTabs.map((t) => {
             const active = props.currentStatus === t.key;
             return (
@@ -171,7 +174,7 @@ export function InsightsList(props: {
                   active ? "bg-brand-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                <span>{t.label}</span>
+                <span>{tt(t.label)}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                     active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
@@ -187,28 +190,27 @@ export function InsightsList(props: {
         {props.canWrite ? (
           <form action={genAction} onSubmit={() => setLastAction("gen")} className="flex items-center gap-2">
             <label htmlFor="insights-days" className="sr-only">
-              Lookback window
-            </label>
+              {tt("Lookback window")}</label>
             <select
               id="insights-days"
               name="days"
               defaultValue="30"
               className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700"
             >
-              <option value="7">Last 7 days</option>
-              <option value="14">Last 14 days</option>
-              <option value="30">Last 30 days</option>
-              <option value="90">Last 90 days</option>
+              <option value="7">{tt("Last 7 days")}</option>
+              <option value="14">{tt("Last 14 days")}</option>
+              <option value="30">{tt("Last 30 days")}</option>
+              <option value="90">{tt("Last 90 days")}</option>
             </select>
             <button type="submit" disabled={genPending} className="btn-primary !px-3 !py-1.5 text-xs">
-              {genPending ? "Evaluating…" : "Refresh insights"}
+              {tt(genPending ? "Evaluating…" : "Refresh insights")}
             </button>
           </form>
         ) : null}
       </div>
 
       {/* Kind filter pills */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Insight category">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={tt("Insight category")}>
         {kindTabs.map((k) => {
           const active = props.currentKind === k.key;
           return (
@@ -221,7 +223,7 @@ export function InsightsList(props: {
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
               }`}
             >
-              <span>{k.label}</span>
+              <span>{tt(k.label)}</span>
               <span className="text-[11px] text-gray-400">({k.count})</span>
             </Link>
           );
@@ -230,13 +232,13 @@ export function InsightsList(props: {
 
       {banner ? (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {banner}
+          {tt(banner)}
         </div>
       ) : null}
 
       {!banner && notice ? (
         <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-          {notice}
+          {tt(notice)}
         </div>
       ) : null}
 
@@ -254,14 +256,14 @@ export function InsightsList(props: {
               <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`badge ${kindMeta.badge}`}>{kindMeta.label}</span>
+                    <span className={`badge ${kindMeta.badge}`}>{tt(kindMeta.label)}</span>
                     {props.currentStatus === "all" || i.status !== "active" ? (
-                      <span className={`badge ${statusMeta.badge}`}>{statusMeta.label}</span>
+                      <span className={`badge ${statusMeta.badge}`}>{tt(statusMeta.label)}</span>
                     ) : null}
-                    <h3 className="text-sm font-semibold text-gray-900">{i.title}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{tt(i.title)}</h3>
                   </div>
 
-                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{i.body}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{tt(i.body)}</p>
 
                   {metricEntries.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -270,7 +272,7 @@ export function InsightsList(props: {
                           key={k}
                           className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-xs text-gray-600 ring-1 ring-gray-200/70"
                         >
-                          <span className="text-gray-400">{formatMetricLabel(k)}:</span>
+                          <span className="text-gray-400">{tt(formatMetricLabel(k))}:</span>
                           <span className="font-medium text-gray-800">{formatMetricValue(k, v)}</span>
                         </span>
                       ))}
@@ -281,7 +283,7 @@ export function InsightsList(props: {
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {i.action.href ? (
                     <Link href={i.action.href} className="btn-primary !px-3 !py-1.5 text-xs">
-                      {i.action.label ?? "Act on it"}
+                      {tt(i.action.label ?? "Act on it")}
                     </Link>
                   ) : null}
 
@@ -292,7 +294,7 @@ export function InsightsList(props: {
                       onClick={() => void askAthena(i.id, i.action.askPrompt!)}
                       className="btn-secondary !px-3 !py-1.5 text-xs"
                     >
-                      {askingId === i.id ? "Opening chat…" : "Ask Athena"}
+                      {tt(askingId === i.id ? "Opening chat…" : "Ask Athena")}
                     </button>
                   ) : null}
 
@@ -303,8 +305,7 @@ export function InsightsList(props: {
                           <input type="hidden" name="insightId" value={i.id} />
                           <input type="hidden" name="status" value="resolved" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Resolve
-                          </button>
+                            {tt("Resolve")}</button>
                         </form>
                       ) : null}
 
@@ -313,8 +314,7 @@ export function InsightsList(props: {
                           <input type="hidden" name="insightId" value={i.id} />
                           <input type="hidden" name="status" value="discarded" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Discard
-                          </button>
+                            {tt("Discard")}</button>
                         </form>
                       ) : null}
 
@@ -323,8 +323,7 @@ export function InsightsList(props: {
                           <input type="hidden" name="insightId" value={i.id} />
                           <input type="hidden" name="status" value="active" />
                           <button type="submit" disabled={statusPending} className="btn-secondary !px-3 !py-1.5 text-xs">
-                            Reopen
-                          </button>
+                            {tt("Reopen")}</button>
                         </form>
                       ) : null}
                     </>
@@ -337,9 +336,9 @@ export function InsightsList(props: {
 
         {props.insights.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-400">
-            {props.currentStatus === "active"
+            {tt(props.currentStatus === "active"
               ? "No active insights for this filter. New insights are generated every 6 hours from your metrics, or click Refresh insights."
-              : `No ${props.currentStatus === "all" ? "" : `${props.currentStatus} `}insights found for this filter.`}
+              : `No ${props.currentStatus === "all" ? "" : `${props.currentStatus} `}insights found for this filter.`)}
           </div>
         ) : null}
       </div>

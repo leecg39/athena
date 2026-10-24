@@ -43,24 +43,25 @@ const modules = [
     summary: "Connect Claude/ChatGPT via @athena/mcp (14 tools) or stream daily visibility datasets directly into Google Looker Studio and Microsoft Power BI.",
   },
 ];
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base title="Platform | Athenum AI Search Intelligence">
+<Base locale={locale} title={tt("Platform | Athenum AI Search Intelligence")}>
   <section class="wrap" style="padding:64px 24px 32px;">
-    <span class="badge">End-to-End AEO Architecture</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
-      Eight Integrated Modules Built for AI Search Dominance
-    </h1>
-    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">
-      Unlike legacy keyword rank trackers, Athenum combines multi-model prompt collection, citation graph analytics, hallucination detection, and direct CMS publishing in one governed workspace.
-    </p>
+    <span class="badge">{tt("End-to-End AEO Architecture")}</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" Eight Integrated Modules Built for AI Search Dominance ")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">{tt(" Unlike legacy keyword rank trackers, Athenum combines multi-model prompt collection, citation graph analytics, hallucination detection, and direct CMS publishing in one governed workspace. ")}</p>
   </section>
 
   <section class="wrap grid-2" style="padding:16px 24px 48px;">
     {modules.map((m) => (
       <div class="card">
-        <span class="badge">{m.tag}</span>
-        <h2 style="font-size:20px;margin:12px 0 8px;">{m.name}</h2>
-        <p style="font-size:14px;color:#475569;line-height:1.65;">{m.summary}</p>
+        <span class="badge">{tt(m.tag)}</span>
+        <h2 style="font-size:20px;margin:12px 0 8px;">{tt(m.name)}</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.65;">{tt(m.summary)}</p>
       </div>
     ))}
   </section>

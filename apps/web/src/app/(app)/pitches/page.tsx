@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import {
   ensureDefaultGroup,
@@ -9,10 +10,14 @@ import { PageHeader } from "@/components/page-header";
 import { PitchWorkspaceView } from "@/components/pitch-workspace-view";
 import { getSettingsContext } from "@/lib/settings-context";
 
-export const metadata = { title: "Pitches" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Pitches") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function PitchesPage() {
+  const tt = await getTranslations();
   const s = await getSettingsContext();
 
   await ensureStarterPitches(db, {
@@ -38,8 +43,8 @@ export default async function PitchesPage() {
   return (
     <div>
       <PageHeader
-        title="Pitch Workspace"
-        subtitle="Generate shareable AI-search visibility & content rewrite reports for prospects from a website URL"
+        title={tt("Pitch Workspace")}
+        subtitle={tt("Generate shareable AI-search visibility & content rewrite reports for prospects from a website URL")}
       />
       <PitchWorkspaceView
         pitches={pitches}

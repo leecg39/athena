@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { ResponsiveContainer, Sankey, Tooltip } from "recharts";
 
@@ -23,7 +25,8 @@ function Node(props: { x: number; y: number; width: number; height: number; payl
 }
 
 export function SourceSankey({ data }: { data: SankeyData }) {
-  if (!data.links.length) return <p className="py-16 text-center text-sm text-gray-400">No cited sources with brand mentions in this period.</p>;
+  const tt = useTranslations();
+  if (!data.links.length) return <p className="py-16 text-center text-sm text-gray-400">{tt("No cited sources with brand mentions in this period.")}</p>;
   return (
     <div className="h-[460px]">
       <ResponsiveContainer width="100%" height="100%">

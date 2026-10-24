@@ -1,14 +1,19 @@
 ---
 import Doc from "../layouts/Doc.astro";
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Doc title="Getting Started | Athenum Docs">
-  <h1>Getting Started</h1>
-  <p>Athenum tracks how your brand appears across AI search platforms, shows where you win or lose visibility, and tells you what to fix.</p>
-  <h2>Quick start</h2>
+<Doc locale={locale} title={tt("Getting Started | Athenum Docs")}>
+  <h1>{tt("Getting Started")}</h1>
+  <p>{tt("Athenum tracks how your brand appears across AI search platforms, shows where you win or lose visibility, and tells you what to fix.")}</p>
+  <h2>{tt("Quick start")}</h2>
   <ol>
-    <li>Sign in and run the onboarding wizard (add your domain).</li>
-    <li>Review suggested competitors and prompts.</li>
-    <li>Start a collection run — 1 credit per AI response.</li>
-    <li>Read the Olympus dashboard and act on Insights.</li>
+    <li>{tt("Sign in and run the onboarding wizard (add your domain).")}</li>
+    <li>{tt("Review suggested competitors and prompts.")}</li>
+    <li>{tt("Start a collection run — 1 credit per AI response.")}</li>
+    <li>{tt("Read the Olympus dashboard and act on Insights.")}</li>
   </ol>
 </Doc>

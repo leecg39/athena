@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db, publishTargets, scheduledReports, apiKeys } from "@athena/db";
@@ -6,7 +7,10 @@ import { gscConfigured } from "@/lib/integrations";
 import { SettingsShell } from "@/components/settings-shell";
 import { getSettingsContext } from "@/lib/settings-context";
 
-export const metadata = { title: "Settings — Integrations" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Settings — Integrations") };
+}
 
 interface Item {
   name: string;
@@ -29,6 +33,7 @@ const CMS_LABEL: Record<(typeof CMS)[number], string> = {
 };
 
 export default async function IntegrationsSettingsPage() {
+  const tt = await getTranslations();
   const s = await getSettingsContext();
   const [gsc, targets, [slack], [keys]] = await Promise.all([
     getIntegration(db, s.websiteId, "gsc"),
@@ -75,27 +80,26 @@ export default async function IntegrationsSettingsPage() {
   ];
 
   return (
-    <SettingsShell active="integrations" title="Integrations Settings" subtitle={`Connections for ${s.website.name}`}>
+    <SettingsShell active="integrations" title={tt("Integrations Settings")} subtitle={tt("Connections for {0}", { 0: s.website.name })}>
       <div className="space-y-6">
         {groups.map((g) => (
           <section key={g.title}>
-            <h2 className="text-sm font-semibold text-gray-900">{g.title}</h2>
-            <p className="mb-3 text-xs text-gray-400">{g.hint}</p>
+            <h2 className="text-sm font-semibold text-gray-900">{tt(g.title)}</h2>
+            <p className="mb-3 text-xs text-gray-400">{tt(g.hint)}</p>
             <div className="grid gap-2 md:grid-cols-2">
               {g.items.map((i) => (
                 <div key={i.name} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
                   <div>
                     <div className="text-sm text-gray-700">{i.name}</div>
-                    {i.note ? <div className="text-[11px] text-gray-400">{i.note}</div> : null}
+                    {i.note ? <div className="text-[11px] text-gray-400">{tt(i.note)}</div> : null}
                   </div>
                   {i.connected ? (
-                    <span className="badge bg-emerald-50 text-emerald-700">Connected</span>
+                    <span className="badge bg-emerald-50 text-emerald-700">{tt("Connected")}</span>
                   ) : i.href ? (
                     <Link href={i.href} className="btn-secondary !px-3 !py-1 text-xs">
-                      Set up
-                    </Link>
+                      {tt("Set up")}</Link>
                   ) : (
-                    <span className="badge bg-gray-100 text-gray-500">Not connected</span>
+                    <span className="badge bg-gray-100 text-gray-500">{tt("Not connected")}</span>
                   )}
                 </div>
               ))}

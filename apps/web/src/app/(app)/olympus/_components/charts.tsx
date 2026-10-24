@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "@/components/locale-provider";
+
 
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -45,6 +47,7 @@ export function TrendChart({
   mode: "detailed" | "simple";
   labels: Record<string, string>;
 }) {
+  const tt = useTranslations();
   const [metric, setMetric] = useState<Metric>("mentionRate");
   const { rows, series } = useMemo(() => {
     if (mode === "simple") return { rows: daily.map((d) => ({ date: d.date, Overall: d[metric] })), series: ["Overall"] };
@@ -63,7 +66,7 @@ export function TrendChart({
 
   return (
     <div className="rounded-xl border border-gray-100 p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-1" role="tablist" aria-label="Chart metric">
+      <div className="mb-3 flex flex-wrap items-center gap-1" role="tablist" aria-label={tt("Chart metric")}>
         {METRICS.map((m) => (
           <button
             key={m.id}
@@ -73,13 +76,13 @@ export function TrendChart({
             onClick={() => setMetric(m.id)}
             className={`rounded-lg px-3 py-1 text-xs ${metric === m.id ? "bg-brand-50 font-medium text-brand-600" : "text-gray-500 hover:bg-gray-50"}`}
           >
-            {m.label}
+            {tt(m.label)}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-gray-400">{mode === "detailed" ? (metric === "shareOfVoice" ? "by brand" : "by AI model") : "all models"}</span>
+        <span className="ml-auto text-[11px] text-gray-400">{tt(mode === "detailed" ? (metric === "shareOfVoice" ? "by brand" : "by AI model") : "all models")}</span>
       </div>
       {rows.length === 0 ? (
-        <p className="py-16 text-center text-sm text-gray-400">No data in this period.</p>
+        <p className="py-16 text-center text-sm text-gray-400">{tt("No data in this period.")}</p>
       ) : (
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
@@ -95,13 +98,13 @@ export function TrendChart({
               <Tooltip formatter={(v) => (v === null || v === undefined ? "—" : `${v}${unit}`)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {series.map((s, i) => (
-                <Line key={s} type="monotone" dataKey={s} stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={false} connectNulls />
+                <Line key={s} type="monotone" dataKey={s} name={mode === "simple" ? tt("Overall") : s} stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={false} connectNulls />
               ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
-      {metric === "avgPosition" ? <p className="mt-2 text-[11px] text-gray-400">Lower is better — 1 means the brand is listed first.</p> : null}
+      {metric === "avgPosition" ? <p className="mt-2 text-[11px] text-gray-400">{tt("Lower is better — 1 means the brand is listed first.")}</p> : null}
     </div>
   );
 }

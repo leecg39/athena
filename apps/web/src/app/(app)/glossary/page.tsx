@@ -1,6 +1,10 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/page-header";
 
-export const metadata = { title: "Glossary" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Glossary") };
+}
 
 const TERMS: [string, string][] = [
   ["Mention Rate", "The percentage of sampled AI responses that mention your brand. Absolute basis: all responses; relative basis: responses mentioning at least one tracked brand."],
@@ -17,15 +21,16 @@ const TERMS: [string, string][] = [
   ["Credit", "Unit consumed per AI response collected (1 credit = 1 response)."],
 ];
 
-export default function GlossaryPage() {
+export default async function GlossaryPage() {
+  const tt = await getTranslations();
   return (
     <div>
-      <PageHeader title="Glossary" subtitle="Plain-language definitions of every metric, score and concept" />
+      <PageHeader title={tt("Glossary")} subtitle={tt("Plain-language definitions of every metric, score and concept")} />
       <div className="max-w-3xl space-y-4 p-6">
         {TERMS.map(([term, def]) => (
           <div key={term} id={term.toLowerCase().replace(/[^a-z]+/g, "-")} className="metric-card">
-            <div className="text-sm font-semibold text-brand-600">{term}</div>
-            <p className="mt-1 text-sm leading-relaxed text-gray-600">{def}</p>
+            <div className="text-sm font-semibold text-brand-600">{tt(term)}</div>
+            <p className="mt-1 text-sm leading-relaxed text-gray-600">{tt(def)}</p>
           </div>
         ))}
       </div>

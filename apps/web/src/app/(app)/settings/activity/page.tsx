@@ -1,10 +1,14 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import { db } from "@athena/db";
 import { listActivity } from "@athena/core/org";
 import { SettingsShell } from "@/components/settings-shell";
 import { getSettingsContext } from "@/lib/settings-context";
 
-export const metadata = { title: "Activity Log" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Activity Log") };
+}
 
 const PAGE = 50;
 
@@ -17,11 +21,12 @@ function summarize(v: unknown): string {
 }
 
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ after?: string }> }) {
+  const tt = await getTranslations();
   const s = await getSettingsContext();
   if (!s.can("activity:read")) {
     return (
-      <SettingsShell active="activity" title="Activity Log">
-        <p className="text-sm text-gray-500">You do not have access to the activity log.</p>
+      <SettingsShell active="activity" title={tt("Activity Log")}>
+        <p className="text-sm text-gray-500">{tt("You do not have access to the activity log.")}</p>
       </SettingsShell>
     );
   }
@@ -29,19 +34,19 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
   const rows = await listActivity(db, { actorId: s.user.id, organizationId: s.organizationId, limit: PAGE, cursor: after });
   const last = rows.at(-1);
   return (
-    <SettingsShell active="activity" title="Activity Log" subtitle="Audit trail of changes across your organization">
+    <SettingsShell active="activity" title={tt("Activity Log")} subtitle={tt("Audit trail of changes across your organization")}>
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-400">No activity recorded{after ? " before this point" : " yet"}.</p>
+        <p className="text-sm text-gray-400">{tt("No activity recorded")}{tt(after ? " before this point" : " yet")}.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-100">
           <table className="table-base">
             <thead>
               <tr>
-                <th>When</th>
-                <th>Actor</th>
-                <th>Entity</th>
-                <th>Change</th>
-                <th>Detail</th>
+                <th>{tt("When")}</th>
+                <th>{tt("Actor")}</th>
+                <th>{tt("Entity")}</th>
+                <th>{tt("Change")}</th>
+                <th>{tt("Detail")}</th>
               </tr>
             </thead>
             <tbody>
@@ -64,8 +69,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
       )}
       {rows.length === PAGE && last ? (
         <Link href={`/settings/activity?after=${encodeURIComponent(last.id)}`} className="mt-4 inline-block text-sm text-brand-600">
-          Older entries →
-        </Link>
+          {tt("Older entries →")}</Link>
       ) : null}
     </SettingsShell>
   );

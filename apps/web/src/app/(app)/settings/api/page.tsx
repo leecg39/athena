@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { listApiKeys } from "@athena/core/org";
 import { SettingsShell } from "@/components/settings-shell";
@@ -6,7 +7,10 @@ import { getSettingsContext } from "@/lib/settings-context";
 import { appBaseUrl } from "@/lib/email";
 import { addApiKey, disableApiKey } from "../actions";
 
-export const metadata = { title: "Settings — API, MCP & BI Connectors" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Settings — API, MCP & BI Connectors") };
+}
 export const dynamic = "force-dynamic";
 
 const API_ENDPOINTS = [
@@ -67,11 +71,12 @@ const API_ENDPOINTS = [
 ];
 
 export default async function ApiSettingsPage() {
+  const tt = await getTranslations();
   const s = await getSettingsContext();
   if (!s.can("api:manage")) {
     return (
-      <SettingsShell active="api" title="API, MCP & BI Connectors">
-        <p className="text-sm text-gray-500">Only owners and admins can manage API keys.</p>
+      <SettingsShell active="api" title={tt("API, MCP & BI Connectors")}>
+        <p className="text-sm text-gray-500">{tt("Only owners and admins can manage API keys.")}</p>
       </SettingsShell>
     );
   }
@@ -102,37 +107,35 @@ export default async function ApiSettingsPage() {
   return (
     <SettingsShell
       active="api"
-      title="API, MCP & BI Connectors"
-      subtitle="Manage Bearer API keys, /api/v1 REST endpoints, ChatGPT/Claude MCP Server, and Looker Studio / Power BI feeds"
+      title={tt("API, MCP & BI Connectors")}
+      subtitle={tt("Manage Bearer API keys, /api/v1 REST endpoints, ChatGPT/Claude MCP Server, and Looker Studio / Power BI feeds")}
     >
       <div className="space-y-6">
         {/* Section 1: API Keys & Rate Limits */}
         <section className="metric-card space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Organization API Keys</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{tt("Organization API Keys")}</h2>
               <p className="text-xs text-gray-500">
-                Authenticate via <code className="font-mono">Authorization: Bearer ath_…</code> or{" "}
-                <code className="font-mono">X-API-Key: ath_…</code> · Token-bucket rate limit:{" "}
-                <strong>60 requests / minute</strong> per key.
-              </p>
+                {tt("Authenticate via ")}<code className="font-mono">Authorization: Bearer ath_…</code> {tt(" or")}{tt(" ")}
+                <code className="font-mono">X-API-Key: ath_…</code> {tt(" · Token-bucket rate limit:")}{tt(" ")}
+                <strong>{tt("60 requests / minute")}</strong> {tt(" per key.")}</p>
             </div>
             <span className="badge bg-brand-50 font-mono text-xs text-brand-700">
-              Rate Limit: 60 req/min
-            </span>
+              {tt("Rate Limit: 60 req/min")}</span>
           </div>
 
           {keys.length === 0 ? (
-            <p className="text-xs text-gray-400">No API keys created yet.</p>
+            <p className="text-xs text-gray-400">{tt("No API keys created yet.")}</p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-100">
               <table className="table-base">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Key Prefix</th>
-                    <th>Last Used</th>
-                    <th className="text-right">Status / Action</th>
+                    <th>{tt("Name")}</th>
+                    <th>{tt("Key Prefix")}</th>
+                    <th>{tt("Last Used")}</th>
+                    <th className="text-right">{tt("Status / Action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,19 +144,19 @@ export default async function ApiSettingsPage() {
                       <td className="font-medium text-gray-900">{k.name}</td>
                       <td className="font-mono text-xs text-gray-500">{k.prefix}…</td>
                       <td className="font-mono text-xs text-gray-500">
-                        {k.lastUsedAt
+                        {tt(k.lastUsedAt
                           ? k.lastUsedAt.toISOString().slice(0, 16).replace("T", " ")
-                          : "never"}
+                          : "never")}
                       </td>
                       <td className="text-right">
                         {k.revokedAt ? (
-                          <span className="badge bg-gray-100 text-gray-500">revoked</span>
+                          <span className="badge bg-gray-100 text-gray-500">{tt("revoked")}</span>
                         ) : (
                           <ActionForm
                             action={disableApiKey}
-                            submitLabel="Revoke"
+                            submitLabel={tt("Revoke")}
                             variant="secondary"
-                            confirm={`Revoke ${k.name}?`}
+                            confirm={tt("Revoke {0}?", { 0: k.name })}
                           >
                             <input type="hidden" name="keyId" value={k.id} />
                           </ActionForm>
@@ -168,13 +171,13 @@ export default async function ApiSettingsPage() {
 
           <ActionForm
             action={addApiKey}
-            submitLabel="Create API Key"
+            submitLabel={tt("Create API Key")}
             className="flex flex-wrap items-center gap-2"
           >
             <input
               name="name"
               className="input-base !w-72 text-xs"
-              placeholder="Key name, e.g. Looker Studio / Claude MCP"
+              placeholder={tt("Key name, e.g. Looker Studio / Claude MCP")}
               required
               maxLength={60}
             />
@@ -186,11 +189,10 @@ export default async function ApiSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-gray-900">
-                Public REST API Surface (<code className="font-mono">{base}/api/v1</code>)
+                {tt("Public REST API Surface (")}<code className="font-mono">{base}/api/v1</code>)
               </h2>
               <p className="text-xs text-gray-500">
-                Full programmatic coverage across basics, metrics, sources, content, kb, billing,
-                teams, and BI connectors. Active Workspace ID:{" "}
+                {tt("Full programmatic coverage across basics, metrics, sources, content, kb, billing, teams, and BI connectors. Active Workspace ID:")}{tt(" ")}
                 <code className="font-mono text-brand-700">{s.websiteId}</code>
               </p>
             </div>
@@ -200,10 +202,10 @@ export default async function ApiSettingsPage() {
             <table className="table-base">
               <thead>
                 <tr>
-                  <th>Surface</th>
-                  <th>Method</th>
-                  <th>Endpoint Contract</th>
-                  <th>Description</th>
+                  <th>{tt("Surface")}</th>
+                  <th>{tt("Method")}</th>
+                  <th>{tt("Endpoint Contract")}</th>
+                  <th>{tt("Description")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,12 +213,12 @@ export default async function ApiSettingsPage() {
                   <tr key={ep.surface}>
                     <td>
                       <span className="badge bg-brand-50 font-mono text-xs text-brand-700">
-                        {ep.surface}
+                        {tt(ep.surface)}
                       </span>
                     </td>
                     <td className="font-mono text-xs font-semibold text-gray-700">{ep.method}</td>
                     <td className="font-mono text-[11px] text-gray-800">{ep.path}</td>
-                    <td className="text-xs text-gray-600">{ep.description}</td>
+                    <td className="text-xs text-gray-600">{tt(ep.description)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -229,16 +231,12 @@ export default async function ApiSettingsPage() {
           <section className="metric-card space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">
-                MCP Server (Claude Desktop &amp; ChatGPT)
-              </h2>
+                {tt("MCP Server (Claude Desktop & ChatGPT)")}</h2>
               <span className="badge bg-purple-50 text-xs font-semibold text-purple-700">
-                14 MCP Tools
-              </span>
+                {tt("14 MCP Tools")}</span>
             </div>
             <p className="text-xs text-gray-500">
-              Connect Claude Desktop, Cursor, or ChatGPT MCP to query live AI search metrics,
-              Knowledge Base facts, and trigger content briefs via stdio transport.
-            </p>
+              {tt("Connect Claude Desktop, Cursor, or ChatGPT MCP to query live AI search metrics, Knowledge Base facts, and trigger content briefs via stdio transport.")}</p>
             <div className="rounded-lg bg-gray-900 p-3 text-gray-100">
               <pre className="overflow-x-auto font-mono text-[11px] leading-relaxed text-emerald-300">
                 {mcpConfigJson}
@@ -249,35 +247,28 @@ export default async function ApiSettingsPage() {
           <section className="metric-card space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">
-                Looker Studio &amp; Power BI Connectors
-              </h2>
+                {tt("Looker Studio & Power BI Connectors")}</h2>
               <span className="badge bg-emerald-50 text-xs font-semibold text-emerald-700">
-                JSON / OData / CSV
-              </span>
+                {tt("JSON / OData / CSV")}</span>
             </div>
             <p className="text-xs text-gray-500">
-              Stream daily AI Mention Rate, Citation Authority, Share of Voice, and Estimated Search
-              Value directly into your BI dashboards using <code className="font-mono">X-API-Key</code>{" "}
-              or <code className="font-mono">Authorization: Bearer</code>.
+              {tt("Stream daily AI Mention Rate, Citation Authority, Share of Voice, and Estimated Search Value directly into your BI dashboards using ")}<code className="font-mono">X-API-Key</code>{tt(" ")}
+              {tt("or ")}<code className="font-mono">Authorization: Bearer</code>.
             </p>
 
             <div className="space-y-2.5 text-xs">
               <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                 <div className="font-semibold text-gray-900">
-                  1. Google Looker Studio Community Connector Feed (JSON Schema + Rows)
-                </div>
+                  {tt("1. Google Looker Studio Community Connector Feed (JSON Schema + Rows)")}</div>
                 <div className="mt-1 break-all font-mono text-[11px] text-brand-700">
-                  {base}/api/v1/connectors/looker-studio?websiteId={s.websiteId}&amp;days=30
-                </div>
+                  {base}{tt("/api/v1/connectors/looker-studio?websiteId=")}{s.websiteId}{tt("&days=30")}</div>
               </div>
 
               <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                 <div className="font-semibold text-gray-900">
-                  2. Microsoft Power BI Web.Contents Feed (OData JSON / CSV)
-                </div>
+                  {tt("2. Microsoft Power BI Web.Contents Feed (OData JSON / CSV)")}</div>
                 <div className="mt-1 break-all font-mono text-[11px] text-brand-700">
-                  {base}/api/v1/connectors/power-bi?websiteId={s.websiteId}&amp;days=30&amp;format=csv
-                </div>
+                  {base}{tt("/api/v1/connectors/power-bi?websiteId=")}{s.websiteId}{tt("&days=30&format=csv")}</div>
               </div>
             </div>
           </section>

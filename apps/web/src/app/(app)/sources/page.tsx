@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
 import { db } from "@athena/db";
 import { MODEL_LABELS } from "@athena/core";
@@ -10,7 +11,10 @@ import { SourceSankey } from "./_components/sankey";
 import { TypeBadge, TYPE_LABEL, rangeWindow } from "./_components/shared";
 import { setSourceTypeAction, removeSourceTypeAction } from "./actions";
 
-export const metadata = { title: "Sources" };
+export async function generateMetadata() {
+  const tt = await getTranslations();
+  return { title: tt("Sources") };
+}
 
 const PAGE = 50;
 const TABS = [
@@ -20,6 +24,7 @@ const TABS = [
 ] as const;
 
 export default async function SourcesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const tt = await getTranslations();
   const ws = await requireWorkspace();
   const sp = await searchParams;
   const tab = TABS.some(([id]) => id === sp.tab) ? sp.tab! : "domains";
@@ -38,11 +43,11 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
 
   return (
     <div>
-      <PageHeader title="Sources" subtitle="Which websites AI answers cite for your tracked prompts" />
-      <nav className="flex gap-1 border-b border-gray-100 px-6" aria-label="Source sections">
+      <PageHeader title={tt("Sources")} subtitle={tt("Which websites AI answers cite for your tracked prompts")} />
+      <nav className="flex gap-1 border-b border-gray-100 px-6" aria-label={tt("Source sections")}>
         {TABS.map(([id, label]) => (
           <Link key={id} href={qs({ tab: id, page: undefined })} aria-current={tab === id ? "page" : undefined} className={`border-b-2 px-3 py-2.5 text-sm ${tab === id ? "border-brand-600 font-medium text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-            {label}
+            {tt(label)}
           </Link>
         ))}
       </nav>
@@ -50,42 +55,40 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
         <div className="flex flex-wrap items-center gap-3">
           <form action="/sources" className="flex flex-wrap items-center gap-2 text-xs">
             <input type="hidden" name="tab" value={tab} />
-            <select name="range" defaultValue={range} aria-label="Date range" className="input !w-auto !py-1.5 text-xs">
-              <option value="7d">Last 7 days</option>
-              <option value="14d">Last 14 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
+            <select name="range" defaultValue={range} aria-label={tt("Date range")} className="input !w-auto !py-1.5 text-xs">
+              <option value="7d">{tt("Last 7 days")}</option>
+              <option value="14d">{tt("Last 14 days")}</option>
+              <option value="30d">{tt("Last 30 days")}</option>
+              <option value="90d">{tt("Last 90 days")}</option>
             </select>
-            <select name="model" defaultValue={model ?? ""} aria-label="AI model" className="input !w-auto !py-1.5 text-xs">
-              <option value="">All models</option>
+            <select name="model" defaultValue={model ?? ""} aria-label={tt("AI model")} className="input !w-auto !py-1.5 text-xs">
+              <option value="">{tt("All models")}</option>
               {[...Object.entries(MODEL_LABELS), ["simulated", "Simulated (dev)"]].map(([id, label]) => (
                 <option key={id} value={id}>
-                  {label}
+                  {tt(label)}
                 </option>
               ))}
             </select>
             {tab === "domains" ? (
               <>
-                <select name="type" defaultValue={type ?? ""} aria-label="Source type" className="input !w-auto !py-1.5 text-xs">
-                  <option value="">All types</option>
+                <select name="type" defaultValue={type ?? ""} aria-label={tt("Source type")} className="input !w-auto !py-1.5 text-xs">
+                  <option value="">{tt("All types")}</option>
                   {SOURCE_TYPES.map((t) => (
                     <option key={t} value={t}>
-                      {TYPE_LABEL[t].label}
+                      {tt(TYPE_LABEL[t].label)}
                     </option>
                   ))}
                 </select>
-                <input name="q" defaultValue={q ?? ""} placeholder="Filter domains" className="input !w-40 !py-1.5 text-xs" />
+                <input name="q" defaultValue={q ?? ""} placeholder={tt("Filter domains")} className="input !w-40 !py-1.5 text-xs" />
               </>
             ) : null}
             <button type="submit" className="btn-secondary !py-1.5 text-xs">
-              Apply
-            </button>
+              {tt("Apply")}</button>
           </form>
           <form action="/sources/url" className="ml-auto flex items-center gap-2 text-xs">
-            <input name="u" type="url" required placeholder="Inspect a cited URL…" className="input !w-64 !py-1.5 text-xs" aria-label="URL to inspect" />
+            <input name="u" type="url" required placeholder={tt("Inspect a cited URL…")} className="input !w-64 !py-1.5 text-xs" aria-label={tt("URL to inspect")} />
             <button type="submit" className="btn-secondary !py-1.5 text-xs">
-              Inspect
-            </button>
+              {tt("Inspect")}</button>
           </form>
         </div>
 
@@ -112,8 +115,9 @@ async function DomainsTab({
   page: number;
   qs: (patch: Record<string, string | undefined>) => string;
 }) {
+  const tt = await getTranslations();
   const r = await listSources(db, { ...c, filters, type, q, limit: PAGE, offset: (page - 1) * PAGE });
-  if (!r.rows.length) return <p className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-500">No cited sources in this period.</p>;
+  if (!r.rows.length) return <p className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-500">{tt("No cited sources in this period.")}</p>;
   const pages = Math.max(1, Math.ceil(r.total / PAGE));
   return (
     <>
@@ -121,14 +125,14 @@ async function DomainsTab({
         <table className="table-base">
           <thead>
             <tr>
-              <th>Domain</th>
-              <th>Type</th>
-              <th title="Share of all answers in the period that cite this domain">Citation %</th>
-              <th>Trend</th>
-              <th title="Of the answers citing this domain, share that mention your brand">Brand mention %</th>
-              <th title="Of the answers citing this domain, share that mention a tracked competitor">Competitor mention %</th>
-              <th>Answers</th>
-              <th>First seen</th>
+              <th>{tt("Domain")}</th>
+              <th>{tt("Type")}</th>
+              <th title={tt("Share of all answers in the period that cite this domain")}>{tt("Citation %")}</th>
+              <th>{tt("Trend")}</th>
+              <th title={tt("Of the answers citing this domain, share that mention your brand")}>{tt("Brand mention %")}</th>
+              <th title={tt("Of the answers citing this domain, share that mention a tracked competitor")}>{tt("Competitor mention %")}</th>
+              <th>{tt("Answers")}</th>
+              <th>{tt("First seen")}</th>
             </tr>
           </thead>
           <tbody>
@@ -157,40 +161,39 @@ async function DomainsTab({
       </div>
       <div className="flex items-center gap-3 text-xs text-gray-500">
         <span>
-          {r.total} domains · {r.totalResponses} answers
-        </span>
-        {page > 1 ? <Link href={qs({ page: String(page - 1) })}>← Previous</Link> : null}
+          {r.total} {tt(" domains · ")}{r.totalResponses} {tt(" answers")}</span>
+        {page > 1 ? <Link href={qs({ page: String(page - 1) })}>{tt("← Previous")}</Link> : null}
         {pages > 1 ? (
           <span>
-            Page {page} of {pages}
+            {tt("Page ")}{page} {tt(" of ")}{pages}
           </span>
         ) : null}
-        {page < pages ? <Link href={qs({ page: String(page + 1) })}>Next →</Link> : null}
+        {page < pages ? <Link href={qs({ page: String(page + 1) })}>{tt("Next →")}</Link> : null}
       </div>
     </>
   );
 }
 
 async function TypesTab({ c }: { c: { actorId: string; websiteId: string } }) {
+  const tt = await getTranslations();
   const overrides = await listSourceOverrides(db, c);
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-500">
-        Your own site and its subdomains are Owned and tracked competitors are Competitor automatically. Mark other domains or URL prefixes (e.g.{" "}
-        <code>reddit.com/user/yourbrand</code>) as Owned, Partner or Third-party here.
-      </p>
-      <ActionForm action={setSourceTypeAction} submitLabel="Save type" className="flex flex-wrap items-center gap-2" resetOnSuccess>
-        <input name="pattern" required placeholder="example.com or example.com/path" className="input !w-72" aria-label="Domain or URL prefix" />
-        <select name="type" defaultValue="partner" className="input !w-auto" aria-label="Type">
+        {tt("Your own site and its subdomains are Owned and tracked competitors are Competitor automatically. Mark other domains or URL prefixes (e.g.")}{tt(" ")}
+        <code>reddit.com/user/yourbrand</code>{tt(") as Owned, Partner or Third-party here.")}</p>
+      <ActionForm action={setSourceTypeAction} submitLabel={tt("Save type")} className="flex flex-wrap items-center gap-2" resetOnSuccess>
+        <input name="pattern" required placeholder={tt("example.com or example.com/path")} className="input !w-72" aria-label={tt("Domain or URL prefix")} />
+        <select name="type" defaultValue="partner" className="input !w-auto" aria-label={tt("Type")}>
           {SOURCE_TYPES.map((t) => (
             <option key={t} value={t}>
-              {TYPE_LABEL[t].label}
+              {tt(TYPE_LABEL[t].label)}
             </option>
           ))}
         </select>
       </ActionForm>
       {overrides.length === 0 ? (
-        <p className="text-sm text-gray-400">No overrides yet.</p>
+        <p className="text-sm text-gray-400">{tt("No overrides yet.")}</p>
       ) : (
         <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100">
           {overrides.map((o) => (
@@ -198,7 +201,7 @@ async function TypesTab({ c }: { c: { actorId: string; websiteId: string } }) {
               <span>
                 <code>{o.pattern}</code> <TypeBadge type={o.type as SourceType} />
               </span>
-              <ActionForm action={removeSourceTypeAction} submitLabel="Remove" variant="secondary">
+              <ActionForm action={removeSourceTypeAction} submitLabel={tt("Remove")} variant="secondary">
                 <input type="hidden" name="pattern" value={o.pattern} />
               </ActionForm>
             </li>

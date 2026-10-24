@@ -24,34 +24,35 @@ const studies = [
     story: "Apex Growth Partners automated prospect audits with Athenum Pitch Workspace—delivering interactive Share-of-Voice benchmarks and Before/After FAQPage JSON-LD rewrites in under 3 minutes.",
   },
 ];
+
+import { createTranslator, resolveLocale } from "@athena/i18n";
+const locale = resolveLocale(Astro.props.locale);
+const tt = createTranslator(locale);
+const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base title="Case Studies | Athenum Customer Outcomes">
+<Base locale={locale} title={tt("Case Studies | Athenum Customer Outcomes")}>
   <section class="wrap" style="padding:64px 24px 32px;">
-    <span class="badge">Verified Customer Impact</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">
-      How Category Leaders Win Share of Voice with Athenum
-    </h1>
-    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">
-      Explore how SaaS, commerce, and agency teams turn AI search observability into measurable citation growth and pipeline.
-    </p>
+    <span class="badge">{tt("Verified Customer Impact")}</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" How Category Leaders Win Share of Voice with Athenum ")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt(" Explore how SaaS, commerce, and agency teams turn AI search observability into measurable citation growth and pipeline. ")}</p>
   </section>
 
   <section class="wrap" style="padding:16px 24px 48px;display:grid;gap:24px;">
     {studies.map((s) => (
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span class="badge">{s.industry}</span>
-          <strong style="font-size:14px;color:#475569;">{s.company}</strong>
+          <span class="badge">{tt(s.industry)}</span>
+          <strong style="font-size:14px;color:#475569;">{tt(s.company)}</strong>
         </div>
-        <h2 style="font-size:24px;margin:12px 0 10px;">{s.headline}</h2>
+        <h2 style="font-size:24px;margin:12px 0 10px;">{tt(s.headline)}</h2>
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
           {s.metrics.map((m) => (
             <span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;">
-              {m}
+              {tt(m)}
             </span>
           ))}
         </div>
-        <p style="font-size:14px;color:#334155;line-height:1.65;">{s.story}</p>
+        <p style="font-size:14px;color:#334155;line-height:1.65;">{tt(s.story)}</p>
       </div>
     ))}
   </section>
