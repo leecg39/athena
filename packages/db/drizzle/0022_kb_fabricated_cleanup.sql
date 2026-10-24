@@ -16,4 +16,7 @@ WHERE "claim" LIKE '% provides AI-assisted workflows and real-time collaboration
 UPDATE "kb_facts"
 SET "status" = 'pending_review', "source_url" = NULL
 WHERE "source_url" LIKE '%/features'
+  AND "status" = 'confirmed'
+  -- the confidence values the earlier extraction wrote (user-entered facts are not touched)
+  AND "confidence" IN (0.94, 0.95)
   AND ("claim" LIKE '% offers % for collaborative teams.' OR "claim" LIKE '% provides %.');
