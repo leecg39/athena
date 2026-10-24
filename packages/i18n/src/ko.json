@@ -4093,5 +4093,7 @@
   "Email delivery isn't configured (RESEND_API_KEY), so nothing was sent. The preview above shows the email.": "이메일 발송이 설정되지 않아(RESEND_API_KEY) 아무것도 보내지 않았습니다. 위 미리보기에서 메일을 확인하세요.",
   "Sent \"{0}\" to {1}.": "“{0}”을(를) {1}에게 보냈습니다.",
   "Recorded OpenTelemetry span \"{0}\".": "OpenTelemetry 스팬 “{0}”을(를) 기록했습니다.",
-  "Your account has no email address.": "계정에 이메일 주소가 없습니다."
+  "Your account has no email address.": "계정에 이메일 주소가 없습니다.",
+  "\"{0}\" is managed by Athenum and can't be edited": "“{0}”은(는) 아테넘이 관리하는 값이라 수정할 수 없습니다",
+  "Publish to a connected CMS or use “Check page & mark published” to mark content as published.": "게시됨으로 표시하려면 연결된 CMS로 발행하거나 “페이지 확인 후 게시됨으로 표시”를 사용하세요."
 }

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { ensureUserWithOrg, createWebsite } from "../tenancy";
 import { detectShoppingCard } from "../extract";
 import { DomainError, ForbiddenError, NotFoundError } from "../org/errors";
+import { baseTitleKey } from "./shared";
 import {
   syncShoppingInsights,
   getShoppingInsightsSummary,
@@ -18,6 +19,14 @@ import {
 } from "./index";
 
 const day = (offset: number) => new Date(Date.now() - offset * 86_400_000);
+
+describe("product title keys", () => {
+  it("keeps non-Latin product names distinct", () => {
+    expect(baseTitleKey("캔버슬리 스케치 키트 — 블루")).toBe("캔버슬리 스케치 키트");
+    expect(baseTitleKey("캔버슬리 스케치 키트")).not.toBe(baseTitleKey("캔버슬리 프로 펜"));
+    expect(baseTitleKey("Canvasly Sketch-Kit, 24 Pencils — Blue")).toBe("canvasly sketch kit 24 pencils");
+  });
+});
 
 describe("commerce: shopping cards and sponsored placements from collected answers", () => {
   let t: TestDb;

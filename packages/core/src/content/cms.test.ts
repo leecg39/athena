@@ -53,6 +53,11 @@ describe("CMS publishing", () => {
     await expect(upsertPublishTarget(t.db, { ...c, provider: "shopify", secretKey: KEY, config: { storeDomain: "evil.example.com", blogId: "1", accessToken: "x" } })).rejects.toThrow(/myshopify/);
     await upsertPublishTarget(t.db, { ...c, provider: "shopify", secretKey: KEY, config: { storeDomain: "canvasly.myshopify.com", blogId: "9001", accessToken: "shpat_123", blogHandle: "news" } });
     expect((await listPublishTargets(t.db, c)).map((x) => [x.provider, x.configured])).toEqual([["shopify", true], ["wordpress", true]]);
+    // a legacy export-only row never shows stored values (e.g. a plaintext token)
+    await t.db.insert(publishTargets).values({ websiteId: c.websiteId, provider: "webflow", config: { apiToken: "plain-legacy-token", endpointUrl: "https://api.webflow.com/x" } });
+    const legacy = (await listPublishTargets(t.db, c)).find((x) => x.provider === "webflow")!;
+    expect(legacy).toMatchObject({ mode: "export", configured: false, config: {} });
+    await t.db.delete(publishTargets).where(eq(publishTargets.id, legacy.id));
   });
 
   it("publishes to WordPress only when the site accepts the post", async () => {

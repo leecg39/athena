@@ -16,6 +16,7 @@ import {
   generateContentDraft,
   reviseWithAthena,
   saveContentVersion,
+  MAX_CONTENT_ITEMS,
 } from "./index";
 
 const PAGE = `<html><head><title>Security | Canvasly</title></head><body><nav>Menu</nav><main><h1>Security at Canvasly</h1><p>All data is encrypted at rest.</p></main></body></html>`;
@@ -100,6 +101,27 @@ describe("content hub and writing pipeline", () => {
     const revised = await reviseWithAthena(t.db, { ...c, contentId: item.id, instruction: "Tighten", body: "# Tighter draft\n\nShorter and clearer.", source: "anthropic" });
     expect(revised).toMatchObject({ status: "review", version: { version: 3 } });
     expect((await saveContentVersion(t.db, { ...c, contentId: item.id, body: "# Manual edit\n\nBy a person." })).version).toBe(4);
+  });
+
+  it("keeps system-managed columns and the published state out of manual edits", async () => {
+    const item = await createContentItem(t.db, { ...c, title: "Managed columns check" });
+    await expect(updateContentItem(t.db, { ...c, contentId: item.id, columns: { remoteId: "123" } })).rejects.toThrow(/managed by Athenum/);
+    await expect(updateContentItem(t.db, { ...c, contentId: item.id, columns: { verifiedLiveAt: "2026-01-01" } })).rejects.toThrow(/managed by Athenum/);
+    await expect(updateContentItem(t.db, { ...c, contentId: item.id, columns: { shopifyProductId: "1" } })).rejects.toThrow(/managed by Athenum/);
+    await expect(updateContentItem(t.db, { ...c, contentId: item.id, status: "published" })).rejects.toThrow(/Publish/);
+    const ok = await updateContentItem(t.db, { ...c, contentId: item.id, status: "review", columns: { persona: "CTO", region: "EU" } });
+    expect(ok.columns).toMatchObject({ persona: "CTO", region: "EU" });
+    await deleteContentItem(t.db, { ...c, contentId: item.id });
+  });
+
+  it("does not count Shopify catalog products against the content item limit", async () => {
+    const o = await ensureUserWithOrg(t.db, { email: "content-limit@example.com" });
+    const site = await createWebsite(t.db, { organizationId: o.organizationId, userId: o.user.id, domain: "limit.io", name: "Limit" });
+    const lc = { actorId: o.user.id, websiteId: site.id };
+    await t.db.insert(contentItems).values(Array.from({ length: MAX_CONTENT_ITEMS }, (_, i) => ({ websiteId: site.id, title: `Product ${i}`, status: "idea" as const, columns: { catalogProduct: true, shopifyProductId: String(i + 1) } })));
+    await expect(createContentItem(t.db, { ...lc, title: "First article" })).resolves.toBeTruthy();
+    await t.db.insert(contentItems).values(Array.from({ length: MAX_CONTENT_ITEMS - 1 }, (_, i) => ({ websiteId: site.id, title: `Article ${i}`, status: "idea" as const })));
+    await expect(createContentItem(t.db, { ...lc, title: "One too many" })).rejects.toThrow(/at most/);
   });
 
   it("enforces RBAC and tenant isolation", async () => {

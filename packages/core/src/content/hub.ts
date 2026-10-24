@@ -101,6 +101,19 @@ const RESERVED_COLUMN_KEYS = new Set([
   "descScore",
   "faqStatus",
   "faqBody",
+  // set by publishing, importing, revising and the Shopify catalog
+  "remoteId",
+  "verifiedLiveAt",
+  "importedFrom",
+  "importedFromUrl",
+  "lastRevisedInstruction",
+  "shopifyProductId",
+  "handle",
+  "price",
+  "currentDescription",
+  "recommendedTitle",
+  "appliedVersion",
+  "appliedAt",
 ]);
 
 function inferAgentStage(
@@ -340,7 +353,8 @@ export async function createContentItem(
       .select()
       .from(contentItems)
       .where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt)));
-    if (existing.length >= MAX_CONTENT_ITEMS) {
+    // Shopify catalog products live in the same table but do not use the editorial quota
+    if (existing.filter((r) => (r.columns ?? {}).catalogProduct !== true).length >= MAX_CONTENT_ITEMS) {
       throw new DomainError(`A website can have at most ${MAX_CONTENT_ITEMS} content items`);
     }
     if (existing.some((r) => (r.columns ?? {}).catalogProduct !== true && normKey(r.title) === normKey(input.title))) {
@@ -411,6 +425,8 @@ export async function updateContentItem(
   } catch {
     throw new DomainError("Invalid content item update");
   }
+  const managed = Object.keys(input.columns ?? {}).find((k) => RESERVED_COLUMN_KEYS.has(k));
+  if (managed) throw new DomainError(`"${managed}" is managed by Athenum and can't be edited`);
   const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
   const normalizedUrl = input.targetUrl !== undefined ? normalizeContentUrl(input.targetUrl, site.domain) : undefined;
 
@@ -421,6 +437,10 @@ export async function updateContentItem(
       .from(contentItems)
       .where(and(eq(contentItems.id, input.contentId), eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt)));
     if (!existing) throw new NotFoundError("Content item not found");
+    // "published" means a CMS accepted the post or the live page was checked
+    if (input.status === "published" && existing.status !== "published") {
+      throw new DomainError("Publish to a connected CMS or use “Check page & mark published” to mark content as published.");
+    }
 
     if (input.promptId) {
       const [p] = await tx

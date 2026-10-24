@@ -101,7 +101,7 @@ export async function importContentFromUrl(
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
     const existing = await tx.select({ title: contentItems.title, targetUrl: contentItems.targetUrl, columns: contentItems.columns }).from(contentItems).where(and(eq(contentItems.websiteId, site.id), isNull(contentItems.deletedAt)));
-    if (existing.length >= MAX_CONTENT_ITEMS) throw new DomainError(`A website can have at most ${MAX_CONTENT_ITEMS} content items`);
+    if (existing.filter((r) => (r.columns ?? {}).catalogProduct !== true).length >= MAX_CONTENT_ITEMS) throw new DomainError(`A website can have at most ${MAX_CONTENT_ITEMS} content items`);
     if (existing.some((r) => (r.columns ?? {}).catalogProduct !== true && (r.targetUrl === url || normKey(r.title) === normKey(title)))) throw new DomainError("This URL or title is already tracked in Content Hub");
     const [item] = await tx
       .insert(contentItems)

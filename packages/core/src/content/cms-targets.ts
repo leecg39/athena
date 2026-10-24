@@ -63,7 +63,8 @@ export interface PublishTargetView {
 function view(row: typeof publishTargets.$inferSelect): PublishTargetView {
   const provider = row.provider as CmsProvider;
   const fields = isDirect(provider) ? CMS_FIELDS[provider] : [];
-  const config = Object.fromEntries(Object.entries(row.config ?? {}).map(([k, v]) => [k, v.startsWith(SEALED) || fields.find((f) => f.key === k)?.secret ? MASK : v]));
+  // only known fields are shown; secrets (and anything sealed) are masked, unknown legacy keys are dropped
+  const config = Object.fromEntries(fields.flatMap((f) => { const v = row.config?.[f.key]; return v ? [[f.key, f.secret || v.startsWith(SEALED) ? MASK : v]] : []; }));
   return {
     id: row.id,
     websiteId: row.websiteId,

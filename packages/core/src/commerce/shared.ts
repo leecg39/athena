@@ -114,7 +114,8 @@ export interface AdsSummary {
  */
 export function baseTitleKey(title: string): string {
   const base = title.split(/\s+[—–]\s+/)[0] ?? title;
-  return base.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  // letters and digits of any script (Korean, Japanese, ... names must stay distinct)
+  return base.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
 export function inferBrandFromTitle(title: string, siteName: string, competitorNames: string[]): { brand: string; isOwn: boolean } {
