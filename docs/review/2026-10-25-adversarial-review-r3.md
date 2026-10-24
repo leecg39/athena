@@ -49,7 +49,7 @@ R2 문서(`2026-10-24-adversarial-review-r2.md`)의 R2-G는 Task 18–23 전체 
 
 ## 4. 알려진 한계와 남은 일
 
-- **CMS 직접 발행:** WordPress와 Shopify만 지원한다. Webflow, Contentful, Sanity, Wix, Framer, Payload는 내보내기만 된다(Task 14 미완).
+- **CMS 직접 발행:** R3 시점에는 WordPress와 Shopify만 지원했다. 이후 나머지 6종(Webflow, Contentful, Sanity, Wix, Framer, Payload)을 구현해 Task 14를 완료했다. 상세는 `2026-10-25-task14-cms-direct-publishing.md`에 있다.
 - **스폰서 광고:** AI Mode와 AI Overview는 공개 API가 없어, 수집된 답변 속 스폰서 표기와 수동 기록만 다룬다.
 - **PDF:** 표준 Helvetica를 쓰므로 비ASCII 문자는 "?"로 표시된다.
 - **실제 결제 E2E:** Stripe 키가 없어 하지 못했다. 웹훅 정규화와 적용은 단위 테스트로 검증했다.

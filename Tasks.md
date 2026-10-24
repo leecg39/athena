@@ -59,8 +59,9 @@
 
 - [x] **13. Knowledge Base + Oracle** — KB(필라/팩트 CRUD + 승인 큐 + 내부링크 페이지) + Oracle(응답 vs KB 부정확성 스캔: 확정된 부정확/KB 불일치/모델 상이 분류 + 해결 워크플로)
   - 검증(R13): vitest 239/239(38 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(필라/팩트 CRUD·AI 응답 팩트 추출·승인 큐 Approve·내부링크 등록·Oracle 3종 스캔 8건·Resolving→Fix KB & Resolve→Resolved 워크플로, SQL 교차 검증). 상세 `docs/review/2026-10-23-task13-review.md`
-- [ ] **14. Content Hub** — 스프레드시트형 그리드 + AI 에이전트 컬럼(브리프→초안→버전) + Revise with Athena + CMS 발행 통합(WordPress/Webflow/Contentful/Sanity/Wix/Framer/Payload) + Shopify Catalog Optimization
-  - 상태(R3): 그리드·브리프/초안/버전·Revise·Shopify 카탈로그는 실제 데이터로 동작한다. CMS 직접 발행은 WordPress·Shopify만(실제 API, 2xx일 때만 게시) 지원하고, Webflow/Contentful/Sanity/Wix/Framer/Payload는 내보내기만 된다 → 직접 연동 미구현. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
+- [x] **14. Content Hub** — 스프레드시트형 그리드 + AI 에이전트 컬럼(브리프→초안→버전) + Revise with Athena + CMS 발행 통합(WordPress/Webflow/Contentful/Sanity/Wix/Framer/Payload) + Shopify Catalog Optimization
+  - 상태(R3): 그리드·브리프/초안/버전·Revise·Shopify 카탈로그는 실제 데이터로 동작한다. CMS 직접 발행은 WordPress·Shopify만 지원했다. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
+  - 완료(T14): 8개 CMS 모두 공식 API로 직접 발행한다. Webflow live items, Contentful 생성→게시, Sanity mutate, Wix Ricos 변환→초안→게시, Framer Server API(미발행 변경 거부·배포 확인), Payload REST API-Key. 여러 단계 흐름은 마지막 단계가 2xx일 때만 게시로 기록하고, 실패하면 초안을 정리한다. 검증: vitest 345/345(59 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(실제 Webflow·Sanity·Framer API 거부가 그대로 표시되고 게시로 기록되지 않음). 상세 `docs/review/2026-10-25-task14-cms-direct-publishing.md`
   - 검증(R14): vitest 244/244(39 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(스프레드시트 그리드 생성·URL 임포트·Brief→Draft→Revise with Athena v2·Webflow CMS 발행·Shopify Catalog Optimization 초안 생성 및 발행, SQL 교차 검증). M4 충족(콘텐츠/인사이트/KB·Oracle). 상세 `docs/review/2026-10-23-task14-review.md`
 - [x] **15. Outreach** — 인용 기회 페이지 목록(인용률·예상 노출) + 발신자 찾기 + 이메일 초안 생성 + 칸반 파이프라인(New/Todo/Done)
   - 검증(R15): vitest 247/247(40 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(자동 인용 기회 탐색 6건·수동 외부 URL 등록·Find author 저자 탐색·KB 기반 Draft pitch 이메일 생성·New→Todo→Done 칸반 이동·Opportunity Pages Table 전환, SQL 교차 검증). 상세 `docs/review/2026-10-23-task15-review.md`
