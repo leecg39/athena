@@ -59,7 +59,8 @@
 
 - [x] **13. Knowledge Base + Oracle** — KB(필라/팩트 CRUD + 승인 큐 + 내부링크 페이지) + Oracle(응답 vs KB 부정확성 스캔: 확정된 부정확/KB 불일치/모델 상이 분류 + 해결 워크플로)
   - 검증(R13): vitest 239/239(38 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(필라/팩트 CRUD·AI 응답 팩트 추출·승인 큐 Approve·내부링크 등록·Oracle 3종 스캔 8건·Resolving→Fix KB & Resolve→Resolved 워크플로, SQL 교차 검증). 상세 `docs/review/2026-10-23-task13-review.md`
-- [x] **14. Content Hub** — 스프레드시트형 그리드 + AI 에이전트 컬럼(브리프→초안→버전) + Revise with Athena + CMS 발행 통합(WordPress/Webflow/Contentful/Sanity/Wix/Framer/Payload) + Shopify Catalog Optimization
+- [ ] **14. Content Hub** — 스프레드시트형 그리드 + AI 에이전트 컬럼(브리프→초안→버전) + Revise with Athena + CMS 발행 통합(WordPress/Webflow/Contentful/Sanity/Wix/Framer/Payload) + Shopify Catalog Optimization
+  - 상태(R3): 그리드·브리프/초안/버전·Revise·Shopify 카탈로그는 실제 데이터로 동작한다. CMS 직접 발행은 WordPress·Shopify만(실제 API, 2xx일 때만 게시) 지원하고, Webflow/Contentful/Sanity/Wix/Framer/Payload는 내보내기만 된다 → 직접 연동 미구현. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
   - 검증(R14): vitest 244/244(39 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(스프레드시트 그리드 생성·URL 임포트·Brief→Draft→Revise with Athena v2·Webflow CMS 발행·Shopify Catalog Optimization 초안 생성 및 발행, SQL 교차 검증). M4 충족(콘텐츠/인사이트/KB·Oracle). 상세 `docs/review/2026-10-23-task14-review.md`
 - [x] **15. Outreach** — 인용 기회 페이지 목록(인용률·예상 노출) + 발신자 찾기 + 이메일 초안 생성 + 칸반 파이프라인(New/Todo/Done)
   - 검증(R15): vitest 247/247(40 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(자동 인용 기회 탐색 6건·수동 외부 URL 등록·Find author 저자 탐색·KB 기반 Draft pitch 이메일 생성·New→Todo→Done 칸반 이동·Opportunity Pages Table 전환, SQL 교차 검증). 상세 `docs/review/2026-10-23-task15-review.md`
@@ -67,18 +68,22 @@
 ## Phase 5 — 커머스 & 사이트 & 리포트
 
 - [x] **16. Shopping Insights + Ads** — AI 쇼핑 카로셀 노출/포지션/가격/경쟁사 비교 + 소매사 분포 / ChatGPT·AI Mode·AI Overview 스폰서드 광고 캡처 표시
+  - 한계(R2·R3): AI Mode·AI Overview는 공개 API가 없어, 수집된 답변 속 스폰서 표기와 수동 기록만 다룬다.
   - 검증(R16): vitest 250/250(41 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/shopping` 카로셀 리더보드 13건·자사 vs 경쟁사 브랜드 비교·6개 소매사 분포·수동 제품 추가, `/ads` 3대 AI 표면 스폰서드 광고 캡처 8건·광고주 점유율·수동 광고 등록·AI Mode 필터, SQL 교차 검증). 상세 `docs/review/2026-10-23-task16-review.md`
 - [x] **17. Site Health** — 키워드/랭킹, 스테이징 체크(릴리스 비교), 사이트맵, 크롤 범위, 페이지 편집 최적화 보드, 라이브 콘텐츠 검증 + AI 크롤러 접근성 체크(OAI-SearchBot 등)
   - 검증(R17): vitest 253/253(42 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/site-health` 10대 AI 봇 매트릭스·키워드/랭킹·스테이징 릴리스 비교·사이트맵/크롤 범위 속성·페이지 편집 최적화 보드 `Needs Edit→Staged→Verified Live`·라이브 콘텐츠 검증 서명, `/bot` 공개 문서, SQL 교차 검증). 상세 `docs/review/2026-10-23-task17-review.md`
 - [x] **18. Report Builder** — 차트 조합 편집기 + 수신자/스케줄 + PDF 내보내기 + 공개 공유 링크(AI 검색 리포트/콘텐츠 제안 리포트) + Slack 주간 리포트
   - 검증(R18): vitest 256/256(43 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/reports` 차트 조합 편집기·신규 리포트 생성·이메일 및 `#board-aeo` Slack 즉시 발송·`/api/reports/.../pdf` `%PDF-1.4` 바이너리 내보내기·`/report/[shareId]` 및 `/report/content/[shareId]` 공개 공유 뷰, SQL 교차 검증). M5 충족(커머스/헬스/리포트). 상세 `docs/review/2026-10-23-task18-review.md`
+  - 재검증(R3): R18 당시의 '발송'은 실제로 아무것도 보내지 않았고 지표는 상수로 채워졌다. 이제는 실측 지표, Resend 이메일과 Slack 웹훅 실제 발송, cron 정기 발송, 공개 PDF로 동작한다 · vitest 317/317 · build exit 0 · E2E(SQL 대조). 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
 
 ## Phase 6 — 에이전시 & 과금
 
 - [x] **19. Pitch Workspace + Groups** — 사이트 URL 기반 피치 리포트 생성 위저드 + 공개 공유 뷰 + 콘텐츠 리라이트 피치 + 사용량 관리 + Group Dashboard/Group Billing(그룹 집계 대시보드 + 공유 크레딧)
   - 검증(R19): vitest 259/259(44 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/pitches` 3단계 피치 위저드·`Vercel Enterprise` AEO 콘텐츠 리라이트 피치 생성·월간 쿼터 `1/3` 반영·`/report/content/cpitch_...` Before/After 및 `FAQPage` JSON-LD 공개 공유 뷰·`/group/[id]` 그룹 집계 대시보드 및 그룹 공유 크레딧 100 할당 `250→350`, SQL 교차 검증). 상세 `docs/review/2026-10-23-task19-review.md`
+  - 재검증(R3): R19 당시 지표는 URL 해시로 생성됐고, 리라이트에는 제3자에 대한 허위 주장이 들어 있었다. 이제는 실제 AI 답변을 수집한다(1크레딧/답변, 실패분 환불). 그룹 크레딧 무상 발행을 제거하고 실측 지표를 쓰며 접근 범위를 제한했다. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
 - [x] **20. Stripe 과금** — Free/Starter($295)/Enterprise 플랜 + 크레딧 시스템(조직/웹사이트/그룹 잔액 + 원장) + 추가 크레딧/API 애드온 과금 + 인보이스
   - 검증(R20): vitest 261/261(45 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/billing`에서 `Starter($295/mo)` 플랜 업그레이드·`Canvasly` 웹사이트 전용 풀 `150` 크레딧 이관·`API/MCP Add-on($99/mo)` 활성화·`+1,000` 크레딧 팩(`$79`) 구매로 조직/웹사이트/그룹 합산 `6,952` 크레딧 반영·`/api/billing/invoices/.../pdf` `%PDF-1.4` 인보이스 영수증 다운로드, SQL 교차 검증). 상세 `docs/review/2026-10-23-task20-review.md`
+  - 재검증(R3): R20 당시 E2E의 업그레이드·팩·애드온은 결제 없이 적용됐고 'paid' 영수증은 가짜였다(CRITICAL). 이제는 Stripe Checkout과 서명 웹훅으로만 적용되고, 테스트 모드는 비운영 환경에서만 '미청구'로 기록된다. 실제 Stripe 결제 E2E는 키가 없어 미실시했으며 웹훅 정규화·적용은 단위 테스트로 검증했다. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
 
 ## Phase 7 — API & 운영 & 배포
 
@@ -86,9 +91,12 @@
   - 검증(R21): vitest 263/263(46 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/api`에서 `"Looker & Claude MCP"` API 키 발급 후 `/api/v1/validate-api-key`·`/api/v1/basics/schedules`·`POST /api/v1/kb`·`/api/v1/billing/credits`·`/api/v1/teams`·`/api/v1/connectors/looker-studio`·`/api/v1/connectors/power-bi?format=csv` 실호출 및 `psql` DB 교차 검증). 상세 `docs/review/2026-10-23-task21-review.md`
 - [x] **22. 관측/운영** — PostHog(이벤트/세션 리플레이/서베이) + Vercel Analytics/Speed Insights + OpenTelemetry 트레이싱 + CSP 리포트 + 랜딩/이메일 템플릿
   - 검증(R22): vitest 267/267(47 files) · typecheck 11/11 · build 성공(exit 0) · 브라우저 E2E(`/settings/observability`에서 PostHog 이벤트·마스킹된 세션 리플레이·서베이 제출 `9.7/10`, `/api/otel/traces` 스팬 수집 및 진단 트레이스 실행, `/api/csp-report` URI 토큰 제거 리포트 수집, `@athena/emails` 5종 템플릿 미리보기/발송, `/landing` 페이지 검증, `psql` `activity_log` 교차 검증). 상세 `docs/review/2026-10-23-task22-review.md`
-- [x] **23. 마케팅 사이트 + 배포** — Astro 마케팅 사이트(홈/플랫폼/가격/산업/비교/케이스스터디/블로그 구조 재현, 자체 브랜딩) + Vercel 프로덕션 배포(앱/마케팅/문서/MCP 4개 프로젝트) + E2E 검증
+  - 재검증(R3): R22 당시의 이벤트·리플레이·설문 9.7/10은 시드된 가짜 데이터였고, 전역 저장소가 다른 테넌트 데이터를 노출했다. 이제는 조직별 실측만 보이고, OTel 수집은 토큰을 요구하며, 테스트 메일은 본인 주소로만 간다. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
+- [ ] **23. 마케팅 사이트 + 배포** — Astro 마케팅 사이트(홈/플랫폼/가격/산업/비교/케이스스터디/블로그 구조 재현, 자체 브랜딩) + Vercel 프로덕션 배포(앱/마케팅/문서/MCP 4개 프로젝트) + E2E 검증
+  - 상태(R3): 사이트는 완료됐다(가상 고객 사례·지어낸 연구·허위 기능 주장·localhost 링크를 제거하고, 실제 앱 수치와 `PUBLIC_APP_URL`을 반영). Vercel 운영 배포는 실시하지 않았다(사용자 Vercel 계정·자격 증명 필요, `vercel.json`만 검증) → 미완. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
   - 검증(R23): vitest 270/270(48 files) · typecheck 11/11 · 전체 모노레포 build 성공(`@athena/web`, `@athena/marketing` 7페이지, `@athena/docs` 7페이지, `@athena/mcp`) · 4개 프로젝트 `vercel.json` 검증 · 브라우저 E2E(`127.0.0.1:4321` 마케팅 7대 라우트 `/`, `/platform`, `/pricing`, `/industries`, `/comparison`, `/case-studies`, `/blog` 및 `127.0.0.1:4322` 문서 사이트 실브라우저 검증). M6 충족(과금/API/마케팅/프로덕션 배포). 상세 `docs/review/2026-10-23-task23-review.md`
   - 적대적 검토 Round 2 (R2 무결성 강화): Tasks 12–23 전 구간 허구/시드 데이터 제거, SSRF 안전 실네트워크 크롤·CMS/Shopify API 연동, `actorId` 필수 RBAC 강제 및 GET 시 쓰기 부작용 제거, 128비트 공유 토큰 상향 및 정리 마이그레이션(`0018`~`0022`) 완료 · vitest 299/299(54 files) · typecheck 11/11 · build 성공(exit 0). 상세 `docs/review/2026-10-24-adversarial-review-r2.md`
+  - 적대적 검토 Round 3 (R3): Task 18–23 실검토(R2-G 미수행분)와 R2 잔여 결함. 과금 무결제 적용(CRITICAL), 해시 기반 피치, 리포트 상수·가짜 발송, 테넌트 간 관측 데이터 노출, 마케팅 허위 사례를 수정했다. 정리 마이그레이션 0023을 추가하고 스냅샷 체인을 복구했다 · vitest 317/317(56 files) · typecheck 11/11(캐시 없음) · web·marketing·docs build exit 0 · 격리 DB E2E. 상세 `docs/review/2026-10-25-adversarial-review-r3.md`
 
 ---
 
