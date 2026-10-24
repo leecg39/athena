@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUser } from "@/lib/session";
 import {
-  getObservabilitySnapshot,
   MAX_CSP_BODY_BYTES,
   parseAndRecordCspReport,
 } from "@/lib/telemetry";
@@ -25,20 +23,4 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid CSP report JSON" }, { status: 400 });
   }
-}
-
-/**
- * GET /api/csp-report
- * Returns recent sanitized CSP violation reports for authenticated users.
- */
-export async function GET() {
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  const snap = getObservabilitySnapshot();
-  return NextResponse.json({
-    data: snap.cspReports,
-    total: snap.cspReports.length,
-  });
 }

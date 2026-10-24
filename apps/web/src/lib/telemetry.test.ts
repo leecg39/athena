@@ -7,6 +7,7 @@ import {
 } from "@athena/emails";
 import {
   getObservabilitySnapshot,
+  getPlatformTelemetry,
   MAX_CSP_BODY_BYTES,
   MAX_OTEL_BODY_BYTES,
   parseAndRecordCspReport,
@@ -31,7 +32,8 @@ vi.mock("@/lib/session", () => ({
 
 describe("Observability, Telemetry, OTel, CSP & Email Templates (Task 22)", () => {
   beforeEach(() => {
-    resetObservabilityStore(true);
+    resetObservabilityStore();
+    vi.unstubAllEnvs();
   });
 
   it("redacts secrets/tokens/API keys from PostHog events and enforces masked session replays", () => {
@@ -79,6 +81,20 @@ describe("Observability, Telemetry, OTel, CSP & Email Templates (Task 22)", () =
     ).toThrow(/between 0 and 10/);
   });
 
+  it("starts empty and shows each organization only its own records", () => {
+    expect(getObservabilitySnapshot("org-a")).toMatchObject({ events: [], sessionReplays: [], surveys: [], summary: { eventsCount: 0, avgSurveyScore: null } });
+    recordTelemetryEvent({ event: "a_event", distinctId: "a@a.io", organizationId: "org-a" });
+    recordTelemetryEvent({ event: "b_event", distinctId: "b@b.io", organizationId: "org-b" });
+    recordSessionReplaySnapshot({ distinctId: "b@b.io", organizationId: "org-b" });
+    recordProductSurveyResponse({ score: 8, feedback: "secret feedback from b", organizationId: "org-b" });
+    const a = getObservabilitySnapshot("org-a");
+    expect(a.events.map((e) => e.event)).toEqual(["a_event"]);
+    expect(a.sessionReplays).toEqual([]);
+    expect(a.surveys).toEqual([]);
+    expect(JSON.stringify(a)).not.toContain("b@b.io");
+    expect(getObservabilitySnapshot("org-b").summary).toMatchObject({ eventsCount: 1, surveysCount: 1, avgSurveyScore: 8 });
+  });
+
   it("parses OTLP traces, enforces 256KB payload limit, and blocks SSRF collector endpoints", async () => {
     expect(validateOtlpCollectorEndpoint("https://otel.collector.example.com/v1/traces")).toBe(
       "https://otel.collector.example.com/v1/traces",
@@ -122,15 +138,15 @@ describe("Observability, Telemetry, OTel, CSP & Email Templates (Task 22)", () =
     expect(parsed.spans[0]?.attributes["athena.model"]).toBe("gpt-4o");
     expect(parsed.spans[0]?.attributes.api_key).toBe("[REDACTED]");
 
+    // ingestion needs the platform token; anonymous posts are refused
+    const post = (body: string, auth?: string) => postOtelTraces(new NextRequest("http://localhost:3000/api/otel/traces", { method: "POST", body, headers: auth ? { authorization: auth } : {} }));
+    expect((await post(otlpPayload)).status).toBe(501);
+    vi.stubEnv("OTEL_INGEST_TOKEN", "ingest-token-123");
+    expect((await post(otlpPayload)).status).toBe(401);
+    expect((await post(otlpPayload, "Bearer wrong")).status).toBe(401);
+    expect((await post(otlpPayload, "Bearer ingest-token-123")).status).toBe(200);
     // Oversized OTLP payload -> 413
-    const hugeBody = "x".repeat(MAX_OTEL_BODY_BYTES + 100);
-    const res413 = await postOtelTraces(
-      new NextRequest("http://localhost:3000/api/otel/traces", {
-        method: "POST",
-        body: hugeBody,
-      }),
-    );
-    expect(res413.status).toBe(413);
+    expect((await post("x".repeat(MAX_OTEL_BODY_BYTES + 100), "Bearer ingest-token-123")).status).toBe(413);
   });
 
   it("parses CSP violation reports, strips query tokens from URIs, and rejects >32KB payloads", async () => {
@@ -157,8 +173,9 @@ describe("Observability, Telemetry, OTel, CSP & Email Templates (Task 22)", () =
     expect(records[0]?.sourceFile).toBe("https://app.athenum.ai/main.js");
     expect(records[0]?.effectiveDirective).toBe("script-src");
 
-    const snap = getObservabilitySnapshot();
-    expect(snap.cspReports.length).toBe(1);
+    expect(getPlatformTelemetry().cspReports.length).toBe(1);
+    // platform data is never part of a tenant snapshot
+    expect(getObservabilitySnapshot("org-a").cspReports).toEqual([]);
 
     // Oversized CSP report -> 413
     const hugeCsp = "a".repeat(MAX_CSP_BODY_BYTES + 100);

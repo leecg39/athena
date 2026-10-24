@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@athena/db";
 import { logActivity } from "@athena/core/org";
-import { getUser } from "@/lib/session";
 import { getWorkspace } from "@/lib/workspace";
 import {
   getObservabilitySnapshot,
@@ -13,14 +12,12 @@ import {
 
 /**
  * GET /api/telemetry
- * Returns current PostHog events, session replays, surveys, Web Vitals, OTel spans, and CSP reports.
+ * The caller's organization: its first-party events, session heartbeats and survey answers.
  */
 export async function GET() {
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  return NextResponse.json({ data: getObservabilitySnapshot() });
+  const ws = await getWorkspace().catch(() => null);
+  if (!ws) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  return NextResponse.json({ data: getObservabilitySnapshot(ws.organizationId) });
 }
 
 /**
@@ -58,6 +55,7 @@ export async function POST(req: NextRequest) {
     if (kind === "session_replay") {
       const replay = recordSessionReplaySnapshot({
         sessionId: body.sessionId,
+        organizationId: ws?.organizationId ?? null,
         distinctId: ws?.user.email ?? body.distinctId,
         pagePath: body.pagePath,
         durationSec: body.durationSec,

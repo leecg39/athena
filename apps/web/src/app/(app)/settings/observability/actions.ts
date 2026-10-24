@@ -11,9 +11,15 @@ import {
 import { runAction, type ActionState } from "@/lib/action-state";
 import { appBaseUrl, sendEmail } from "@/lib/email";
 import { getSettingsContext } from "@/lib/settings-context";
+import { eq } from "drizzle-orm";
+import { organizations } from "@athena/db";
+
+async function organizationName(id: string): Promise<string> {
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, id));
+  return org?.name ?? "";
+}
 import {
   recordProductSurveyResponse,
-  recordSessionReplaySnapshot,
   recordTelemetryEvent,
   withTracedSpan,
 } from "@/lib/telemetry";
@@ -100,12 +106,6 @@ export async function triggerDiagnosticTraceAction(
         "athena.actor_email": actorEmail,
       },
       async () => {
-        recordSessionReplaySnapshot({
-          distinctId: actorEmail,
-          pagePath: "/settings/observability",
-          durationSec: 95,
-          eventsCount: 24,
-        });
         recordTelemetryEvent({
           event: "diagnostic_trace_executed",
           distinctId: actorEmail,
@@ -130,7 +130,7 @@ export async function triggerDiagnosticTraceAction(
     revalidatePath("/settings/activity");
     return {
       ok: true,
-      message: `Recorded OpenTelemetry span "${operationName}" and session replay snapshot.`,
+      message: `Recorded OpenTelemetry span "${operationName}".`,
     };
   });
 }
@@ -143,7 +143,9 @@ export async function sendTestEmailTemplateAction(
     const s = await getSettingsContext();
     const actorEmail = s.user.email ?? "demo@example.com";
     const templateIdRaw = String(form.get("templateId") ?? "weekly_report").trim();
-    const recipient = String(form.get("recipient") ?? actorEmail).trim() || actorEmail;
+    // test emails go only to the signed-in user (templates must not be sent to arbitrary addresses)
+    if (!s.user.email) throw new DomainError("Your account has no email address.");
+    const recipient = s.user.email;
 
     const validIds = EMAIL_TEMPLATE_CATALOG.map((t) => t.id);
     if (!validIds.includes(templateIdRaw as EmailTemplateId)) {
@@ -153,7 +155,7 @@ export async function sendTestEmailTemplateAction(
     const baseUrl = await appBaseUrl();
     const rendered = renderEmailTemplateHtml(templateId, {
       brandName: s.website.name,
-      orgName: "Canvasly Workspace",
+      orgName: await organizationName(s.organizationId),
       domain: s.website.domain,
       baseUrl,
     });
@@ -193,9 +195,8 @@ export async function sendTestEmailTemplateAction(
 
     revalidatePath("/settings/observability");
     revalidatePath("/settings/activity");
-    return {
-      ok: true,
-      message: `Dispatched "${rendered.subject}" to ${recipient} (${deliveredViaResend ? "Resend API" : "Local Preview Mode"}).`,
-    };
+    return deliveredViaResend
+      ? { ok: true, message: `Sent "${rendered.subject}" to ${recipient}.` }
+      : { ok: false, error: "Email delivery isn't configured (RESEND_API_KEY), so nothing was sent. The preview above shows the email." };
   });
 }

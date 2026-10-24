@@ -18,6 +18,7 @@ export interface TelemetryEventRecord {
 
 export interface SessionReplayRecord {
   sessionId: string;
+  organizationId: string | null;
   distinctId: string;
   pagePath: string;
   maskedInputs: true;
@@ -86,93 +87,13 @@ interface ObservabilityStore {
   cspReports: CspViolationRecord[];
 }
 
-function createDefaultSeedStore(): ObservabilityStore {
-  const now = new Date().toISOString();
-  return {
-    events: [
-      {
-        id: "evt_seed_olympus_view",
-        event: "olympus_dashboard_viewed",
-        distinctId: "demo@example.com",
-        organizationId: null,
-        websiteId: null,
-        properties: { window: "30d", chartMode: "detailed" },
-        recordedAt: now,
-      },
-      {
-        id: "evt_seed_mcp_query",
-        event: "api_v1_request_completed",
-        distinctId: "mcp-client",
-        organizationId: null,
-        websiteId: null,
-        properties: { surface: "metrics/share-of-voice", status: 200 },
-        recordedAt: now,
-      },
-    ],
-    sessionReplays: [
-      {
-        sessionId: "ph_sess_98a7bc12e4f0",
-        distinctId: "demo@example.com",
-        pagePath: "/olympus",
-        maskedInputs: true,
-        maskedSelectors: ["[data-ph-mask]", "input[type=password]", "code"],
-        durationSec: 142,
-        eventsCount: 38,
-        recordedAt: now,
-      },
-    ],
-    surveys: [
-      {
-        id: "srv_seed_01",
-        surveyId: "nps_q4_2026",
-        category: "nps",
-        score: 9,
-        feedback: "Oracle hallucination detection and Content Hub Webflow publishing saved our AEO team 12 hours/week.",
-        pagePath: "/oracle",
-        organizationId: null,
-        userId: null,
-        recordedAt: now,
-      },
-    ],
-    webVitals: [
-      { id: "wv_lcp", name: "LCP", value: 1180, rating: "good", pagePath: "/olympus", recordedAt: now },
-      { id: "wv_inp", name: "INP", value: 64, rating: "good", pagePath: "/content", recordedAt: now },
-      { id: "wv_cls", name: "CLS", value: 0.02, rating: "good", pagePath: "/pitches", recordedAt: now },
-      { id: "wv_ttfb", name: "TTFB", value: 145, rating: "good", pagePath: "/settings/billing", recordedAt: now },
-    ],
-    otelSpans: [
-      {
-        traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
-        spanId: "00f067aa0ba902b7",
-        name: "GET /api/v1/metrics/share-of-voice",
-        serviceName: "@athena/web",
-        kind: "SERVER",
-        durationMs: 28,
-        status: "OK",
-        attributes: { "http.method": "GET", "http.status_code": 200, "athena.surface": "metrics" },
-        recordedAt: now,
-      },
-      {
-        traceId: "7a193d4481e04bc291af00219c8e1102",
-        spanId: "b81022ca91ef4410",
-        name: "jobs.collection.executeRun",
-        serviceName: "@athena/jobs",
-        kind: "INTERNAL",
-        durationMs: 412,
-        status: "OK",
-        attributes: { "athena.models_count": 6, "athena.credits_reserved": 12 },
-        recordedAt: now,
-      },
-    ],
-    cspReports: [],
-  };
-}
+const emptyStore = (): ObservabilityStore => ({ events: [], sessionReplays: [], surveys: [], webVitals: [], otelSpans: [], cspReports: [] });
 
 const globalStore = globalThis as unknown as { __athenaObservabilityStore?: ObservabilityStore };
 
 function store(): ObservabilityStore {
   if (!globalStore.__athenaObservabilityStore) {
-    globalStore.__athenaObservabilityStore = createDefaultSeedStore();
+    globalStore.__athenaObservabilityStore = emptyStore();
   }
   return globalStore.__athenaObservabilityStore;
 }
@@ -184,17 +105,8 @@ function pushBounded<T>(arr: T[], item: T): void {
   }
 }
 
-export function resetObservabilityStore(empty = true): void {
-  globalStore.__athenaObservabilityStore = empty
-    ? {
-        events: [],
-        sessionReplays: [],
-        surveys: [],
-        webVitals: [],
-        otelSpans: [],
-        cspReports: [],
-      }
-    : createDefaultSeedStore();
+export function resetObservabilityStore(): void {
+  globalStore.__athenaObservabilityStore = emptyStore();
 }
 
 /**
@@ -245,6 +157,7 @@ export function recordTelemetryEvent(input: {
 
 export function recordSessionReplaySnapshot(input: {
   sessionId?: string;
+  organizationId?: string | null;
   distinctId?: string;
   pagePath?: string;
   durationSec?: number;
@@ -254,6 +167,7 @@ export function recordSessionReplaySnapshot(input: {
     sessionId:
       String(input.sessionId ?? "").trim().slice(0, 80) ||
       `ph_sess_${randomBytes(6).toString("hex")}`,
+    organizationId: input.organizationId ?? null,
     distinctId: String(input.distinctId ?? "anonymous").trim().slice(0, 120) || "anonymous",
     pagePath: sanitizeCspUri(input.pagePath || "/"),
     maskedInputs: true, // Always enforced to prevent PII/secret leakage in replays
@@ -613,32 +527,42 @@ export function parseAndRecordCspReport(
   return created;
 }
 
-export function getObservabilitySnapshot() {
+/**
+ * What one organization may see: its own first-party events, heartbeats and
+ * survey answers. Traces, CSP reports and Web Vitals are platform data and
+ * are not shown to tenants.
+ */
+export function getObservabilitySnapshot(organizationId: string) {
   const s = store();
-  const npsScores = s.surveys.filter((x) => x.category === "nps").map((x) => x.score);
-  const avgSurveyScore =
-    npsScores.length > 0
-      ? Number((npsScores.reduce((a, b) => a + b, 0) / npsScores.length).toFixed(1))
-      : 9.0;
-
+  const own = <T extends { organizationId: string | null }>(rows: T[]) => rows.filter((r) => r.organizationId === organizationId);
+  const events = own(s.events);
+  const sessionReplays = own(s.sessionReplays);
+  const surveys = own(s.surveys);
+  const nps = surveys.filter((x) => x.category === "nps").map((x) => x.score);
   return {
-    events: s.events,
-    sessionReplays: s.sessionReplays,
-    surveys: s.surveys,
-    webVitals: s.webVitals,
-    otelSpans: s.otelSpans,
-    cspReports: s.cspReports,
+    events,
+    sessionReplays,
+    surveys,
+    webVitals: [] as WebVitalRecord[],
+    otelSpans: [] as OtelSpanRecord[],
+    cspReports: [] as CspViolationRecord[],
     summary: {
-      eventsCount: s.events.length,
-      sessionReplaysCount: s.sessionReplays.length,
-      surveysCount: s.surveys.length,
-      avgSurveyScore,
-      otelSpansCount: s.otelSpans.length,
-      cspReportsCount: s.cspReports.length,
+      eventsCount: events.length,
+      sessionReplaysCount: sessionReplays.length,
+      surveysCount: surveys.length,
+      avgSurveyScore: nps.length ? Number((nps.reduce((x, y) => x + y, 0) / nps.length).toFixed(1)) : null,
+      otelSpansCount: 0,
+      cspReportsCount: 0,
       posthogConfigured: Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY),
       otelCollectorConfigured: Boolean(validateOtlpCollectorEndpoint(process.env.OTEL_EXPORTER_OTLP_ENDPOINT)),
       vercelAnalyticsEnabled: true,
       speedInsightsEnabled: true,
     },
   };
+}
+
+/** Platform-level telemetry (operators and tests only; never sent to tenants). */
+export function getPlatformTelemetry() {
+  const s = store();
+  return { otelSpans: s.otelSpans, cspReports: s.cspReports, webVitals: s.webVitals };
 }

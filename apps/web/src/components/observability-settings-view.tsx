@@ -31,7 +31,7 @@ export function ObservabilitySettingsView(props: {
     eventsCount: number;
     sessionReplaysCount: number;
     surveysCount: number;
-    avgSurveyScore: number;
+    avgSurveyScore: number | null;
     otelSpansCount: number;
     cspReportsCount: number;
     posthogConfigured: boolean;
@@ -62,33 +62,33 @@ export function ObservabilitySettingsView(props: {
       {/* Top KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="metric-card">
-          <div className="text-xs text-gray-500">{tt("PostHog Events & Replays")}</div>
+          <div className="text-xs text-gray-500">{tt("First-party events / heartbeats")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900" data-testid="obs-events-count">
             {props.summary.eventsCount} / {props.summary.sessionReplaysCount}
           </div>
-          <div className="mt-1 text-[11px] text-emerald-700">{tt("Input Masking Enforced")}</div>
+          <div className="mt-1 text-[11px] text-gray-500">{tt(props.summary.posthogConfigured ? "PostHog is also configured" : "PostHog key not set")}</div>
         </div>
         <div className="metric-card">
           <div className="text-xs text-gray-500">{tt("Product Survey NPS")}</div>
           <div className="mt-1 text-xl font-bold text-brand-700" data-testid="obs-survey-nps">
-            {props.summary.avgSurveyScore.toFixed(1)} / 10
+            {props.summary.avgSurveyScore === null ? "—" : `${props.summary.avgSurveyScore.toFixed(1)} / 10`}
           </div>
           <div className="mt-1 text-[11px] text-gray-500">
             {props.summary.surveysCount} {tt(" survey responses")}</div>
         </div>
         <div className="metric-card">
-          <div className="text-xs text-gray-500">{tt("OpenTelemetry Spans")}</div>
+          <div className="text-xs text-gray-500">{tt("OpenTelemetry export")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900" data-testid="obs-otel-count">
-            {props.summary.otelSpansCount}
+            {tt(props.summary.otelCollectorConfigured ? "Configured" : "Not configured")}
           </div>
-          <div className="mt-1 text-[11px] text-gray-500">{tt("/api/otel/traces OTLP")}</div>
+          <div className="mt-1 text-[11px] text-gray-500">{tt("Traces are platform data, not shown per workspace")}</div>
         </div>
         <div className="metric-card">
           <div className="text-xs text-gray-500">{tt("CSP Security Reports")}</div>
           <div className="mt-1 text-xl font-bold text-gray-900" data-testid="obs-csp-count">
-            {props.summary.cspReportsCount}
+            {tt("Collected")}
           </div>
-          <div className="mt-1 text-[11px] text-gray-500">{tt("/api/csp-report URI-sanitized")}</div>
+          <div className="mt-1 text-[11px] text-gray-500">{tt("At /api/csp-report for the platform (query strings removed)")}</div>
         </div>
       </div>
 
@@ -97,18 +97,18 @@ export function ObservabilitySettingsView(props: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              {tt("PostHog Telemetry — Events, Session Replays & Product Surveys")}</h2>
+              {tt("Product telemetry for this organization")}</h2>
             <p className="text-xs text-gray-500">
               {tt("Automatic PII/Secret key redaction (")}<code className="font-mono">[REDACTED]</code>{tt(") and")}{tt(" ")}
               <code className="font-mono">maskAllInputs: true</code> {tt(" on all recorded sessions.")}</p>
           </div>
-          <span className="badge bg-emerald-50 text-xs text-emerald-700">
-            {tt("Session Replay: Masked")}</span>
+          <span className="badge bg-gray-100 text-xs text-gray-600">
+            {tt("Kept in server memory (resets on restart)")}</span>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-gray-100 p-3">
-            <div className="mb-2 text-xs font-semibold text-gray-800">{tt("Recent PostHog Events")}</div>
+            <div className="mb-2 text-xs font-semibold text-gray-800">{tt("Recent first-party events")}</div>
             <div className="space-y-1.5">
               {props.events.slice(0, 5).map((e) => (
                 <div
@@ -129,7 +129,7 @@ export function ObservabilitySettingsView(props: {
 
           <div className="rounded-xl border border-gray-100 p-3">
             <div className="mb-2 text-xs font-semibold text-gray-800">
-              {tt("Submit Product Survey (PostHog Survey Widget)")}</div>
+              {tt("Send product feedback")}</div>
             <ActionForm
               action={props.submitProductSurveyAction}
               submitLabel={tt("Submit Survey Feedback")}
@@ -180,12 +180,10 @@ export function ObservabilitySettingsView(props: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              {tt("Vercel Speed Insights (Web Vitals) & OpenTelemetry Tracing (")}<code className="font-mono">/api/otel/traces</code>)
+              {tt("OpenTelemetry tracing")}
             </h2>
             <p className="text-xs text-gray-500">
-              {tt("Real-time Core Web Vitals and distributed OTLP spans across")}{tt(" ")}
-              <code className="font-mono">@athena/web</code> {tt(" and")}{tt(" ")}
-              <code className="font-mono">@athena/jobs</code>.
+              {tt("Spans are exported to OTEL_EXPORTER_OTLP_ENDPOINT when it is set; they are platform data and are not listed here.")}
             </p>
           </div>
           <ActionForm
@@ -267,7 +265,7 @@ export function ObservabilitySettingsView(props: {
               {tt("React Email Templates (")}<code className="font-mono">@athena/emails</code>)
             </h2>
             <p className="text-xs text-gray-500">
-              {tt("Preview and test-dispatch transactional emails (Weekly Report, Invite, Onboarding, Oracle Alert, Billing Receipt).")}</p>
+              {tt("Preview transactional emails. A test send goes only to your own address, and only when email delivery is configured.")}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {props.emailTemplates.map((tpl) => (
@@ -302,13 +300,7 @@ export function ObservabilitySettingsView(props: {
                 className="flex items-center gap-2"
               >
                 <input type="hidden" name="templateId" value={selectedTemplate.id} />
-                <input
-                  name="recipient"
-                  type="email"
-                  defaultValue={props.userEmail}
-                  className="input-base !w-52 text-xs"
-                  required
-                />
+                <span className="text-xs text-gray-500">{tt("to {0}", { 0: props.userEmail })}</span>
               </ActionForm>
             </div>
 

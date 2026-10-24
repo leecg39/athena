@@ -1,4 +1,6 @@
 import { getTranslations } from "@/lib/i18n/server";
+import { eq } from "drizzle-orm";
+import { db, organizations } from "@athena/db";
 import { EMAIL_TEMPLATE_CATALOG, renderEmailTemplateHtml } from "@athena/emails";
 import { ObservabilitySettingsView } from "@/components/observability-settings-view";
 import { SettingsShell } from "@/components/settings-shell";
@@ -22,13 +24,14 @@ export const dynamic = "force-dynamic";
 export default async function ObservabilitySettingsPage() {
   const tt = await getTranslations();
   const s = await getSettingsContext();
-  const snap = getObservabilitySnapshot();
+  const snap = getObservabilitySnapshot(s.organizationId);
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, s.organizationId));
   const baseUrl = await appBaseUrl();
 
   const emailTemplates = EMAIL_TEMPLATE_CATALOG.map((tpl) => {
     const rendered = renderEmailTemplateHtml(tpl.id, {
       brandName: s.website.name,
-      orgName: "Canvasly Workspace",
+      orgName: org?.name ?? "",
       domain: s.website.domain,
       baseUrl,
     });
@@ -46,10 +49,10 @@ export default async function ObservabilitySettingsPage() {
     <SettingsShell
       active="observability"
       title={tt("Observability, Telemetry & Email Templates")}
-      subtitle={tt("PostHog events/replays/surveys, Vercel Speed Insights, OpenTelemetry traces, CSP reports, and React Email templates")}
+      subtitle={tt("This organization's first-party events and survey answers, PostHog and OpenTelemetry configuration, and email template previews")}
     >
       <ObservabilitySettingsView
-        userEmail={s.user.email ?? "demo@example.com"}
+        userEmail={s.user.email ?? ""}
         summary={snap.summary}
         events={snap.events}
         sessionReplays={snap.sessionReplays}
