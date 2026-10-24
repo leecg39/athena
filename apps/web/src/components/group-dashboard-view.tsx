@@ -14,6 +14,7 @@ import {
   deleteGroupSavedViewAction,
 } from "@/app/(app)/group/[id]/actions";
 
+const pctOrDash = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)}%`);
 const idle: ActionState = { ok: false };
 
 export function GroupDashboardView({
@@ -183,26 +184,26 @@ export function GroupDashboardView({
             <div className="metric-card">
               <div className="text-xs text-gray-400">{tt("Group Share of Voice")}</div>
               <div className="mt-1 text-2xl font-bold text-brand-700">
-                {data.kpis.groupSovPct.toFixed(1)}%
+                {pctOrDash(data.kpis.groupSovPct)}
               </div>
               <div className="mt-1 text-xs text-gray-500">
-                {tt("Weighted portfolio SOV across AI engines")}</div>
+                {tt("Your brands' mentions among all tracked brands, last {0} days", { 0: data.periodDays })}</div>
             </div>
             <div className="metric-card">
               <div className="text-xs text-gray-400">{tt("Group Mention / Citation Rate")}</div>
               <div className="mt-1 text-2xl font-bold text-gray-900">
-                {data.kpis.groupMentionRatePct.toFixed(1)}%{tt(" ")}
+                {pctOrDash(data.kpis.groupMentionRatePct)}{tt(" ")}
                 <span className="text-sm font-normal text-gray-400">
-                  / {data.kpis.groupCitationRatePct.toFixed(1)}%
+                  / {pctOrDash(data.kpis.groupCitationRatePct)}
                 </span>
               </div>
               <div className="mt-1 text-xs text-gray-500">
-                {tt("Aggregated across member brand workspaces")}</div>
+                {tt("Across all answers collected for member websites")}</div>
             </div>
             <div className="metric-card">
-              <div className="text-xs text-gray-400">{tt("Dollar Value (Est. Monthly)")}</div>
+              <div className="text-xs text-gray-400">{tt("AI-visible searches")}</div>
               <div className="mt-1 text-2xl font-bold text-emerald-700">
-                ${data.kpis.totalEstimatedValueUsd.toLocaleString()}
+                {data.kpis.totalAiVisibleSearches === null ? "—" : data.kpis.totalAiVisibleSearches.toLocaleString()}
               </div>
               <div className="mt-1 text-xs text-gray-500">
                 {tt("Shared Credits: ")}{data.billing.groupSharedBalance.toLocaleString()}
@@ -355,7 +356,7 @@ export function GroupDashboardView({
                     <th>{tt("Mention Rate")}</th>
                     <th>{tt("Citation Rate")}</th>
                     <th>{tt("SOV")}</th>
-                    <th>{tt("Est. Value")}</th>
+                    <th>{tt("AI-visible searches")}</th>
                     <th className="text-right">{tt("Action")}</th>
                   </tr>
                 </thead>
@@ -367,14 +368,14 @@ export function GroupDashboardView({
                       <td className="font-mono text-xs">{w.activePromptsCount}</td>
                       <td className="font-mono text-xs">{w.totalResponses}</td>
                       <td className="font-mono text-xs font-semibold text-gray-900">
-                        {w.mentionRatePct.toFixed(1)}%
+                        {pctOrDash(w.mentionRatePct)}
                       </td>
                       <td className="font-mono text-xs text-brand-700">
-                        {w.citationRatePct.toFixed(1)}%
+                        {pctOrDash(w.citationRatePct)}
                       </td>
-                      <td className="font-mono text-xs">{w.sovPct.toFixed(1)}%</td>
+                      <td className="font-mono text-xs">{pctOrDash(w.sovPct)}</td>
                       <td className="font-mono text-xs text-emerald-700">
-                        ${w.estimatedValueUsd.toLocaleString()}
+                        {w.aiVisibleSearches === null ? "—" : w.aiVisibleSearches.toLocaleString()}
                       </td>
                       <td className="text-right">
                         <form action={assignSiteFormAction}>

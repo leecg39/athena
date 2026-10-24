@@ -234,8 +234,14 @@ export interface SearchValue {
 
 /** "AI search value" from real volume data only — never an invented per-response dollar figure. */
 export async function getSearchValue(db: Db, input: { actorId: string; websiteId: string; filters: VisibilityFilters }): Promise<SearchValue> {
-  const f = filtersSchema.parse(input.filters);
+  filtersSchema.parse(input.filters);
   const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "prompts:read");
+  return searchValueForSite(db, site, input.filters);
+}
+
+/** Search value for a website the caller has ALREADY authorised (reports, group rollups). */
+export async function searchValueForSite(db: Db, site: { id: string }, filters: VisibilityFilters): Promise<SearchValue> {
+  const f = filtersSchema.parse(filters);
   const rows = await db
     .select({
       volume: prompts.volumeEstimate,

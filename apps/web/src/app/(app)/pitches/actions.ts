@@ -2,142 +2,85 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@athena/db";
+import { configuredAdapters } from "@athena/llm";
 import { DomainError, ForbiddenError, NotFoundError } from "@athena/core/org";
-import {
-  PITCH_KINDS,
-  type PitchKind,
-  createPitch,
-  deletePitch,
-  regeneratePitchRewrite,
-} from "@athena/core/pitches";
+import { PITCH_KINDS, type PitchKind, createPitch, deletePitch, writePitchRewrite } from "@athena/core/pitches";
 import { getSettingsContext } from "@/lib/settings-context";
+import { writePitchCopy } from "@/lib/pitch-writer";
 import { pitchesLimiter } from "@/lib/limits";
 import type { ActionState } from "@/lib/action-state";
 
 function toActionError(err: unknown, fallback: string): ActionState {
-  if (err instanceof DomainError || err instanceof ForbiddenError || err instanceof NotFoundError) {
-    return { ok: false, error: err.message };
-  }
+  if (err instanceof DomainError || err instanceof ForbiddenError || err instanceof NotFoundError) return { ok: false, error: err.message };
+  console.error("[pitches] action failed", err);
   return { ok: false, error: fallback };
 }
 
 function checkRate(userId: string): ActionState | null {
   const r = pitchesLimiter(userId);
-  if (!r.ok) {
-    return {
-      ok: false,
-      error: `Rate limit reached. Try again in ${Math.ceil(r.retryAfterMs / 1000)}s.`,
-    };
-  }
-  return null;
+  return r.ok ? null : { ok: false, error: `Rate limit reached. Try again in ${Math.ceil(r.retryAfterMs / 1000)}s.` };
 }
 
-export async function createPitchAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+const lines = (v: FormDataEntryValue | null) => String(v ?? "").split(/\n/).map((x) => x.trim()).filter(Boolean);
+const list = (v: FormDataEntryValue | null) => String(v ?? "").split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+const text = (v: FormDataEntryValue | null) => String(v ?? "").trim() || undefined;
+
+export async function createPitchAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
-    const websiteUrl = String(formData.get("websiteUrl") ?? "").trim();
-    const brandName = String(formData.get("brandName") ?? "").trim() || undefined;
-    const rawKind = String(formData.get("kind") ?? "visibility").trim();
-    const kind: PitchKind = (PITCH_KINDS as readonly string[]).includes(rawKind)
-      ? (rawKind as PitchKind)
-      : "visibility";
-    const industry = String(formData.get("industry") ?? "").trim() || undefined;
-    const targetPageUrl = String(formData.get("targetPageUrl") ?? "").trim() || undefined;
-    const existingCopy = String(formData.get("existingCopy") ?? "").trim() || undefined;
-    const rawPrompts = String(formData.get("targetPrompts") ?? "").trim();
-    const targetPrompts = rawPrompts
-      ? rawPrompts
-          .split(/\n|,/)
-          .map((p) => p.trim())
-          .filter(Boolean)
-      : undefined;
-
+    const rawKind = String(formData.get("kind") ?? "visibility");
+    const kind: PitchKind = (PITCH_KINDS as readonly string[]).includes(rawKind) ? (rawKind as PitchKind) : "visibility";
     const created = await createPitch(db, {
       actorId: s.user.id,
       organizationId: s.organizationId,
-      websiteUrl,
-      brandName,
+      websiteUrl: String(formData.get("websiteUrl") ?? ""),
+      brandName: text(formData.get("brandName")),
+      industry: text(formData.get("industry")),
       kind,
-      industry,
-      targetPageUrl,
-      existingCopy,
-      targetPrompts,
+      prompts: lines(formData.get("prompts")),
+      competitors: list(formData.get("competitors")),
+      collectors: configuredAdapters(),
     });
-
     revalidatePath("/pitches");
-    return {
-      ok: true,
-      message: `Generated ${
-        created.kind === "content" ? "AEO Content Rewrite Pitch" : "AI Search Visibility Pitch"
-      } for ${created.brandName} (${created.sharePath}).`,
-    };
+    return { ok: true, message: `Pitch for ${created.brandName} measured from ${created.payload?.totals.answers ?? 0} AI answers.` };
   } catch (err) {
-    return toActionError(err, "Failed to generate pitch report.");
+    return toActionError(err, "Failed to create the pitch.");
   }
 }
 
-export async function regeneratePitchRewriteAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function writePitchRewriteAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
-    const pitchId = String(formData.get("pitchId") ?? "").trim();
-    const targetPageUrl = String(formData.get("targetPageUrl") ?? "").trim() || undefined;
-    const focusPrompt = String(formData.get("focusPrompt") ?? "").trim() || undefined;
-    const existingCopy = String(formData.get("existingCopy") ?? "").trim() || undefined;
-
-    const updated = await regeneratePitchRewrite(db, {
+    const updated = await writePitchRewrite(db, {
       actorId: s.user.id,
       organizationId: s.organizationId,
-      pitchId,
-      targetPageUrl,
-      focusPrompt,
-      existingCopy,
+      pitchId: String(formData.get("pitchId") ?? ""),
+      existingCopy: String(formData.get("existingCopy") ?? ""),
+      targetPageUrl: text(formData.get("targetPageUrl")),
+      focusPrompt: text(formData.get("focusPrompt")),
+      writer: writePitchCopy,
     });
-
     revalidatePath("/pitches");
     revalidatePath(`/report/${updated.shareId}`);
     revalidatePath(`/report/content/${updated.shareId}`);
-    return {
-      ok: true,
-      message: `Updated AEO Content Rewrite Pitch for ${updated.brandName} (+${updated.payload.contentRewrite.projectedCitationLiftPct}% projected citation lift).`,
-    };
+    return { ok: true, message: `Rewrite for ${updated.brandName} written by ${updated.payload?.rewrite?.writtenBy ?? "the AI provider"} — review it before sharing.` };
   } catch (err) {
-    return toActionError(err, "Failed to update content rewrite pitch.");
+    return toActionError(err, "Failed to write the rewrite.");
   }
 }
 
-export async function deletePitchAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function deletePitchAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const s = await getSettingsContext();
     const limited = checkRate(s.user.id);
     if (limited) return limited;
-
-    const pitchId = String(formData.get("pitchId") ?? "").trim();
-    await deletePitch(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-      pitchId,
-    });
-
+    await deletePitch(db, { actorId: s.user.id, organizationId: s.organizationId, pitchId: String(formData.get("pitchId") ?? "") });
     revalidatePath("/pitches");
-    return {
-      ok: true,
-      message: "Deleted pitch report.",
-    };
+    return { ok: true, message: "Deleted pitch report." };
   } catch (err) {
     return toActionError(err, "Failed to delete pitch report.");
   }

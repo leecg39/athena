@@ -1,8 +1,10 @@
 import { getTranslations } from "@/lib/i18n/server";
 import Link from "next/link";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { db, publishTargets, scheduledReports, apiKeys } from "@athena/db";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { db, publishTargets, apiKeys } from "@athena/db";
 import { getIntegration } from "@athena/core/integrations";
+import { getSlackConnection } from "@athena/core/reports";
+import { SlackConnectForm } from "@/components/slack-connect-form";
 import { gscConfigured } from "@/lib/integrations";
 import { SettingsShell } from "@/components/settings-shell";
 import { getSettingsContext } from "@/lib/settings-context";
@@ -35,13 +37,10 @@ const CMS_LABEL: Record<(typeof CMS)[number], string> = {
 export default async function IntegrationsSettingsPage() {
   const tt = await getTranslations();
   const s = await getSettingsContext();
-  const [gsc, targets, [slack], [keys]] = await Promise.all([
+  const [gsc, targets, slack, [keys]] = await Promise.all([
     getIntegration(db, s.websiteId, "gsc"),
     db.select({ provider: publishTargets.provider }).from(publishTargets).where(eq(publishTargets.websiteId, s.websiteId)),
-    db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(scheduledReports)
-      .where(and(eq(scheduledReports.websiteId, s.websiteId), isNotNull(scheduledReports.slackChannel))),
+    getSlackConnection(db, { actorId: s.user.id, websiteId: s.websiteId }),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(apiKeys)
@@ -67,14 +66,17 @@ export default async function IntegrationsSettingsPage() {
     {
       title: "Publish",
       hint: "Send content to your CMS",
-      items: CMS.map((c) => ({ name: CMS_LABEL[c], connected: connectedCms.has(c), href: "/content" })),
+      items: CMS.map((c) =>
+        c === "wordpress" || c === "shopify"
+          ? { name: CMS_LABEL[c], connected: connectedCms.has(c), href: "/content" }
+          : { name: CMS_LABEL[c], connected: false, note: "Export only: download the export from Content Hub and import it" },
+      ),
     },
     {
       title: "Extend",
       hint: "Use your data in other tools",
       items: [
         { name: "REST API / MCP / Looker Studio", connected: hasKey, href: "/settings/api", note: hasKey ? undefined : "Create an API key" },
-        { name: "Slack weekly report", connected: (slack?.n ?? 0) > 0, href: "/reports" },
       ],
     },
   ];
@@ -106,6 +108,11 @@ export default async function IntegrationsSettingsPage() {
             </div>
           </section>
         ))}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900">{tt("Notify")}</h2>
+          <p className="mb-3 text-xs text-gray-400">{tt("Where scheduled reports are posted")}</p>
+          <SlackConnectForm connected={slack.connected} channel={slack.channel} canWrite={s.can("websites:write")} />
+        </section>
       </div>
     </SettingsShell>
   );

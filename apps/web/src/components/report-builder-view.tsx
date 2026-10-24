@@ -18,65 +18,20 @@ import type { ActionState } from "@/lib/action-state";
 
 const idle: ActionState = { ok: false };
 
-const CHART_MODULES: {
-  key: ReportChartKey;
-  label: string;
-  category: string;
-  description: string;
-}[] = [
-  {
-    key: "mention_rate",
-    label: "Brand Mention Rate (30d)",
-    category: "visibility",
-    description: "Daily % of AI responses mentioning your brand vs top competitor",
-  },
-  {
-    key: "citation_rate",
-    label: "Citation Rate & Authority Trend",
-    category: "visibility",
-    description: "Daily % of AI responses citing your domain URLs as primary sources",
-  },
-  {
-    key: "share_of_voice",
-    label: "Share of Voice vs Competitors",
-    category: "visibility",
-    description: "Relative mention share across all tracked AI search engines",
-  },
-  {
-    key: "ai_search_value",
-    label: "Estimated AI Search Traffic Value",
-    category: "visibility",
-    description: "Monthly equivalent organic/paid search value from AI answer citations",
-  },
-  {
-    key: "top_sources",
-    label: "Top Cited Domains & Authority Pages",
-    category: "sources",
-    description: "Most frequently cited third-party and own-brand domains",
-  },
-  {
-    key: "prompt_gaps",
-    label: "High-Volume Prompt Gaps",
-    category: "content",
-    description: "Prompts where competitors are mentioned but your brand is omitted",
-  },
-  {
-    key: "content_proposals",
-    label: "AI Content Proposals & Briefs",
-    category: "content",
-    description: "Recommended AEO articles, briefs, and target URLs from Content Hub",
-  },
-  {
-    key: "site_health_summary",
-    label: "AI Crawler Accessibility & Sitemap",
-    category: "technical",
-    description: "OAI-SearchBot, Claude-SearchBot & PerplexityBot access health",
-  },
+/** Mirrors REPORT_CHART_CATALOG in @athena/core/reports (kept here so the client bundle stays server-free). */
+const CHART_MODULES: { key: ReportChartKey; label: string; category: string; description: string }[] = [
+  { key: "mention_rate", label: "Brand mention rate", category: "visibility", description: "Share of collected AI answers that mention your brand, by day" },
+  { key: "citation_rate", label: "Citation rate", category: "visibility", description: "Share of collected AI answers that cite your domain, by day" },
+  { key: "share_of_voice", label: "Share of voice vs competitors", category: "visibility", description: "Your mentions among all tracked brands' mentions (each brand counted once per answer)" },
+  { key: "ai_search_value", label: "AI-visible searches", category: "visibility", description: "Search volume of tracked prompts weighted by how often answers mention you (needs volume data)" },
+  { key: "top_sources", label: "Top cited domains", category: "sources", description: "Domains cited most often in collected answers" },
+  { key: "prompt_gaps", label: "Prompt gaps", category: "content", description: "Tracked prompts whose answers mention your brand in half of the answers or fewer" },
+  { key: "content_proposals", label: "Content pipeline", category: "content", description: "Content Hub items and their status" },
+  { key: "site_health_summary", label: "AI crawler access", category: "technical", description: "Share of crawled pages that allow AI crawlers (from Site Health)" },
 ];
 
 interface Props {
   reports: ScheduledReportItem[];
-  siteDomain: string;
   canWrite: boolean;
 }
 
@@ -118,7 +73,7 @@ export function ReportBuilderView(props: Props) {
             {tt("Scheduled Reports & Public Share Links (")}{props.reports.length})
           </div>
           <div className="text-xs text-gray-500">
-            {tt("Compose chart sets, schedule automated Email & Slack weekly digests, export PDFs, and share live AI Search or Content Proposal reports")}</div>
+            {tt("Choose the charts, who receives the report and how often; the scheduler sends it once the period has passed since the last send")}</div>
         </div>
         {props.canWrite ? (
           <button
@@ -194,10 +149,10 @@ export function ReportBuilderView(props: Props) {
                 defaultValue="weekly"
                 className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
               >
-                <option value="daily">{tt("Daily · 09:00 UTC")}</option>
-                <option value="weekly">{tt("Weekly · Mon 09:00 UTC")}</option>
-                <option value="biweekly">{tt("Biweekly · Mon 09:00 UTC")}</option>
-                <option value="monthly">{tt("Monthly · 1st of month")}</option>
+                <option value="daily">{tt("Daily")}</option>
+                <option value="weekly">{tt("Weekly")}</option>
+                <option value="biweekly">{tt("Every 2 weeks")}</option>
+                <option value="monthly">{tt("Monthly")}</option>
               </select>
             </div>
           </div>
@@ -208,17 +163,15 @@ export function ReportBuilderView(props: Props) {
                 {tt("Email Recipients (comma-separated)")}</label>
               <input
                 name="recipients"
-                defaultValue={`leadership@${props.siteDomain}, marketing@${props.siteDomain}`}
                 placeholder={tt("exec@company.com, seo@company.com")}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                {tt("Slack Weekly Report Channel")}</label>
+                {tt("Post to Slack (channel name, uses the webhook from Settings → Integrations)")}</label>
               <input
                 name="slackChannel"
-                defaultValue="#aeo-weekly"
                 placeholder={tt("#aeo-weekly")}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs"
               />
@@ -227,7 +180,7 @@ export function ReportBuilderView(props: Props) {
 
           <div>
             <label className="mb-2 block text-xs font-medium text-gray-600">
-              {tt("Chart Composition Modules (Select charts to include in PDF, Slack & Public Share Link)")}</label>
+              {tt("Charts to include (share link, PDF and email/Slack summary)")}</label>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {CHART_MODULES.map((m, idx) => (
                 <label
@@ -284,9 +237,7 @@ export function ReportBuilderView(props: Props) {
                   <td>
                     <div className="font-semibold text-gray-900">{r.name}</div>
                     <div className="text-[11px] text-gray-400">
-                      {tt(r.lastSentAt
-                        ? `Last sent ${new Date(r.lastSentAt).toISOString().slice(0, 10)}`
-                        : "Never dispatched")}
+                      {r.lastSentAt ? tt("Last sent {0}", { 0: new Date(r.lastSentAt).toISOString().slice(0, 10) }) : tt("Not sent yet")}
                     </div>
                   </td>
                   <td>
@@ -420,7 +371,7 @@ export function ReportBuilderView(props: Props) {
               >
                 <option value="daily">{tt("Daily")}</option>
                 <option value="weekly">{tt("Weekly")}</option>
-                <option value="biweekly">{tt("Biweekly")}</option>
+                <option value="biweekly">{tt("Every 2 weeks")}</option>
                 <option value="monthly">{tt("Monthly")}</option>
               </select>
             </div>
@@ -438,7 +389,7 @@ export function ReportBuilderView(props: Props) {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                {tt("Slack Weekly Digest Channel")}</label>
+                {tt("Post to Slack (channel name, uses the webhook from Settings → Integrations)")}</label>
               <input
                 name="slackChannel"
                 defaultValue={selectedReport.slackChannel ?? ""}

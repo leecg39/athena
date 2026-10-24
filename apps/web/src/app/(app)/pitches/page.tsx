@@ -1,11 +1,8 @@
 import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
-import {
-  ensureDefaultGroup,
-  ensureStarterPitches,
-  getPitchUsage,
-  listPitches,
-} from "@athena/core/pitches";
+import { configuredAdapters } from "@athena/llm";
+import { findDefaultGroup, getPitchUsage, listPitches } from "@athena/core/pitches";
+import { getOrgBalance } from "@athena/core/billing";
 import { PageHeader } from "@/components/page-header";
 import { PitchWorkspaceView } from "@/components/pitch-workspace-view";
 import { getSettingsContext } from "@/lib/settings-context";
@@ -15,43 +12,19 @@ export async function generateMetadata() {
   return { title: tt("Pitches") };
 }
 export const dynamic = "force-dynamic";
+/** creating a pitch collects AI answers synchronously (up to 5 questions per provider) */
+export const maxDuration = 300;
 
 export default async function PitchesPage() {
   const tt = await getTranslations();
   const s = await getSettingsContext();
-
-  await ensureStarterPitches(db, {
-    actorId: s.user.id,
-    organizationId: s.organizationId,
-  });
-
-  const [pitches, usage, defaultGroup] = await Promise.all([
-    listPitches(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-    }),
-    getPitchUsage(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-    }),
-    ensureDefaultGroup(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-    }),
-  ]);
-
+  const c = { actorId: s.user.id, organizationId: s.organizationId };
+  const [pitches, usage, group, credits] = await Promise.all([listPitches(db, c), getPitchUsage(db, c), findDefaultGroup(db, c), getOrgBalance(db, s.organizationId)]);
+  const providers = configuredAdapters().map((a) => a.label);
   return (
     <div>
-      <PageHeader
-        title={tt("Pitch Workspace")}
-        subtitle={tt("Generate shareable AI-search visibility & content rewrite reports for prospects from a website URL")}
-      />
-      <PitchWorkspaceView
-        pitches={pitches}
-        usage={usage}
-        defaultGroupId={defaultGroup.id}
-        defaultGroupName={defaultGroup.name}
-      />
+      <PageHeader title={tt("Pitch Workspace")} subtitle={tt("Shareable AI-search audits of a prospect's site, measured from AI answers collected for their buyer questions")} />
+      <PitchWorkspaceView pitches={pitches} usage={usage} group={group} providers={providers} credits={credits} canWrite={s.can("content:write")} />
     </div>
   );
 }

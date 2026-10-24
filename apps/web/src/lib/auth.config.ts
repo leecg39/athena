@@ -9,6 +9,10 @@ const PUBLIC_PATHS: RegExp[] = [
   /^\/api\/v1(\/|$)/,
   /^\/api\/inngest(\/|$)/,
   /^\/api\/stripe\/webhook$/,
+  // Vercel Cron sends only the CRON_SECRET bearer token; the route verifies it
+  /^\/api\/cron\/dispatch$/,
+  // PDF of a public share link (the route requires a session when no shareId is given)
+  /^\/api\/reports\/[^/]+\/pdf$/,
   /^\/api\/csp-report$/,
   /^\/api\/otel\/traces$/,
   /^\/api\/version$/,

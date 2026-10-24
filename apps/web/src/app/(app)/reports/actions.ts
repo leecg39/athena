@@ -14,6 +14,8 @@ import {
   sendScheduledReportNow,
 } from "@athena/core/reports";
 import { getSettingsContext } from "@/lib/settings-context";
+import { integrationKey } from "@/lib/integrations";
+import { reportLinkBase, reportTransport } from "@/lib/report-transport";
 import { reportsLimiter } from "@/lib/limits";
 import type { ActionState } from "@/lib/action-state";
 
@@ -129,15 +131,18 @@ export async function sendReportNowAction(_prev: ActionState, formData: FormData
       actorId: s.user.id,
       websiteId: s.websiteId,
       reportId,
+      transport: reportTransport(),
+      secretKey: integrationKey(),
+      appUrl: await reportLinkBase(),
     });
 
     revalidatePath("/reports");
-    return {
-      ok: true,
-      message: `Dispatched report to ${sent.recipientCount} email recipient(s)${
-        sent.slackChannel ? ` and Slack channel ${sent.slackChannel}` : ""
-      }.`,
-    };
+    const main = sent.emailed && sent.slackPosted
+      ? `Sent to ${sent.emailed} email recipient(s) and Slack.`
+      : sent.emailed
+        ? `Sent to ${sent.emailed} email recipient(s).`
+        : "Posted to Slack.";
+    return { ok: true, message: sent.skipped.length ? `${main} Not sent: ${sent.skipped.join("; ")}.` : main };
   } catch (err) {
     return toActionError(err, "Failed to send report.");
   }

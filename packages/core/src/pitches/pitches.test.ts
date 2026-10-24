@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { createTestDb, type TestDb } from "@athena/db/testing";
-import { creditBalances, organizations, prompts, responses } from "@athena/db";
+import { creditBalances, orgMembers, pitches, prompts, responses, users, websiteMembers } from "@athena/db";
 import { createWebsite, ensureUserWithOrg } from "../tenancy";
 import { createGroup, setWebsiteGroup } from "../org/groups";
-import { getPublicReportByShareId } from "../reports";
+import { getOrgBalance } from "../billing/credits";
 import {
   allocateGroupCredits,
   createGroupSavedView,
@@ -14,10 +14,26 @@ import {
   ensureDefaultGroup,
   getGroupDashboardData,
   getPitchUsage,
+  getPublicPitchByShareId,
   listPitches,
-  regeneratePitchRewrite,
   validateProspectUrl,
+  writePitchRewrite,
+  type PitchCollector,
+  type PitchRewriteWriter,
 } from "./index";
+
+const chatgpt: PitchCollector = {
+  model: "chatgpt",
+  collect: async (prompt) => ({ text: `For "${prompt}": 1. Linear — fast issue tracking. 2. Jira — enterprise standard. Source: https://linear.app/docs`, citations: [{ url: "https://linear.app/docs" }], provider: "openai:gpt-4.1" }),
+};
+const flaky: PitchCollector = {
+  model: "perplexity",
+  collect: async (prompt) => {
+    if (prompt === "jira alternatives") throw new Error("HTTP 503");
+    return { text: "Jira is the most common choice.", citations: [{ url: "https://atlassian.com/software/jira" }], provider: "perplexity:sonar" };
+  },
+};
+const okWriter: PitchRewriteWriter = async () => ({ ok: true, provider: "anthropic", afterCopy: "Asana is a work management tool for teams. [add customer examples]", faq: [{ question: "What is Asana?", answer: "A work management tool." }] });
 
 async function bootstrapUser(
   db: TestDb["db"],
@@ -62,140 +78,67 @@ describe("@athena/core/pitches — Pitch Workspace & Agency Groups", () => {
     expect(() => validateProspectUrl("javascript:alert(1)")).toThrow(/http/i);
   });
 
-  it("creates visibility & content rewrite pitches, enforces monthly quota even after soft-delete, and resolves public pitch view", async () => {
-    const owner = await bootstrapUser(t.db, {
-      email: "pitch-owner@test.com",
-      name: "Pitch Owner",
-      website: { name: "Agency Hub", domain: "agencyhub.io" },
-    });
-    const outsider = await bootstrapUser(t.db, {
-      email: "pitch-outsider@test.com",
-      name: "Outsider",
-      website: { name: "Other Org", domain: "otherorg.io" },
-    });
+  it("measures pitches from collected AI answers, charging 1 credit per answer and refunding failures", async () => {
+    const owner = await bootstrapUser(t.db, { email: "pitch-owner@test.com", name: "Pitch Owner", website: { name: "Agency", domain: "agency.io" } });
+    const base = { actorId: owner.user.id, organizationId: owner.organizationId, websiteUrl: "https://linear.app", competitors: ["Jira"] };
+    await expect(createPitch(t.db, { ...base, prompts: ["best issue tracker"], collectors: [] })).rejects.toThrow(/AI provider/);
+    await expect(createPitch(t.db, { ...base, prompts: [], collectors: [chatgpt] })).rejects.toThrow(/buyer question/);
+    expect(await getOrgBalance(t.db, owner.organizationId)).toBe(300);
 
-    // Free plan starts with 0/3 used this month
-    const initialUsage = await getPitchUsage(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-    });
-    expect(initialUsage.plan).toBe("free");
-    expect(initialUsage.usedThisMonth).toBe(0);
-    expect(initialUsage.monthlyLimit).toBe(3);
+    const pitch = await createPitch(t.db, { ...base, prompts: ["best issue tracker", "jira alternatives"], collectors: [chatgpt, flaky] });
+    expect(pitch).toMatchObject({ brandName: "Linear", domain: "linear.app", kind: "visibility" });
+    expect(pitch.shareId).toMatch(/^pitch_[0-9a-f]{32}$/);
+    const p = pitch.payload!;
+    // chatgpt answered both questions (Linear listed and cited; in the "jira alternatives" answer Jira is named first, so Linear is #2);
+    // the flaky model answered one question naming only Jira and failed once
+    expect(p.totals).toEqual({ answers: 3, mentionRatePct: 66.7, citationRatePct: 66.7, shareOfVoicePct: 40, avgPosition: 1.5, simulatedSharePct: 0 });
+    expect(p.failures).toEqual([{ prompt: "jira alternatives", model: "perplexity" }]);
+    expect(p.competitorSov).toEqual([{ name: "Jira", isOwn: false, mentions: 3, sovPct: 60 }, { name: "Linear", isOwn: true, mentions: 2, sovPct: 40 }]);
+    expect(p.topSources[0]).toEqual({ domain: "linear.app", citations: 2, isOwn: true });
+    expect(p.byModel).toEqual([{ model: "chatgpt", answers: 2, mentionRatePct: 100, citationRatePct: 100 }, { model: "perplexity", answers: 1, mentionRatePct: 0, citationRatePct: 0 }]);
+    // 4 reserved, 1 refunded
+    expect(await getOrgBalance(t.db, owner.organizationId)).toBe(297);
 
-    // 1. Create a visibility pitch
-    const p1 = await createPitch(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-      websiteUrl: "https://figma.com",
-      brandName: "Figma",
-      kind: "visibility",
-      industry: "Collaborative Design",
-    });
-    expect(p1.shareId).toMatch(/^pitch_/);
-    expect(p1.sharePath).toBe(`/report/${p1.shareId}`);
-    expect(p1.payload.kpis.mentionRatePct).toBeGreaterThan(0);
+    const pub = await getPublicPitchByShareId(t.db, pitch.shareId);
+    expect(pub).toMatchObject({ brandName: "Linear", payload: { totals: { answers: 3 } } });
+    expect(JSON.stringify(pub)).not.toContain(owner.organizationId);
 
-    // 2. Create a content rewrite pitch
-    const p2 = await createPitch(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-      websiteUrl: "https://notion.so",
-      brandName: "Notion",
-      kind: "content",
-      targetPageUrl: "https://notion.so/enterprise",
-      existingCopy: "Notion is an all-in-one workspace for notes and docs.",
-      targetPrompts: ["best enterprise knowledge base software 2026"],
-    });
-    expect(p2.shareId).toMatch(/^cpitch_/);
+    // too few credits: nothing is collected or charged
+    await t.db.update(creditBalances).set({ balance: 1 }).where(eq(creditBalances.organizationId, owner.organizationId));
+    await expect(createPitch(t.db, { ...base, prompts: ["best issue tracker", "jira alternatives"], collectors: [chatgpt, flaky] })).rejects.toThrow(/needs 4 credits/);
+    expect(await getOrgBalance(t.db, owner.organizationId)).toBe(1);
+  });
+
+  it("enforces the monthly limit before spending credits, hides legacy invented pitches and writes rewrites only with an AI provider", async () => {
+    const owner = await bootstrapUser(t.db, { email: "quota-owner@test.com", name: "Quota Owner", website: { name: "Agency Two", domain: "agency2.io" } });
+    const base = { actorId: owner.user.id, organizationId: owner.organizationId, prompts: ["best issue tracker"], collectors: [chatgpt] };
+    const p1 = await createPitch(t.db, { ...base, websiteUrl: "https://linear.app" });
+    const p2 = await createPitch(t.db, { ...base, websiteUrl: "https://asana.com", kind: "content" });
     expect(p2.sharePath).toBe(`/report/content/${p2.shareId}`);
-    expect(p2.payload.contentRewrite.focusPrompt).toBe(
-      "best enterprise knowledge base software 2026",
-    );
-    expect(p2.payload.contentRewrite.afterCopy).toContain("Direct Answer Summary");
-    expect(p2.payload.contentRewrite.jsonLdSchema).toContain("FAQPage");
+    const p3 = await createPitch(t.db, { ...base, websiteUrl: "https://notion.so" });
+    await deletePitch(t.db, { actorId: owner.user.id, organizationId: owner.organizationId, pitchId: p3.id });
+    await expect(getPublicPitchByShareId(t.db, p3.shareId)).rejects.toThrow(/not found/i);
+    const before = await getOrgBalance(t.db, owner.organizationId);
+    await expect(createPitch(t.db, { ...base, websiteUrl: "https://monday.com" })).rejects.toThrow(/Monthly pitch limit/);
+    expect(await getOrgBalance(t.db, owner.organizationId)).toBe(before);
+    expect((await getPitchUsage(t.db, { actorId: owner.user.id, organizationId: owner.organizationId })).remaining).toBe(0);
 
-    // Regenerate content rewrite on p1 (upgrades p1 to content rewrite pitch)
-    const p1Upgraded = await regeneratePitchRewrite(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-      pitchId: p1.id,
-      targetPageUrl: "https://figma.com/enterprise-design-systems",
-      focusPrompt: "best design system governance platform for enterprise",
-    });
-    expect(p1Upgraded.kind).toBe("content");
-    expect(p1Upgraded.payload.contentRewrite.targetPageUrl).toBe(
-      "https://figma.com/enterprise-design-systems",
-    );
+    // a pitch stored by the earlier generator (invented numbers) is listed without data and is not public
+    const [legacy] = await t.db.insert(pitches).values({ organizationId: owner.organizationId, websiteUrl: "https://acme.io", brandName: "Acme Cloud", shareId: `pitch_${"c".repeat(32)}`, kind: "visibility", payload: { kpis: { mentionRatePct: 31.2 } }, createdAt: new Date(Date.UTC(2020, 0, 1)) }).returning();
+    expect((await listPitches(t.db, { actorId: owner.user.id, organizationId: owner.organizationId })).find((x) => x.id === legacy!.id)?.payload).toBeNull();
+    await expect(getPublicPitchByShareId(t.db, legacy!.shareId)).rejects.toThrow(/not found/i);
 
-    // Resolve public share link via getPublicReportByShareId
-    const pubPitch = await getPublicReportByShareId(t.db, p2.shareId);
-    expect(pubPitch.isPitch).toBe(true);
-    expect(pubPitch.brandName).toBe("Notion");
-    expect(pubPitch.contentRewrite?.targetPageUrl).toBe("https://notion.so/enterprise");
+    const copy = "Asana helps teams orchestrate their work, from daily tasks to strategic initiatives, with timelines, boards and automated workflows.";
+    await expect(writePitchRewrite(t.db, { actorId: owner.user.id, organizationId: owner.organizationId, pitchId: p2.id, existingCopy: "too short", writer: okWriter })).rejects.toThrow(/paragraph/);
+    await expect(writePitchRewrite(t.db, { actorId: owner.user.id, organizationId: owner.organizationId, pitchId: p2.id, existingCopy: copy, writer: async () => ({ ok: false, reason: "unavailable" }) })).rejects.toThrow(/none is configured/);
+    await expect(writePitchRewrite(t.db, { actorId: owner.user.id, organizationId: owner.organizationId, pitchId: p2.id, existingCopy: copy, targetPageUrl: "https://evil.example/x", writer: okWriter })).rejects.toThrow(/prospect's site/);
+    const rewritten = await writePitchRewrite(t.db, { actorId: owner.user.id, organizationId: owner.organizationId, pitchId: p2.id, existingCopy: copy, targetPageUrl: "https://asana.com/product", writer: okWriter });
+    expect(rewritten.payload!.rewrite).toMatchObject({ beforeCopy: copy, writtenBy: "anthropic", targetPageUrl: "https://asana.com/product", focusPrompt: "best issue tracker", faq: [{ question: "What is Asana?", answer: "A work management tool." }] });
 
-    // Cross-tenant isolation check
-    await expect(
-      deletePitch(t.db, {
-        actorId: outsider.user.id,
-        organizationId: owner.organizationId,
-        pitchId: p2.id,
-      }),
-    ).rejects.toThrow();
-
-    // 3. Create 3rd pitch to reach free limit (3/3)
-    const p3 = await createPitch(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-      websiteUrl: "https://miro.com",
-      kind: "visibility",
-    });
-
-    // Soft-delete p3 and verify that monthly quota STILL counts p3 (prevents create-then-delete quota bypass!)
-    await deletePitch(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-      pitchId: p3.id,
-    });
-
-    // Deleted pitch is no longer accessible via public shareId
-    await expect(getPublicReportByShareId(t.db, p3.shareId)).rejects.toThrow(/not found/i);
-
-    const afterDeleteUsage = await getPitchUsage(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-    });
-    expect(afterDeleteUsage.usedThisMonth).toBe(3);
-    expect(afterDeleteUsage.remaining).toBe(0);
-
-    await expect(
-      createPitch(t.db, {
-        actorId: owner.user.id,
-        organizationId: owner.organizationId,
-        websiteUrl: "https://canva.com",
-        kind: "visibility",
-      }),
-    ).rejects.toThrow(/Monthly pitch limit reached/i);
-
-    // Upgrading organization plan to starter (limit 10) unlocks creation
-    await t.db
-      .update(organizations)
-      .set({ plan: "starter" })
-      .where(eq(organizations.id, owner.organizationId));
-
-    const p4 = await createPitch(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-      websiteUrl: "https://canva.com",
-      kind: "visibility",
-    });
-    expect(p4.brandName).toBe("Canva");
-
-    const listed = await listPitches(t.db, {
-      actorId: owner.user.id,
-      organizationId: owner.organizationId,
-    });
-    expect(listed.length).toBe(3); // p1, p2, p4 (p3 was soft-deleted)
+    // members without content:write cannot create pitches
+    const outsider = await bootstrapUser(t.db, { email: "pitch-outsider@test.com", name: "Outsider", website: { name: "Other", domain: "other.io" } });
+    await expect(createPitch(t.db, { ...base, actorId: outsider.user.id, websiteUrl: "https://linear.app" })).rejects.toThrow();
+    expect(p1.payload).not.toBeNull();
   });
 
   it("aggregates multi-website Group Dashboard metrics, manages group saved views, and atomically allocates shared group credits", async () => {
@@ -260,7 +203,7 @@ describe("@athena/core/pitches — Pitch Workspace & Agency Groups", () => {
       reason: "Q4 Agency Campaign Pool",
     });
     expect(alloc1.orgBalance).toBe(180); // 300 initial - 120
-    expect(alloc1.groupBalance).toBe(370); // 250 initial group grant + 120
+    expect(alloc1.groupBalance).toBe(120); // groups start empty; credits come from the organization pool
 
     // Return 70 credits from Group Shared Pool -> Org Unallocated Pool
     const alloc2 = await allocateGroupCredits(t.db, {
@@ -272,7 +215,7 @@ describe("@athena/core/pitches — Pitch Workspace & Agency Groups", () => {
       reason: "Rebalance unused credits",
     });
     expect(alloc2.orgBalance).toBe(250);
-    expect(alloc2.groupBalance).toBe(300);
+    expect(alloc2.groupBalance).toBe(50);
 
     // Guard against over-allocation
     await expect(
@@ -295,8 +238,8 @@ describe("@athena/core/pitches — Pitch Workspace & Agency Groups", () => {
     expect(dash.kpis.groupCitationRatePct).toBe(50);
     expect(dash.savedViews.some((v) => v.id === view.id)).toBe(true);
     expect(dash.billing.orgUnallocatedBalance).toBe(250);
-    expect(dash.billing.groupSharedBalance).toBe(300);
-    expect(dash.billing.ledger.length).toBeGreaterThanOrEqual(3);
+    expect(dash.billing.groupSharedBalance).toBe(50);
+    expect(dash.billing.ledger.map((l) => l.amount)).toEqual([-70, 120]);
 
     await deleteGroupSavedView(t.db, {
       actorId: owner.user.id,
@@ -325,6 +268,14 @@ describe("@athena/core/pitches — Pitch Workspace & Agency Groups", () => {
     expect(dash2.kpis.websiteCount).toBe(1);
     expect(dash2.memberWebsites[0]?.domain).toBe("alpha.io");
 
+    // a member who can access only one website does not see the others in the group
+    const second = await createWebsite(t.db, { userId: owner.user.id, organizationId: owner.organizationId, name: "Brand Beta", domain: "beta.io", groupId: g2.id });
+    const [member] = await t.db.insert(users).values({ email: "group-member@test.com", name: "Member" }).returning();
+    await t.db.insert(orgMembers).values({ organizationId: owner.organizationId, userId: member!.id, role: "member" });
+    await t.db.insert(websiteMembers).values({ websiteId: second.id, userId: member!.id, role: "member" });
+    const scoped = await getGroupDashboardData(t.db, { actorId: member!.id, organizationId: owner.organizationId, groupId: g2.id });
+    expect(scoped.memberWebsites.map((w) => w.domain)).toEqual(["beta.io"]);
+    expect(scoped.availableWebsites.map((w) => w.domain)).toEqual(["beta.io"]);
     // Suppress unused import warning for creditBalances
     expect(creditBalances).toBeDefined();
   });
