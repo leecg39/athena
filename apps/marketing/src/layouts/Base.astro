@@ -1,4 +1,5 @@
 ---
+import { APP_URL } from "../lib/app-url";
 import LanguageSwitch from "../components/LanguageSwitch.astro";
 interface Props {
   locale?: "ko" | "en";
@@ -93,13 +94,13 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
           <a href={hrefFor("/pricing")} style="color:#475569;text-decoration:none;">{tt("Pricing")}</a>
           <a href={hrefFor("/industries")} style="color:#475569;text-decoration:none;">{tt("Industries")}</a>
           <a href={hrefFor("/comparison")} style="color:#475569;text-decoration:none;">{tt("Compare")}</a>
-          <a href={hrefFor("/case-studies")} style="color:#475569;text-decoration:none;">{tt("Case Studies")}</a>
+          <a href={hrefFor("/case-studies")} style="color:#475569;text-decoration:none;">{tt("Example Workflows")}</a>
           <a href={hrefFor("/blog")} style="color:#475569;text-decoration:none;">{tt("Blog")}</a>
         </nav>
         <div style="display:flex;gap:10px;align-items:center;">
           <LanguageSwitch locale={locale} />
-          <a class="btn btn-secondary" href="http://localhost:3000/login">{tt("Sign in")}</a>
-          <a class="btn btn-primary" href="http://localhost:3000/home">{tt("Launch Workspace →")}</a>
+          <a class="btn btn-secondary" href={`${APP_URL}/login`}>{tt("Sign in")}</a>
+          <a class="btn btn-primary" href={`${APP_URL}/home`}>{tt("Launch Workspace →")}</a>
         </div>
       </div>
     </header>
@@ -109,13 +110,13 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
     <footer style="border-top:1px solid #f1f5f9;margin-top:80px;background:#f8fafc;padding:48px 0;">
       <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;font-size:13px;color:#64748b;">
         <div>
-          <strong style="color:#0f172a;">{tt("Athenum AI Search Intelligence")}</strong>{tt(" — Answer Engine Optimization & Autonomous Content Platform. ")}</div>
+          <strong style="color:#0f172a;">{tt("Athenum AI Search Intelligence")}</strong>{tt(" — AI search visibility, fact checking and content workflows. ")}</div>
         <div style="display:flex;gap:16px;">
           <a href={hrefFor("/platform")} style="color:#64748b;text-decoration:none;">{tt("Platform")}</a>
           <a href={hrefFor("/pricing")} style="color:#64748b;text-decoration:none;">{tt("Pricing")}</a>
           <a href={hrefFor("/industries")} style="color:#64748b;text-decoration:none;">{tt("Industries")}</a>
           <a href={hrefFor("/comparison")} style="color:#64748b;text-decoration:none;">{tt("Comparison")}</a>
-          <a href={hrefFor("/case-studies")} style="color:#64748b;text-decoration:none;">{tt("Case Studies")}</a>
+          <a href={hrefFor("/case-studies")} style="color:#64748b;text-decoration:none;">{tt("Example Workflows")}</a>
           <a href={hrefFor("/blog")} style="color:#64748b;text-decoration:none;">{tt("Blog")}</a>
         </div>
       </div>

@@ -8,35 +8,23 @@ export async function generateMetadata() {
 };
 }
 
-const MODEL_ENGINES = [
-  "ChatGPT Search",
-  "Perplexity",
-  "Claude",
-  "Google AI Overviews",
-  "Google AI Mode",
-  "Gemini",
-  "Microsoft Copilot",
-  "Grok",
-];
+const MODEL_ENGINES = ["ChatGPT", "Claude", "Perplexity", "Gemini", "Grok", "DeepSeek"];
 
 const PLATFORM_PILLARS = [
   {
     badge: "Olympus Analytics",
-    title: "Real-Time Share of Voice Across 8 Answer Engines",
-    description:
-      "Track daily brand mentions, citation rates, average ranking position, and estimated AI traffic value across every persona, region, and topic.",
+    title: "Share of Voice Across 6 AI Models",
+    description: "Daily brand mentions, citation rates and average position from the answers collected for your buyer questions, by persona, region and topic.",
   },
   {
     badge: "Oracle & Knowledge Base",
-    title: "Detect & Eliminate AI Hallucinations",
-    description:
-      "Continuously audit LLM responses against your canonical Knowledge Base facts and resolve brand inaccuracies before buyers see them.",
+    title: "Check AI Answers Against Your Facts",
+    description: "Keep approved brand facts in the Knowledge Base; Oracle flags answers whose numbers or claims conflict with them for review.",
   },
   {
     badge: "Content Hub & Outreach",
-    title: "Ship Citation-Engineered AEO Content & CMS Sync",
-    description:
-      "Generate prompt-grounded briefs, full articles, and Shopify catalog optimizations with 1-click publishing to Webflow, WordPress, Contentful, and Sanity.",
+    title: "Content Grounded in Confirmed Facts",
+    description: "Briefs, drafts and Shopify listing updates from your confirmed facts, published to WordPress or Shopify (exports for other CMSs).",
   },
 ];
 
@@ -79,7 +67,7 @@ export default async function LandingPage() {
           <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl">
             {tt("Command Your Brand's Presence Across AI Search")}</h1>
           <p className="mt-4 text-base text-slate-300 sm:text-lg">
-            {tt("Athenum monitors how ChatGPT, Perplexity, Claude, Gemini, and Google AI Overviews cite your brand—and deploys autonomous content and outreach workflows to win Share of Voice.")}</p>
+            {tt("Athenum collects answers from ChatGPT, Claude, Perplexity, Gemini, Grok and DeepSeek for the questions your buyers ask, measures how they mention and cite your brand, and turns the gaps into content and outreach work.")}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/home"

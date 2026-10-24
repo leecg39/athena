@@ -2,46 +2,14 @@
 import Base from "../layouts/Base.astro";
 
 const modules = [
-  {
-    name: "Olympus Dashboard",
-    tag: "Visibility & SOV",
-    summary: "Track Mention Rate, Citation Rate, Share of Voice, Average Ranking Position, and Estimated AI Search Traffic Value with saved views and CSV export.",
-  },
-  {
-    name: "Responses & Sources Intelligence",
-    tag: "Citation Graph",
-    summary: "Inspect every full AI response matrix, Sankey domain flows, C/T/O/P source classification, and standalone URL citation inspector.",
-  },
-  {
-    name: "Ask Athena Copilot",
-    tag: "Agentic Chat",
-    summary: "Query live workspace metrics, search collected LLM answers, and generate content briefs with file attachments and Google Search Console context.",
-  },
-  {
-    name: "Knowledge Base & Oracle",
-    tag: "Brand Truth",
-    summary: "Maintain canonical brand pillars and facts while Oracle scans LLM outputs for Confirmed Inaccuracies, KB Discrepancies, and Model Divergence.",
-  },
-  {
-    name: "Content Hub & Shopify Catalog Optimization",
-    tag: "Execution",
-    summary: "Spreadsheet grid with AI Brief → Draft → Revise with Athena versioning and 1-click CMS publishing (WordPress, Webflow, Contentful, Sanity, Wix, Framer, Payload).",
-  },
-  {
-    name: "Outreach & Citation Pipeline",
-    tag: "Authority",
-    summary: "Discover high-citation third-party pages, resolve author contacts, draft KB-grounded outreach emails, and manage status in a New/Todo/Done Kanban.",
-  },
-  {
-    name: "Shopping Insights, Sponsored Ads & Site Health",
-    tag: "Commerce & Technical AEO",
-    summary: "Monitor AI shopping carousels, ChatGPT/AI Mode sponsored ad captures, 10 AI crawler access checks (OAI-SearchBot, PerplexityBot, ClaudeBot), and live page verification.",
-  },
-  {
-    name: "Public REST API v1, MCP Server & BI Connectors",
-    tag: "Ecosystem",
-    summary: "Connect Claude/ChatGPT via @athena/mcp (14 tools) or stream daily visibility datasets directly into Google Looker Studio and Microsoft Power BI.",
-  },
+  { name: "Olympus Dashboard", tag: "Visibility & SOV", summary: "Mention rate, citation rate, share of voice and average position from collected answers, with saved views, filters, CSV export and AI-visible searches when search volume is available." },
+  { name: "Responses & Sources Intelligence", tag: "Citation Graph", summary: "Every collected answer with its mentions and citations, a Sankey view of cited domains, domain classification and a standalone URL inspector." },
+  { name: "Ask Athena Copilot", tag: "Agentic Chat", summary: "Ask questions about your workspace metrics and collected answers, attach files, and use Search Console data when it is connected." },
+  { name: "Knowledge Base & Oracle", tag: "Brand Truth", summary: "Approved brand facts in pillars; Oracle flags answers that conflict with them, facts that conflict with each other, and prompts where models disagree." },
+  { name: "Content Hub & Shopify Catalog Optimization", tag: "Execution", summary: "Briefs, drafts and versions grounded in confirmed facts; publishing to WordPress and Shopify and exports for Webflow, Contentful, Sanity, Wix, Framer and Payload; Shopify listing scores and updates." },
+  { name: "Outreach & Citation Pipeline", tag: "Authority", summary: "Third-party pages that AI answers cite about your topics, authors read from the pages themselves, pitch drafts from verified facts and a New/Todo/Done board." },
+  { name: "Shopping Insights, Sponsored Ads & Site Health", tag: "Commerce & Technical AEO", summary: "Product cards and sponsored placements found in collected answers, robots.txt checks for 10 AI crawlers, sitemap and llms.txt checks, and live page verification." },
+  { name: "Public REST API v1, MCP Server & BI Connectors", tag: "Ecosystem", summary: "Connect Claude or ChatGPT through the MCP server (14 tools), call /api/v1 with API keys, or feed Looker Studio and Power BI." },
 ];
 
 import { createTranslator, resolveLocale } from "@athena/i18n";
@@ -52,8 +20,8 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
 <Base locale={locale} title={tt("Platform | Athenum AI Search Intelligence")}>
   <section class="wrap" style="padding:64px 24px 32px;">
     <span class="badge">{tt("End-to-End AEO Architecture")}</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" Eight Integrated Modules Built for AI Search Dominance ")}</h1>
-    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">{tt(" Unlike legacy keyword rank trackers, Athenum combines multi-model prompt collection, citation graph analytics, hallucination detection, and direct CMS publishing in one governed workspace. ")}</p>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" Eight Modules for AI Search Visibility ")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">{tt(" Athenum combines multi-model answer collection, citation analytics, fact checking against your Knowledge Base, and content publishing in one workspace. ")}</p>
   </section>
 
   <section class="wrap grid-2" style="padding:16px 24px 48px;">

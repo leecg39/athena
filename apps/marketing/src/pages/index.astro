@@ -1,32 +1,24 @@
 ---
+import { APP_URL } from "../lib/app-url";
 import Base from "../layouts/Base.astro";
 
-const engines = [
-  "ChatGPT Search",
-  "Perplexity",
-  "Claude",
-  "Google AI Overviews",
-  "Google AI Mode",
-  "Gemini",
-  "Microsoft Copilot",
-  "Grok",
-];
+const engines = ["ChatGPT", "Claude", "Perplexity", "Gemini", "Grok", "DeepSeek"];
 
 const pillars = [
   {
     badge: "01 · Olympus Visibility",
-    title: "Monitor Mention Rate, Citation Share & AI Search Value",
-    desc: "Measure how 8 answer engines rank and cite your brand across every buyer persona, region, and topic cluster.",
+    title: "Measure Mention Rate, Citation Rate & Share of Voice",
+    desc: "Collect answers to your buyer questions from the AI models you connect and see how often each one mentions, ranks and cites your brand, by topic, persona and region.",
   },
   {
     badge: "02 · Oracle & Knowledge Base",
-    title: "Eliminate Brand Hallucinations with Canonical Facts",
-    desc: "Audit AI responses against your verified Knowledge Base pillars to detect inaccuracies, outdated pricing, and model drift.",
+    title: "Check AI Answers Against Your Approved Facts",
+    desc: "Keep approved brand facts in the Knowledge Base; Oracle flags answers whose numbers or claims conflict with them so your team can review and fix the source.",
   },
   {
     badge: "03 · Content Hub, Outreach & MCP",
-    title: "Deploy Citation-Engineered Content & Agency Pitches",
-    desc: "Generate AEO briefs, full drafts, and Shopify catalog optimizations with 1-click publishing to Webflow, WordPress, Contentful, and Sanity.",
+    title: "Write, Publish and Pitch from the Same Data",
+    desc: "Draft briefs and articles grounded in your confirmed facts, publish to WordPress or Shopify (export for other CMSs), and find the pages AI answers cite for outreach.",
   },
 ];
 
@@ -37,18 +29,18 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
 ---
 <Base locale={locale} title={tt("Athenum | AI Search Visibility & Answer Engine Optimization Platform")}>
   <section class="wrap" style="text-align:center;padding:84px 24px 56px;">
-    <span class="badge">{tt("2026 Enterprise GEO & AEO Suite · Native MCP Server")}</span>
+    <span class="badge">{tt("AI search visibility · Knowledge Base · MCP server")}</span>
     <h1 style="font-size:52px;letter-spacing:-1.8px;margin:20px 0 16px;line-height:1.06;">{tt(" Become the Default Answer")}<br /><span style="color:var(--brand);">{tt("Across Every AI Engine")}</span>
     </h1>
-    <p style="font-size:18px;color:#475569;max-width:640px;margin:0 auto 32px;">{tt(" Athenum tracks how ChatGPT, Perplexity, Claude, Gemini, and Google AI Overviews cite your brand—then deploys autonomous content, Oracle fact verification, and outreach workflows to win Share of Voice. ")}</p>
+    <p style="font-size:18px;color:#475569;max-width:640px;margin:0 auto 32px;">{tt(" Athenum collects answers from ChatGPT, Claude, Perplexity, Gemini, Grok and DeepSeek for the questions your buyers ask, measures how they mention and cite your brand, and turns the gaps into content and outreach work. ")}</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a class="btn btn-primary" href="http://localhost:3000/home">{tt("Launch Live Workspace")}</a>
+      <a class="btn btn-primary" href={`${APP_URL}/home`}>{tt("Launch Live Workspace")}</a>
       <a class="btn btn-secondary" href={hrefFor("/platform")}>{tt("Explore 8 Platform Modules →")}</a>
     </div>
   </section>
 
   <section class="wrap" style="padding:16px 24px 48px;">
-    <p style="text-align:center;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">{tt(" Continuous Multi-Model Collection Across 8 Answer Surfaces ")}</p>
+    <p style="text-align:center;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">{tt(" Answers collected through the official APIs of 6 AI models ")}</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
       {engines.map((engine) => (
         <span style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:#334155;">
@@ -72,10 +64,10 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
     <div class="card" style="background:#0f172a;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;padding:36px;">
       <div>
         <span class="badge" style="background:rgba(79,57,246,0.25);color:#c7d2fe;">{tt("Agency Pitch Workspace & Multi-Brand Groups")}</span>
-        <h2 style="font-size:24px;margin-top:10px;">{tt("Run 60-Second Prospect Audits & Shared Credit Pools")}</h2>
-        <p style="color:#94a3b8;font-size:14px;margin-top:6px;max-width:600px;">{tt(" Generate shareable prospect visibility benchmarks and Before/After AEO content rewrite pitches with FAQPage JSON-LD schema. ")}</p>
+        <h2 style="font-size:24px;margin-top:10px;">{tt("Prospect Audits from Real AI Answers & Shared Credit Pools")}</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-top:6px;max-width:600px;">{tt(" Ask the AI models a prospect's buyer questions, share the measured result, and add a rewrite of their own page copy with an FAQPage JSON-LD block. ")}</p>
       </div>
-      <a class="btn btn-primary" href={hrefFor("/case-studies")}>{tt("Read Customer Case Studies →")}</a>
+      <a class="btn btn-primary" href={hrefFor("/case-studies")}>{tt("See example workflows →")}</a>
     </div>
   </section>
 </Base>

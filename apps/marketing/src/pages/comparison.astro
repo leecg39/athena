@@ -2,14 +2,14 @@
 import Base from "../layouts/Base.astro";
 
 const rows = [
-  { capability: "8 AI Answer Engines (ChatGPT, Perplexity, Claude, Gemini, AI Mode, Overviews, Copilot, Grok)", athenum: "Included", trackers: "2–3 Engines", seo: "Keyword SERP only" },
-  { capability: "Oracle Hallucination & Knowledge Base Fact Auditing", athenum: "Native 3-tier scanner", trackers: "Not available", seo: "Not available" },
-  { capability: "Autonomous Content Hub + 7 Native CMS Publishers", athenum: "Built-in with version diff", trackers: "Export only", seo: "Manual brief only" },
-  { capability: "Shopify Product Catalog AEO Optimization", athenum: "Native JSON-LD & sync", trackers: "Not available", seo: "Not available" },
-  { capability: "AI Shopping Carousel & Sponsored Ad Capture", athenum: "Real-time leaderboard", trackers: "Not available", seo: "Traditional PLA only" },
-  { capability: "10 AI Bot Crawler Health & Live Content Signature Verification", athenum: "Automated matrix", trackers: "Basic robots.txt", seo: "Googlebot only" },
-  { capability: "Agency Pitch Workspace & Multi-Brand Shared Credit Pools", athenum: "3-Scope Credit Ledger", trackers: "Single workspace", seo: "Per-seat only" },
-  { capability: "Public REST API v1 + 14-Tool MCP Server + Looker Studio / Power BI", athenum: "Full programmatic suite", trackers: "CSV export only", seo: "Legacy REST API" },
+  { capability: "Answers from 6 AI models (ChatGPT, Claude, Perplexity, Gemini, Grok, DeepSeek)", athenum: "Through each model's API, with your keys", trackers: "Varies by tool", seo: "Usually search results only" },
+  { capability: "Fact checks against your Knowledge Base", athenum: "Oracle: answer, fact and model conflicts", trackers: "Varies by tool", seo: "Usually not included" },
+  { capability: "Content Hub with publishing", athenum: "WordPress & Shopify; exports for other CMSs", trackers: "Varies by tool", seo: "Briefs only in many suites" },
+  { capability: "Shopify product listing optimization", athenum: "Scores and updates listings via the Admin API", trackers: "Varies by tool", seo: "Varies by suite" },
+  { capability: "Product cards and sponsored placements in answers", athenum: "Found in collected answers, plus manual records", trackers: "Varies by tool", seo: "Search ads data instead" },
+  { capability: "AI crawler access & live content checks", athenum: "robots.txt for 10 AI bots, page hash verification", trackers: "Varies by tool", seo: "Usually search crawlers" },
+  { capability: "Agency pitches & shared credit pools", athenum: "Measured prospect audits, group credit ledger", trackers: "Varies by tool", seo: "Varies by suite" },
+  { capability: "REST API v1, 14-tool MCP server, Looker Studio / Power BI", athenum: "Included", trackers: "Varies by tool", seo: "Varies by suite" },
 ];
 
 import { createTranslator, resolveLocale } from "@athena/i18n";
@@ -20,8 +20,8 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
 <Base locale={locale} title={tt("Compare Athenum | AI Search Intelligence vs. Legacy Tools")}>
   <section class="wrap" style="padding:64px 24px 32px;">
     <span class="badge">{tt("Platform Comparison")}</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" Why Revenue & AEO Teams Choose Athenum ")}</h1>
-    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">{tt(" Point prompt trackers only show screenshots of AI answers. Legacy SEO suites only measure 10-blue-link SERPs. Athenum closes the loop from multi-model measurement to verified CMS execution. ")}</p>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" What Athenum Covers ")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:680px;font-size:16px;">{tt(" A capability overview of Athenum next to typical prompt trackers and SEO suites. Other tools differ, so check their current features. ")}</p>
   </section>
 
   <section class="wrap" style="padding:16px 24px 48px;">

@@ -1,58 +1,31 @@
 ---
 import Base from "../layouts/Base.astro";
 
-const posts = [
-  {
-    date: "2026-10-20",
-    category: "Research Report",
-    title: "State of AI Search 2026: How ChatGPT, Perplexity & AI Overviews Choose Citations",
-    excerpt: "We analyzed 1.4 million AI responses across 8 answer engines to uncover why high-density factual tables, canonical KB claims, and third-party review domains dominate citation share.",
-    readTime: "8 min read",
-  },
-  {
-    date: "2026-10-14",
-    category: "Engineering & MCP",
-    title: "Connecting Claude & Looker Studio to Athenum with MCP and Public REST API v1",
-    excerpt: "A step-by-step guide to querying Share of Voice, Knowledge Base facts, and multi-scope credit balances directly from Claude Desktop and BI dashboards.",
-    readTime: "6 min read",
-  },
-  {
-    date: "2026-10-05",
-    category: "Brand Safety",
-    title: "Eliminating LLM Hallucinations: Inside Athenum Oracle's 3-Tier Discrepancy Scanner",
-    excerpt: "How to detect Confirmed Inaccuracies, KB Discrepancies, and Model Divergence before enterprise prospects encounter outdated pricing or compliance claims.",
-    readTime: "7 min read",
-  },
-  {
-    date: "2026-09-28",
-    category: "Technical AEO",
-    title: "AI Crawler Accessibility in 2026: OAI-SearchBot, PerplexityBot & ClaudeBot Checklist",
-    excerpt: "Why blocking training bots while allowing real-time retrieval bots is critical for citation visibility—and how to verify live page signatures automatically.",
-    readTime: "5 min read",
-  },
+/** Topics for upcoming guides; no posts are published yet. */
+const topics = [
+  { category: "Getting started", title: "Choosing the buyer questions to track", excerpt: "How to turn your sales and support questions into prompts, topics and personas." },
+  { category: "Engineering & MCP", title: "Connecting Claude and Looker Studio with the MCP server and REST API v1", excerpt: "Query share of voice, Knowledge Base facts and credit balances from Claude Desktop and BI dashboards." },
+  { category: "Brand Safety", title: "Reviewing Oracle findings", excerpt: "What each finding type means and how to fix the source a model learned the wrong claim from." },
+  { category: "Technical AEO", title: "AI crawler access: OAI-SearchBot, PerplexityBot and ClaudeBot", excerpt: "How robots.txt rules affect which AI crawlers can read your pages, and how Site Health checks them." },
 ];
 
 import { createTranslator, resolveLocale } from "@athena/i18n";
 const locale = resolveLocale(Astro.props.locale);
 const tt = createTranslator(locale);
-const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base locale={locale} title={tt("Blog & Research | Athenum")}>
+<Base locale={locale} title={tt("Blog | Athenum")}>
   <section class="wrap" style="padding:64px 24px 32px;">
-    <span class="badge">{tt("Athenum Research & Playbooks")}</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" AI Search Engineering & AEO Insights ")}</h1>
-    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt(" Deep dives into Answer Engine Optimization, citation graph mechanics, LLM hallucination remediation, and agentic workflows. ")}</p>
+    <span class="badge">{tt("Coming soon")}</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt("Guides we are writing")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt("No posts are published yet. These are the first guides in progress; the product documentation covers the API, MCP server and features today.")}</p>
   </section>
 
   <section class="wrap grid-2" style="padding:16px 24px 48px;">
-    {posts.map((post) => (
+    {topics.map((t) => (
       <article class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#64748b;margin-bottom:10px;">
-          <span class="badge">{tt(post.category)}</span>
-          <span>{post.date} · {tt(post.readTime)}</span>
-        </div>
-        <h2 style="font-size:20px;margin-bottom:10px;line-height:1.35;">{tt(post.title)}</h2>
-        <p style="font-size:14px;color:#475569;line-height:1.6;">{tt(post.excerpt)}</p>
+        <span class="badge" style="margin-bottom:10px;">{tt(t.category)}</span>
+        <h2 style="font-size:20px;margin-bottom:10px;line-height:1.35;">{tt(t.title)}</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.6;">{tt(t.excerpt)}</p>
       </article>
     ))}
   </section>

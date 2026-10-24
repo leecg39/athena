@@ -1,58 +1,50 @@
 ---
 import Base from "../layouts/Base.astro";
 
-const studies = [
+/** Illustrative workflows built from the product's real features (no customer results). */
+const workflows = [
   {
-    company: "Canvasly (Collaborative Vector Design)",
+    team: "B2B SaaS marketing team",
     industry: "B2B SaaS",
-    headline: "+184% Citation Rate Lift on ChatGPT & Perplexity in 45 Days",
-    metrics: ["64.2% Mention Rate", "41.8% Citation Share", "8 Oracle Hallucinations Resolved"],
-    story: "Canvasly used Athenum's Oracle scanner to identify outdated pricing and SAML claims across GPT-4o and Claude, then published 12 citation-engineered comparison guides directly to Webflow via Content Hub.",
+    headline: "Find the comparison questions where AI answers recommend competitors",
+    steps: ["Track 30–50 buyer questions per topic", "Read which pages the answers cite", "Draft a comparison guide from confirmed facts and publish it to WordPress"],
   },
   {
-    company: "LumenCart (Modern Commerce Infrastructure)",
+    team: "Shopify store",
     industry: "E-Commerce & Retail",
-    headline: "3.4x Increase in AI Shopping Carousel Recommendations",
-    metrics: ["13 Carousel Leaderboards Won", "+$48k/mo Est. AI Traffic Value", "100% OAI-SearchBot Crawl Pass"],
-    story: "By combining Shopping Insights with Athenum's Shopify Catalog Optimization and Site Health AI crawler checks, LumenCart became the #1 cited merchant for headless checkout prompts.",
+    headline: "Improve product listings and watch product cards in AI answers",
+    steps: ["Sync products from Shopify", "Fix the listings with the lowest title and description scores", "Compare product cards in collected answers before and after"],
   },
   {
-    company: "Apex Growth Partners",
+    team: "SEO / AEO agency",
     industry: "Digital & AEO Agency",
-    headline: "Closed $320k in New Annual Retainers Using Pitch Workspace",
-    metrics: ["19 Prospect Pitches Shared", "62% Pitch-to-Close Rate", "3-Scope Group Credit Pooling"],
-    story: "Apex Growth Partners automated prospect audits with Athenum Pitch Workspace—delivering interactive Share-of-Voice benchmarks and Before/After FAQPage JSON-LD rewrites in under 3 minutes.",
+    headline: "Pitch a prospect with measured AI-answer visibility",
+    steps: ["Ask the AI models five of the prospect's buyer questions", "Share the measured pitch link", "Add a rewrite of the prospect's own page copy"],
   },
 ];
 
 import { createTranslator, resolveLocale } from "@athena/i18n";
 const locale = resolveLocale(Astro.props.locale);
 const tt = createTranslator(locale);
-const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.startsWith("//") ? `/en${url === "/" ? "" : url}` : url;
 ---
-<Base locale={locale} title={tt("Case Studies | Athenum Customer Outcomes")}>
+<Base locale={locale} title={tt("Example Workflows | Athenum")}>
   <section class="wrap" style="padding:64px 24px 32px;">
-    <span class="badge">{tt("Verified Customer Impact")}</span>
-    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt(" How Category Leaders Win Share of Voice with Athenum ")}</h1>
-    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt(" Explore how SaaS, commerce, and agency teams turn AI search observability into measurable citation growth and pipeline. ")}</p>
+    <span class="badge">{tt("Example workflows (illustrative, not customer results)")}</span>
+    <h1 style="font-size:42px;letter-spacing:-1.2px;margin-top:14px;">{tt("How Teams Use Athenum")}</h1>
+    <p style="color:#475569;margin-top:12px;max-width:660px;font-size:16px;">{tt("Typical ways SaaS, commerce and agency teams use the product. Results depend on your market and content.")}</p>
   </section>
 
   <section class="wrap" style="padding:16px 24px 48px;display:grid;gap:24px;">
-    {studies.map((s) => (
+    {workflows.map((w) => (
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span class="badge">{tt(s.industry)}</span>
-          <strong style="font-size:14px;color:#475569;">{tt(s.company)}</strong>
+          <span class="badge">{tt(w.industry)}</span>
+          <strong style="font-size:14px;color:#475569;">{tt(w.team)}</strong>
         </div>
-        <h2 style="font-size:24px;margin:12px 0 10px;">{tt(s.headline)}</h2>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-          {s.metrics.map((m) => (
-            <span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;">
-              {tt(m)}
-            </span>
-          ))}
-        </div>
-        <p style="font-size:14px;color:#334155;line-height:1.65;">{tt(s.story)}</p>
+        <h2 style="font-size:24px;margin:12px 0 10px;">{tt(w.headline)}</h2>
+        <ol style="font-size:14px;color:#334155;line-height:1.65;padding-left:18px;">
+          {w.steps.map((s) => <li>{tt(s)}</li>)}
+        </ol>
       </div>
     ))}
   </section>

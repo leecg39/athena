@@ -1,4 +1,5 @@
 ---
+import { APP_URL } from "../lib/app-url";
 import Base from "../layouts/Base.astro";
 
 const plans = [
@@ -6,48 +7,30 @@ const plans = [
     name: "Free",
     price: "$0",
     credits: "300 monthly credits",
-    models: "5 AI answer surfaces",
-    features: [
-      "Up to 25 tracked prompts per website",
-      "Olympus visibility & Share of Voice dashboard",
-      "Sources & competitor heatmap analysis",
-      "Ask Athena AI copilot",
-      "3 prospect pitches / month",
-    ],
+    models: "ChatGPT, Perplexity and Gemini",
+    features: ["Up to 50 tracked prompts per website", "Olympus visibility & Share of Voice dashboard", "Sources & competitor heatmap analysis", "Ask Athena AI copilot", "3 prospect pitches / month"],
   },
   {
     name: "Starter",
     price: "$295",
     credits: "3,600 monthly credits",
-    models: "All 8 AI answer surfaces",
+    models: "Adds Claude, Grok and DeepSeek",
     popular: true,
-    features: [
-      "Up to 250 tracked prompts per website",
-      "Knowledge Base & Oracle inaccuracy scanner",
-      "Content Hub + 7 CMS integrations + Shopify Catalog",
-      "Multi-scope credit pools (Org / Website / Group)",
-      "25 prospect pitches / month + Report Builder PDF/Slack",
-    ],
+    features: ["Up to 500 tracked prompts per website", "Knowledge Base & Oracle fact checks", "Content Hub publishing to WordPress & Shopify, exports for other CMSs", "Multi-scope credit pools (Org / Website / Group)", "10 prospect pitches / month + scheduled email & Slack reports"],
   },
   {
     name: "Enterprise",
     price: "$1,450",
-    credits: "25,000 monthly credits",
-    models: "All 8 AI surfaces + custom regions",
-    features: [
-      "Up to 2,000 tracked prompts per website",
-      "Public REST API (/api/v1) & 14-tool MCP Server",
-      "Looker Studio & Power BI native connectors",
-      "SAML 2.0 / OIDC SSO & Custom RBAC roles",
-      "200 prospect pitches / month + Dedicated AEO Architect",
-    ],
+    credits: "20,000 monthly credits",
+    models: "All 6 AI models",
+    features: ["Up to 5,000 tracked prompts per website", "Public REST API (/api/v1) & 14-tool MCP Server", "Looker Studio & Power BI connectors", "Custom roles, Google & Microsoft sign-in", "100 prospect pitches / month"],
   },
 ];
 
 const addons = [
-  { name: "Public REST API & MCP Server Add-on", price: "$99/mo", detail: "Unlocks 60 req/min Bearer API keys, 14 MCP tools, Looker Studio & Power BI feeds (+500 bonus credits)." },
-  { name: "Agency Pitch Pro Add-on", price: "$75/mo", detail: "Expands Pitch Workspace quota and white-labelBefore/After AEO rewrite share links (+300 bonus credits)." },
-  { name: "On-Demand Credit Packs", price: "$79 – $895", detail: "Instant top-up packs (+1,000 for $79 · +5,000 for $345 · +15,000 for $895) allocatable to Org, Website, or Group pools." },
+  { name: "REST API & MCP Server Add-on", price: "$99/mo", detail: "API keys with 60 requests/min, the 14-tool MCP server and Looker Studio & Power BI feeds (+500 credits with each paid month)." },
+  { name: "Pitch Pro Add-on", price: "$75/mo", detail: "Extra pitch capacity for agencies (+500 credits with each paid month)." },
+  { name: "Credit Packs", price: "$79 – $895", detail: "One-time packs: +1,000 for $79 · +5,000 for $345 · +15,000 for $895, added to the organization pool." },
 ];
 
 import { createTranslator, resolveLocale } from "@athena/i18n";
@@ -76,8 +59,8 @@ const hrefFor = (url: string) => locale === "en" && url.startsWith("/") && !url.
           <ul style="list-style:none;padding:0;font-size:14px;color:#334155;display:grid;gap:10px;margin-bottom:24px;">
             {p.features.map((f) => <li>✓ {tt(f)}</li>)}
           </ul>
-          <a class={`btn ${p.popular ? "btn-primary" : "btn-secondary"}`} style="width:100%;" href="http://localhost:3000/login">
-            {tt(p.name === "Enterprise" ? "Start Enterprise Trial" : "Start Free Workspace")}
+          <a class={`btn ${p.popular ? "btn-primary" : "btn-secondary"}`} style="width:100%;" href={`${APP_URL}/login`}>
+            {tt(p.name === "Free" ? "Start Free Workspace" : "Sign in to upgrade")}
           </a>
         </div>
       ))}
