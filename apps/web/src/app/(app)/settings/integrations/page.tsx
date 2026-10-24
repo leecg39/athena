@@ -4,6 +4,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, publishTargets, apiKeys } from "@athena/db";
 import { getIntegration } from "@athena/core/integrations";
 import { getSlackConnection } from "@athena/core/reports";
+import { targetConfigured } from "@athena/core/content";
 import { SlackConnectForm } from "@/components/slack-connect-form";
 import { gscConfigured } from "@/lib/integrations";
 import { SettingsShell } from "@/components/settings-shell";
@@ -39,14 +40,14 @@ export default async function IntegrationsSettingsPage() {
   const s = await getSettingsContext();
   const [gsc, targets, slack, [keys]] = await Promise.all([
     getIntegration(db, s.websiteId, "gsc"),
-    db.select({ provider: publishTargets.provider }).from(publishTargets).where(eq(publishTargets.websiteId, s.websiteId)),
+    db.select({ provider: publishTargets.provider, config: publishTargets.config }).from(publishTargets).where(eq(publishTargets.websiteId, s.websiteId)),
     getSlackConnection(db, { actorId: s.user.id, websiteId: s.websiteId }),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(apiKeys)
       .where(and(eq(apiKeys.organizationId, s.organizationId), isNull(apiKeys.revokedAt))),
   ]);
-  const connectedCms = new Set(targets.map((t) => t.provider));
+  const connectedCms = new Set(targets.filter((t) => targetConfigured(t.provider, t.config)).map((t) => t.provider));
   const hasKey = (keys?.n ?? 0) > 0;
 
   const groups: { title: string; hint: string; items: Item[] }[] = [
@@ -66,11 +67,7 @@ export default async function IntegrationsSettingsPage() {
     {
       title: "Publish",
       hint: "Send content to your CMS",
-      items: CMS.map((c) =>
-        c === "wordpress" || c === "shopify"
-          ? { name: CMS_LABEL[c], connected: connectedCms.has(c), href: "/content" }
-          : { name: CMS_LABEL[c], connected: false, note: "Export only: download the export from Content Hub and import it" },
-      ),
+      items: CMS.map((c) => ({ name: CMS_LABEL[c], connected: connectedCms.has(c), href: "/content" })),
     },
     {
       title: "Extend",

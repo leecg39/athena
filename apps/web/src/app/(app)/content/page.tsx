@@ -1,10 +1,13 @@
 import { getTranslations } from "@/lib/i18n/server";
 import { db } from "@athena/db";
 import { getMembership } from "@athena/core/org";
-import { listContentHub, listPublishTargets } from "@athena/core/content";
+import { cmsConnectionSchema, listContentHub, listPublishTargets } from "@athena/core/content";
 import { PageHeader } from "@/components/page-header";
 import { ContentGrid } from "@/components/content-grid";
 import { requireWorkspace } from "@/lib/workspace";
+
+// publishing runs multi-step CMS flows (Contentful, Wix: up to 3 requests of 20s) and waits for a Framer deployment from this page's actions
+export const maxDuration = 120;
 
 export async function generateMetadata() {
   const tt = await getTranslations();
@@ -51,8 +54,8 @@ export default async function ContentPage() {
           </div>
           <div className="metric-card">
             <div className="text-xs font-medium text-gray-500">{tt("Connected CMS Targets")}</div>
-            <div className="mt-1 text-2xl font-semibold text-gray-900">{targets.filter((t) => t.mode === "direct" && t.configured).length}</div>
-            <div className="mt-1 text-xs text-gray-400">{tt("Direct: WordPress, Shopify · others via Export")}</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900">{targets.filter((t) => t.configured).length}</div>
+            <div className="mt-1 text-xs text-gray-400">{tt("WordPress, Webflow, Contentful, Sanity, Wix, Framer, Payload, Shopify")}</div>
           </div>
         </div>
 
@@ -92,7 +95,8 @@ export default async function ContentPage() {
             createdAt: item.createdAt.toISOString(),
           }))}
           counts={data.counts}
-          publishTargets={targets.map((t) => ({ id: t.id, provider: t.provider, label: t.label, mode: t.mode, configured: t.configured, config: t.config }))}
+          publishTargets={targets.map((t) => ({ id: t.id, provider: t.provider, label: t.label, configured: t.configured, config: t.config }))}
+          cmsSchema={cmsConnectionSchema()}
           prompts={data.prompts}
           canWrite={canWrite}
         />

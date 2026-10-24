@@ -23,12 +23,12 @@ import {
   markContentPublished,
   contentWritingContext,
   CMS_FIELDS,
-  isDirect,
 } from "@athena/core/content";
 import { getSettingsContext } from "@/lib/settings-context";
 import { fetchPageHtml } from "@/lib/page-fetch";
 import { integrationKey } from "@/lib/integrations";
 import { cmsRequest } from "@/lib/cms-request";
+import { framerConnect } from "@/lib/framer-connect";
 import { writeBrief, writeDraft, writeRevision, writtenBy } from "@/lib/content-writer";
 import { contentLimiter } from "@/lib/limits";
 import type { ActionState } from "@/lib/action-state";
@@ -273,7 +273,7 @@ export async function upsertPublishTargetAction(_prev: ActionState, formData: Fo
     if (!(CMS_PROVIDERS as readonly string[]).includes(rawProvider)) return { ok: false, error: "Invalid CMS provider" };
     const provider = rawProvider as CmsProvider;
     // only the fields this CMS needs; empty or masked values keep what is stored
-    const fields = isDirect(provider) ? CMS_FIELDS[provider] : [];
+    const fields = CMS_FIELDS[provider];
     const config = Object.fromEntries(fields.map((f) => [f.key, String(formData.get(f.key) ?? "").trim()]).filter(([, v]) => v));
     const saved = await upsertPublishTarget(db, { actorId: s.user.id, websiteId: s.websiteId, provider, config, secretKey: integrationKey() });
     revalidatePath("/content");
@@ -310,7 +310,7 @@ export async function publishContentItemAction(_prev: ActionState, formData: For
     const contentId = String(formData.get("contentId") ?? "").trim();
     const rawProvider = String(formData.get("provider") ?? "").trim().toLowerCase();
     if (!(CMS_PROVIDERS as readonly string[]).includes(rawProvider)) return { ok: false, error: "Unsupported CMS provider" };
-    const res = await publishContentItem(db, { actorId: s.user.id, websiteId: s.websiteId, contentId, provider: rawProvider as CmsProvider, secretKey: integrationKey(), request: cmsRequest });
+    const res = await publishContentItem(db, { actorId: s.user.id, websiteId: s.websiteId, contentId, provider: rawProvider as CmsProvider, secretKey: integrationKey(), request: cmsRequest, framer: framerConnect });
     revalidatePath("/content");
     return { ok: true, message: res.publishedUrl ? `Published v${res.publishedVersion} to ${res.providerLabel}: ${res.publishedUrl}` : `Published v${res.publishedVersion} to ${res.providerLabel}.` };
   } catch (err) {

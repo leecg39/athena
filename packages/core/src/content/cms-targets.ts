@@ -1,8 +1,7 @@
 /**
- * CMS connections. Direct publishing is implemented for WordPress (REST API +
- * Application Password) and Shopify (Admin REST articles); other CMSs are
- * export-only until a real integration exists. Secret fields are sealed with
- * the integrations key and never returned in clear.
+ * CMS connections. Every supported CMS publishes directly through its own API
+ * (see cms-providers). Secret fields are sealed with the integrations key and
+ * never returned in clear.
  */
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
@@ -11,40 +10,21 @@ import { requireWebsitePermission } from "../tenancy";
 import { logActivity } from "../org/activity";
 import { DomainError, NotFoundError } from "../org/errors";
 import { decryptSecret, encryptSecret } from "../integrations/crypto";
-import { CMS_PROVIDER_LABELS, CMS_PROVIDERS, type CmsProvider, validateSafeCmsEndpointUrl } from "./shared";
+import { CMS_PROVIDER_LABELS, CMS_PROVIDERS, type CmsProvider } from "./shared";
+import { PROVIDERS, type FieldSpec } from "./cms-providers";
 
-export const DIRECT_PROVIDERS = ["wordpress", "shopify"] as const satisfies readonly CmsProvider[];
-export type DirectProvider = (typeof DIRECT_PROVIDERS)[number];
-export const isDirect = (p: string): p is DirectProvider => (DIRECT_PROVIDERS as readonly string[]).includes(p);
+export const CMS_FIELDS = Object.fromEntries(CMS_PROVIDERS.map((p) => [p, PROVIDERS[p].fields])) as Record<CmsProvider, FieldSpec[]>;
 
-interface FieldSpec {
-  key: string;
-  label: string;
-  secret?: boolean;
-  required: boolean;
-  parse: (v: string) => string;
+/** What the connection form needs to render each CMS (no validators, no stored values). */
+export function cmsConnectionSchema() {
+  return CMS_PROVIDERS.map((p) => ({
+    provider: p,
+    label: CMS_PROVIDER_LABELS[p],
+    note: PROVIDERS[p].note,
+    fields: PROVIDERS[p].fields.map((f) => ({ key: f.key, label: f.label, secret: Boolean(f.secret), required: f.required, placeholder: f.placeholder ?? f.defaultValue ?? "", options: f.options ? [...f.options] : null })),
+  }));
 }
-
-const text = (max: number) => (v: string) => z.string().trim().min(1).max(max).parse(v);
-const httpsUrl = (v: string) => {
-  const url = validateSafeCmsEndpointUrl(v);
-  if (!url || !url.startsWith("https://")) throw new DomainError("Use an https:// site URL so credentials stay encrypted in transit");
-  return url.replace(/\/+$/, "");
-};
-
-export const CMS_FIELDS: Record<DirectProvider, FieldSpec[]> = {
-  wordpress: [
-    { key: "siteUrl", label: "Site URL", required: true, parse: httpsUrl },
-    { key: "username", label: "Username", required: true, parse: text(100) },
-    { key: "applicationPassword", label: "Application password", secret: true, required: true, parse: text(200) },
-  ],
-  shopify: [
-    { key: "storeDomain", label: "Store domain (*.myshopify.com)", required: true, parse: (v) => { if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(v.trim())) throw new DomainError("Use the store's *.myshopify.com domain"); return v.trim().toLowerCase(); } },
-    { key: "blogId", label: "Blog ID", required: true, parse: (v) => { if (!/^\d{1,20}$/.test(v.trim())) throw new DomainError("The blog ID is the number in the blog's admin URL"); return v.trim(); } },
-    { key: "accessToken", label: "Admin API access token", secret: true, required: true, parse: text(200) },
-    { key: "blogHandle", label: "Blog handle (for public links)", required: false, parse: (v) => { if (!/^[a-z0-9-]{1,100}$/.test(v.trim())) throw new DomainError("The blog handle uses lowercase letters, numbers and dashes"); return v.trim(); } },
-  ],
-};
+export type CmsConnectionSchema = ReturnType<typeof cmsConnectionSchema>;
 
 const SEALED = "enc:";
 const MASK = "••••••••";
@@ -54,15 +34,20 @@ export interface PublishTargetView {
   websiteId: string;
   provider: CmsProvider;
   label: string;
-  mode: "direct" | "export";
   configured: boolean;
   config: Record<string, string>;
   createdAt: Date;
 }
 
+/** Every required field of the connection has a value. */
+export function targetConfigured(provider: string, config: Record<string, string> | null | undefined): boolean {
+  const fields = CMS_FIELDS[provider as CmsProvider] ?? [];
+  return fields.length > 0 && fields.every((f) => !f.required || Boolean(config?.[f.key]));
+}
+
 function view(row: typeof publishTargets.$inferSelect): PublishTargetView {
   const provider = row.provider as CmsProvider;
-  const fields = isDirect(provider) ? CMS_FIELDS[provider] : [];
+  const fields = CMS_FIELDS[provider] ?? [];
   // only known fields are shown; secrets (and anything sealed) are masked, unknown legacy keys are dropped
   const config = Object.fromEntries(fields.flatMap((f) => { const v = row.config?.[f.key]; return v ? [[f.key, f.secret || v.startsWith(SEALED) ? MASK : v]] : []; }));
   return {
@@ -70,8 +55,7 @@ function view(row: typeof publishTargets.$inferSelect): PublishTargetView {
     websiteId: row.websiteId,
     provider,
     label: CMS_PROVIDER_LABELS[provider] ?? provider,
-    mode: isDirect(provider) ? "direct" : "export",
-    configured: fields.length > 0 && fields.every((f) => !f.required || Boolean(row.config?.[f.key])),
+    configured: targetConfigured(provider, row.config),
     config,
     createdAt: row.createdAt,
   };
@@ -88,18 +72,23 @@ export async function listPublishTargets(db: Db, input: { actorId: string; websi
   return rows.map(view);
 }
 
-/** Validated, sealed field values merged over the existing ones (masked or empty input keeps a value). */
-function mergeConfig(provider: DirectProvider, existing: Record<string, string>, incoming: Record<string, string>, secretKey: string): Record<string, string> {
+const seal = (f: FieldSpec, value: string, secretKey: string) => (f.secret && !value.startsWith(SEALED) ? `${SEALED}${encryptSecret(value, secretKey)}` : value);
+
+/** Validated, sealed field values merged over the existing ones (masked or empty input keeps a value, else the default). */
+function mergeConfig(provider: CmsProvider, existing: Record<string, string>, incoming: Record<string, string>, secretKey: string, site: { domain: string }): Record<string, string> {
   return CMS_FIELDS[provider].reduce<Record<string, string>>((acc, f) => {
     const raw = incoming[f.key]?.trim();
-    if (!raw || raw.includes("••••")) return existing[f.key] ? { ...acc, [f.key]: existing[f.key] } : acc;
+    if (!raw || raw.includes("••••")) {
+      const kept = existing[f.key] || f.defaultValue;
+      return kept ? { ...acc, [f.key]: seal(f, kept, secretKey) } : acc;
+    }
     let value: string;
     try {
-      value = f.parse(raw);
+      value = f.parse(raw, site);
     } catch (err) {
       throw err instanceof DomainError ? err : new DomainError(`${f.label} is not valid`);
     }
-    return { ...acc, [f.key]: f.secret ? `${SEALED}${encryptSecret(value, secretKey)}` : value };
+    return { ...acc, [f.key]: seal(f, value, secretKey) };
   }, {});
 }
 
@@ -109,12 +98,11 @@ export async function upsertPublishTarget(
 ): Promise<PublishTargetView> {
   if (!(CMS_PROVIDERS as readonly string[]).includes(input.provider)) throw new DomainError("Unknown CMS");
   const site = await requireWebsitePermission(db, input.actorId, input.websiteId, "content:write");
-  if (!isDirect(input.provider)) throw new DomainError(`Direct publishing to ${CMS_PROVIDER_LABELS[input.provider]} isn't available yet — use Export from the Content Hub instead`);
   const provider = input.provider;
   return db.transaction(async (tx) => {
     await tx.select({ id: websites.id }).from(websites).where(eq(websites.id, site.id)).for("update");
     const [existing] = await tx.select().from(publishTargets).where(and(eq(publishTargets.websiteId, site.id), eq(publishTargets.provider, provider)));
-    const config = mergeConfig(provider, existing?.config ?? {}, input.config ?? {}, input.secretKey);
+    const config = mergeConfig(provider, existing?.config ?? {}, input.config ?? {}, input.secretKey, site);
     const [saved] = existing
       ? await tx.update(publishTargets).set({ config }).where(eq(publishTargets.id, existing.id)).returning()
       : await tx.insert(publishTargets).values({ websiteId: site.id, provider, config }).returning();

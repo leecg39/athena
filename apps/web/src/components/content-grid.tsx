@@ -17,6 +17,7 @@ import {
   saveVersionAction,
 } from "@/app/(app)/content/actions";
 import { CmsPanel, type SerializedPublishTarget } from "@/components/content/cms-panel";
+import type { CmsConnectionSchema } from "@athena/core/content";
 import { PublishTab } from "@/components/content/publish-tab";
 import { ReviseTab } from "@/components/content/revise-tab";
 
@@ -89,6 +90,7 @@ export function ContentGrid(props: {
     total: number;
   };
   publishTargets: SerializedPublishTarget[];
+  cmsSchema: CmsConnectionSchema;
   prompts: { id: string; text: string }[];
   canWrite: boolean;
 }) {
@@ -202,7 +204,7 @@ export function ContentGrid(props: {
                 onClick={() => setActivePanel(activePanel === "cms" ? null : "cms")}
                 className="btn-secondary !px-3 !py-1.5 text-xs"
               >
-                {tt("CMS Connectors (")}{props.publishTargets.length}/8)
+                {tt("CMS Connectors (")}{props.publishTargets.filter((t) => t.configured).length}/8)
               </button>
               <button
                 type="button"
@@ -340,7 +342,7 @@ export function ContentGrid(props: {
         </form>
       ) : null}
 
-      {activePanel === "cms" && props.canWrite ? <CmsPanel targets={props.publishTargets} onClose={() => setActivePanel(null)} /> : null}
+      {activePanel === "cms" && props.canWrite ? <CmsPanel targets={props.publishTargets} schema={props.cmsSchema} onClose={() => setActivePanel(null)} /> : null}
 
       {/* Spreadsheet-style Content Hub Grid */}
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">

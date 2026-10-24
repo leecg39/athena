@@ -34,6 +34,18 @@ describe("language selection", () => {
     expect(createTranslator("ko")("Rate limit reached. Try again in 12s.")).toBe("요청 한도에 도달했습니다. 12초 후 다시 시도하세요.");
     expect(createTranslator("en")('Pillar "Home" saved.')).toBe('Pillar "Home" saved.');
   });
+  it("translates CMS publishing outcomes without changing CMS names, ids or the CMS's own message", () => {
+    const t = createTranslator("ko");
+    expect(t("Webflow rejected the post (HTTP 400): Validation Error; slug taken")).toBe("Webflow이(가) 게시 요청을 거부했습니다 (HTTP 400): Validation Error; slug taken");
+    expect(t("Contentful rejected publishing (HTTP 422): Validation error (required fields.summary). The draft created in Contentful was removed.")).toBe(
+      "Contentful이(가) 게시를 거부했습니다 (HTTP 422): Validation error (required fields.summary). Contentful에 만든 초안은 삭제했습니다.",
+    );
+    expect(t("Wix rejected publishing (HTTP 403): Missing Post Owner. The draft 894a58a2 is still in Wix — publish or delete it there.")).toBe(
+      "Wix이(가) 게시를 거부했습니다 (HTTP 403): Missing Post Owner. 초안 894a58a2이(가) Wix에 남아 있으니 그곳에서 게시하거나 삭제하세요.",
+    );
+    expect(t("Your Framer project has 2 unpublished page change(s). Publish or discard them in Framer first, so only this post goes live.")).toContain("2건");
+    expect(t("Finish the Sanity connection first (missing: Project ID)")).toBe("먼저 Sanity 연결을 완료하세요 (누락: Project ID)");
+  });
   it("keeps parameter sets consistent across translated messages", () => {
     for (const [key, value] of Object.entries(ko)) {
       const slots = (s: string) => [...new Set(s.match(/\{\d+\}/g) ?? [])].sort();

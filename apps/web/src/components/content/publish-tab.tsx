@@ -23,7 +23,7 @@ export function PublishTab(props: { item: { id: string; status: string; targetUr
   const tt = useTranslations();
   const [pubState, pubAct, publishing] = useActionState(publishContentItemAction, idle);
   const [markState, markAct, marking] = useActionState(markPublishedAction, idle);
-  const direct = props.targets.filter((t) => t.mode === "direct" && t.configured);
+  const direct = props.targets.filter((t) => t.configured);
   const msg = pubState.error ?? markState.error ?? pubState.message ?? markState.message;
   if (!props.item.hasVersion) return <p className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-xs text-gray-400">{tt("Write or generate a draft before publishing.")}</p>;
   return (
@@ -46,7 +46,7 @@ export function PublishTab(props: { item: { id: string; status: string; targetUr
             </button>
           </form>
         ) : (
-          <p className="text-gray-500">{tt("Connect WordPress or Shopify under “CMS connections” to publish with one click.")}</p>
+          <p className="text-gray-500">{tt("Connect a CMS under “CMS connections” to publish with one click.")}</p>
         )}
       </section>
       <section className="space-y-2">

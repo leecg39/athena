@@ -24,7 +24,7 @@ const PLATFORM_PILLARS = [
   {
     badge: "Content Hub & Outreach",
     title: "Content Grounded in Confirmed Facts",
-    description: "Briefs, drafts and Shopify listing updates from your confirmed facts, published to WordPress or Shopify (exports for other CMSs).",
+    description: "Briefs, drafts and Shopify listing updates from your confirmed facts, published directly to WordPress, Webflow, Contentful, Sanity, Wix, Framer, Payload or Shopify.",
   },
 ];
 

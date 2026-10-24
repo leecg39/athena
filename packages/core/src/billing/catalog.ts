@@ -38,7 +38,7 @@ export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanCatalogItem> = {
     monthlyCredits: 3600,
     modelsCount: collectedCount(PLANS.starter.models),
     pitchLimit: 10,
-    features: ["3,600 monthly AI answer credits", "Adds Claude, Grok and DeepSeek answers", "10 prospect pitches / month", "Content Hub publishing to WordPress and Shopify, Outreach and Site Health"],
+    features: ["3,600 monthly AI answer credits", "Adds Claude, Grok and DeepSeek answers", "10 prospect pitches / month", "Content Hub publishing to 8 CMSs, Outreach and Site Health"],
   },
   enterprise: {
     tier: "enterprise",
