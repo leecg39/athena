@@ -36,11 +36,11 @@ export async function GET(
       invoiceId: inv.id,
       stripeInvoiceId: inv.stripeInvoiceId,
       organizationName: org?.name ?? "Athenum Organization",
-      description: inv.description ?? "Athenum Subscription & Credits Invoice",
+      description: inv.description ?? "Invoice",
       amountCents: inv.amountCents,
       currency: inv.currency,
       status: inv.status,
-      issuedAt: inv.issuedAt ?? new Date(),
+      issuedAt: inv.issuedAt ?? null,
     });
 
     const filename = (inv.stripeInvoiceId || `invoice-${inv.id.slice(0, 8)}`)

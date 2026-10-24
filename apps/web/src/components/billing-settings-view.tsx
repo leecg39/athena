@@ -15,63 +15,39 @@ import {
 
 const idle: ActionState = { ok: false };
 
+/** Mirrors CREDIT_PACK_CATALOG / BILLING_ADDON_CATALOG in @athena/core/billing (kept here for the client bundle). */
 const CREDIT_PACKS = [
-  {
-    id: "pack_1k",
-    label: "+1,000 Credits Top-Up Pack",
-    credits: 1000,
-    priceUsd: 79,
-    description: "Instant 1,000 AI response credits (never expire while subscription is active)",
-  },
-  {
-    id: "pack_5k",
-    label: "+5,000 Credits Growth Pack",
-    credits: 5000,
-    priceUsd: 345,
-    description: "5,000 AI response credits ($0.069/credit — save 13%)",
-  },
-  {
-    id: "pack_15k",
-    label: "+15,000 Credits Scale Pack",
-    credits: 15000,
-    priceUsd: 895,
-    description: "15,000 AI response credits for high-frequency multi-brand tracking (save 24%)",
-  },
+  { id: "pack_1k", label: "+1,000 credits", credits: 1000, priceUsd: 79, description: "1,000 AI answer credits" },
+  { id: "pack_5k", label: "+5,000 credits", credits: 5000, priceUsd: 345, description: "5,000 AI answer credits ($0.069/credit)" },
+  { id: "pack_15k", label: "+15,000 credits", credits: 15000, priceUsd: 895, description: "15,000 AI answer credits ($0.060/credit)" },
 ] as const;
 
 const BILLING_ADDONS = [
-  {
-    id: "api_mcp_addon",
-    label: "Public REST API, MCP Server & BI Connectors Add-on",
-    priceMonthlyUsd: 99,
-    bonusCredits: 500,
-    description:
-      "Unlocks high-throughput /api/v1/* endpoints, ChatGPT/Claude MCP Server, and Looker Studio / Power BI feeds (+500 monthly credits).",
-  },
-  {
-    id: "pitch_pro_addon",
-    label: "Agency Pitch Deck Pro Add-on",
-    priceMonthlyUsd: 75,
-    bonusCredits: 500,
-    description:
-      "Unlocks agency prospect pitch templates, custom PDF export branding, and +500 bonus monthly credits.",
-  },
+  { id: "api_mcp_addon", label: "REST API, MCP server and BI connectors", priceMonthlyUsd: 99, bonusCredits: 500, description: "/api/v1, the MCP server and Looker Studio / Power BI feeds, plus 500 credits with each paid month." },
+  { id: "pitch_pro_addon", label: "Pitch Pro", priceMonthlyUsd: 75, bonusCredits: 500, description: "Extra pitch capacity for agencies, plus 500 credits with each paid month." },
 ] as const;
+
+const MODE_NOTE: Record<"stripe" | "test" | "off", { cls: string; text: string }> = {
+  stripe: { cls: "border-gray-200 bg-white text-gray-600", text: "Payments go through Stripe Checkout. Plans, packs and add-ons change only after Stripe confirms the payment." },
+  test: { cls: "border-amber-200 bg-amber-50 text-amber-800", text: "Billing test mode: changes are applied without payment and recorded as not charged. Never enable this in production." },
+  off: { cls: "border-gray-200 bg-gray-50 text-gray-600", text: "Billing isn't configured on this server, so plans and credit packs can't be purchased yet." },
+};
 
 export function BillingSettingsView({
   overview,
   plans,
   canWriteBilling,
+  mode,
 }: {
   overview: BillingOverview;
   plans: BillingPlanCatalogItem[];
   canWriteBilling: boolean;
+  mode: "stripe" | "test" | "off";
 }) {
   const tt = useTranslations();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">(
     overview.subscription.billingInterval,
   );
-  const [packTargetScope, setPackTargetScope] = useState<string>("organization");
 
   const [planState, planFormAction, planPending] = useActionState(
     changeSubscriptionPlanAction,
@@ -114,6 +90,8 @@ export function BillingSettingsView({
         </div>
       ) : null}
 
+      <div className={`rounded-xl border px-4 py-3 text-xs ${MODE_NOTE[mode].cls}`}>{tt(MODE_NOTE[mode].text)}</div>
+
       {/* Top Executive KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <div className="metric-card">
@@ -147,7 +125,7 @@ export function BillingSettingsView({
             {overview.subscription.monthlyCredits.toLocaleString()}
           </div>
           <div className="mt-1 text-xs text-gray-400">
-            {tt("Status: ")}<span className="font-medium text-emerald-700">{tt(overview.subscription.status)}</span> {tt(" · Renews ")}{new Date(overview.subscription.currentPeriodEnd).toISOString().slice(0, 10)}
+            {tt("Status: ")}<span className="font-medium text-emerald-700">{tt(overview.subscription.status)}</span> {tt(" · Renews ")}{overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toISOString().slice(0, 10) : "—"}
           </div>
         </div>
 
@@ -170,7 +148,7 @@ export function BillingSettingsView({
             <h2 className="text-sm font-semibold text-gray-900">
               {tt("Subscription Plans — Free, Starter ($295/mo) & Enterprise")}</h2>
             <p className="text-xs text-gray-500">
-              {tt("Upgrade anytime to unlock all 11 AI search engines, higher monthly credit allowances, and agency pitch quotas.")}</p>
+              {tt("Higher plans add AI models, monthly credits and pitch capacity.")}</p>
           </div>
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-xs">
             <button
@@ -247,7 +225,7 @@ export function BillingSettingsView({
                     <input type="hidden" name="billingInterval" value={billingInterval} />
                     <button
                       type="submit"
-                      disabled={planPending || (isCurrent && overview.subscription.billingInterval === billingInterval)}
+                      disabled={planPending || mode === "off" || (isCurrent && overview.subscription.billingInterval === billingInterval)}
                       className={`w-full rounded-lg px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${
                         p.tier === "starter"
                           ? "bg-brand-600 text-white hover:bg-brand-700"
@@ -404,28 +382,7 @@ export function BillingSettingsView({
             <h2 className="text-sm font-semibold text-gray-900">
               {tt("Additional Credit Top-Up Packs")}</h2>
             <p className="text-xs text-gray-500">
-              {tt("Purchase instant AI response credit packs and deposit them into your Organization, Website, or Group pool.")}</p>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              {tt("Deposit Purchased Credits Into:")}</label>
-            <select
-              value={packTargetScope}
-              onChange={(e) => setPackTargetScope(e.target.value)}
-              className="input-base w-full text-xs"
-            >
-              <option value="organization">
-                {tt("Organization Unallocated Pool (")}{overview.balances.orgUnallocatedBalance.toLocaleString()} {tt(" credits)")}</option>
-              {overview.balances.websitePools.map((w) => (
-                <option key={w.websiteId} value={`website:${w.websiteId}`}>
-                  {tt("Website Pool: ")}{w.websiteName} ({w.balance.toLocaleString()} {tt(" credits)")}</option>
-              ))}
-              {overview.balances.groupPools.map((g) => (
-                <option key={g.groupId} value={`group:${g.groupId}`}>
-                  {tt("Group Shared Pool: ")}{g.groupName} ({g.balance.toLocaleString()} {tt(" credits)")}</option>
-              ))}
-            </select>
+              {tt("Purchased credits go to the organization pool; allocate them to websites or groups afterwards.")}</p>
           </div>
 
           <div className="space-y-2.5">
@@ -436,14 +393,13 @@ export function BillingSettingsView({
                 className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-3.5"
               >
                 <input type="hidden" name="packId" value={pack.id} />
-                <input type="hidden" name="targetScope" value={packTargetScope} />
                 <div>
                   <div className="text-xs font-semibold text-gray-900">{tt(pack.label)}</div>
                   <div className="text-[11px] text-gray-500">{tt(pack.description)}</div>
                 </div>
                 <button
                   type="submit"
-                  disabled={!canWriteBilling || packPending}
+                  disabled={!canWriteBilling || packPending || mode === "off"}
                   className="btn-primary shrink-0 !px-3.5 !py-1.5 text-xs font-semibold"
                 >
                   {tt("Buy $")}{pack.priceUsd}
@@ -492,7 +448,7 @@ export function BillingSettingsView({
                     </div>
                     <button
                       type="submit"
-                      disabled={!canWriteBilling || addonPending}
+                      disabled={!canWriteBilling || addonPending || mode === "off"}
                       className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                         isEnabled
                           ? "border border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
@@ -583,22 +539,22 @@ export function BillingSettingsView({
                 <th>{tt("Description")}</th>
                 <th>{tt("Status")}</th>
                 <th className="text-right">{tt("Amount")}</th>
-                <th className="text-right">{tt("Receipt PDF")}</th>
+                <th className="text-right">{tt("PDF")}</th>
               </tr>
             </thead>
             <tbody>
               {overview.invoices.map((inv) => (
                 <tr key={inv.id}>
                   <td className="font-mono text-xs text-gray-500">
-                    {new Date(inv.issuedAt).toISOString().slice(0, 10)}
+                    {inv.issuedAt ? new Date(inv.issuedAt).toISOString().slice(0, 10) : "—"}
                   </td>
                   <td className="font-mono text-xs text-gray-700">
                     {inv.stripeInvoiceId ?? inv.id.slice(0, 12)}
                   </td>
                   <td className="text-xs font-medium text-gray-900">{tt(inv.description)}</td>
                   <td>
-                    <span className="badge bg-emerald-50 text-xs uppercase text-emerald-700">
-                      {tt(inv.status)}
+                    <span className={`badge text-xs uppercase ${inv.status === "paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+                      {tt(inv.status === "test" ? "test · not charged" : inv.status)}
                     </span>
                   </td>
                   <td className="text-right font-mono text-xs font-semibold text-gray-900">
@@ -616,7 +572,7 @@ export function BillingSettingsView({
               {overview.invoices.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-6 text-center text-xs text-gray-400">
-                    {tt("No invoices issued yet. Upgrade a plan, enable an add-on, or purchase a credit pack to generate an invoice.")}</td>
+                    {tt("No invoices yet. They appear when Stripe confirms a payment.")}</td>
                 </tr>
               ) : null}
             </tbody>

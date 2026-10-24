@@ -1,197 +1,110 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { db } from "@athena/db";
 import { DomainError, ForbiddenError, NotFoundError } from "@athena/core/org";
-import {
-  BILLING_INTERVALS,
-  type BillingAddonId,
-  type BillingInterval,
-  type CreditPackId,
-  allocateWebsiteCredits,
-  changeSubscriptionPlan,
-  purchaseCreditPack,
-  toggleBillingAddon,
-} from "@athena/core/billing";
-import type { PlanTier } from "@athena/core";
+import { allocateWebsiteCredits, getBillingOverview, isAddonId, isPackId, testBuyPack, testChangePlan, testToggleAddon } from "@athena/core/billing";
 import { getSettingsContext } from "@/lib/settings-context";
+import { appBaseUrl } from "@/lib/email";
+import { billingMode, createCheckoutSession, createPortalSession, type CheckoutItem } from "@/lib/stripe-billing";
 import { pitchesLimiter } from "@/lib/limits";
 import type { ActionState } from "@/lib/action-state";
 
 function toActionError(err: unknown, fallback: string): ActionState {
-  if (err instanceof DomainError || err instanceof ForbiddenError || err instanceof NotFoundError) {
-    return { ok: false, error: err.message };
-  }
+  unstable_rethrow(err);
+  if (err instanceof DomainError || err instanceof ForbiddenError || err instanceof NotFoundError) return { ok: false, error: err.message };
+  console.error("[billing] action failed", err);
   return { ok: false, error: fallback };
 }
 
-function checkRate(userId: string): ActionState | null {
-  const r = pitchesLimiter(userId);
-  if (!r.ok) {
-    return {
-      ok: false,
-      error: `Rate limit reached. Try again in ${Math.ceil(r.retryAfterMs / 1000)}s.`,
-    };
-  }
-  return null;
+async function context() {
+  const s = await getSettingsContext();
+  const r = pitchesLimiter(s.user.id);
+  if (!r.ok) throw new DomainError(`Rate limit reached. Try again in ${Math.ceil(r.retryAfterMs / 1000)}s.`);
+  if (!s.can("billing:write")) throw new ForbiddenError("Billing access required");
+  return s;
 }
 
-export async function changeSubscriptionPlanAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    const s = await getSettingsContext();
-    const limited = checkRate(s.user.id);
-    if (limited) return limited;
+const OFF = "Billing isn't configured on this server (set the Stripe keys).";
 
-    const rawPlan = String(formData.get("plan") ?? "starter").trim();
-    const plan: PlanTier =
-      rawPlan === "enterprise" ? "enterprise" : rawPlan === "starter" ? "starter" : "free";
-    const rawInterval = String(formData.get("billingInterval") ?? "monthly").trim();
-    const billingInterval: BillingInterval = (BILLING_INTERVALS as readonly string[]).includes(
-      rawInterval,
-    )
-      ? (rawInterval as BillingInterval)
-      : "monthly";
-
-    const res = await changeSubscriptionPlan(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-      plan,
-      billingInterval,
-    });
-
-    revalidatePath("/settings/billing");
-    revalidatePath("/pitches");
-    return {
-      ok: true,
-      message:
-        res.plan === "free"
-          ? "Switched organization subscription to Free plan."
-          : `Upgraded to ${res.plan.toUpperCase()} (${res.billingInterval}) plan! Granted +${res.monthlyCredits.toLocaleString()} monthly credits (Org pool balance: ${res.orgBalance.toLocaleString()}).`,
-    };
-  } catch (err) {
-    return toActionError(err, "Failed to update subscription plan.");
+/** Sends the user to Stripe Checkout (or the Customer Portal for an existing subscription). */
+async function toStripe(s: Awaited<ReturnType<typeof context>>, item: CheckoutItem | null): Promise<never> {
+  const overview = await getBillingOverview(db, { actorId: s.user.id, organizationId: s.organizationId });
+  const origin = await appBaseUrl();
+  const customerId = overview.subscription.stripeCustomerId;
+  const managePlan = !item || (item.kind === "plan" && overview.subscription.stripeSubscriptionId);
+  if (managePlan) {
+    if (!customerId) throw new DomainError("There is no Stripe subscription to manage yet.");
+    redirect(await createPortalSession(customerId, origin));
   }
+  redirect(await createCheckoutSession({ organizationId: s.organizationId, customerId, email: s.user.email ?? null, item: item!, origin }));
 }
 
-export async function purchaseCreditPackAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function changeSubscriptionPlanAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    const s = await getSettingsContext();
-    const limited = checkRate(s.user.id);
-    if (limited) return limited;
-
-    const rawPack = String(formData.get("packId") ?? "pack_1k").trim();
-    const packId: CreditPackId =
-      rawPack === "pack_15k" ? "pack_15k" : rawPack === "pack_5k" ? "pack_5k" : "pack_1k";
-
-    const rawScope = String(formData.get("targetScope") ?? "organization").trim();
-    let targetScope: "organization" | "website" | "group" = "organization";
-    let targetWebsiteId: string | null = null;
-    let targetGroupId: string | null = null;
-
-    if (rawScope.startsWith("website:")) {
-      targetScope = "website";
-      targetWebsiteId = rawScope.slice("website:".length);
-    } else if (rawScope.startsWith("group:")) {
-      targetScope = "group";
-      targetGroupId = rawScope.slice("group:".length);
+    const s = await context();
+    const plan = String(formData.get("plan") ?? "");
+    const interval = String(formData.get("billingInterval") ?? "monthly") === "annual" ? "annual" : "monthly";
+    const mode = billingMode();
+    if (mode === "off") return { ok: false, error: OFF };
+    if (mode === "test") {
+      const res = await testChangePlan(db, { actorId: s.user.id, organizationId: s.organizationId, plan, billingInterval: interval });
+      revalidatePath("/settings/billing");
+      return { ok: true, message: `Test mode: switched to ${res.plan} (not charged${res.creditsGranted ? `, +${res.creditsGranted.toLocaleString()} test credits` : ""}).` };
     }
-
-    const res = await purchaseCreditPack(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-      packId,
-      targetScope,
-      targetWebsiteId,
-      targetGroupId,
-    });
-
-    revalidatePath("/settings/billing");
-    if (targetGroupId) revalidatePath(`/group/${targetGroupId}`);
-    return {
-      ok: true,
-      message: `Purchased +${res.creditsAdded.toLocaleString()} credits pack (Updated pool balance: ${res.newPoolBalance.toLocaleString()} credits). Invoice issued.`,
-    };
+    return toStripe(s, plan === "starter" || plan === "enterprise" ? { kind: "plan", plan, interval } : null);
   } catch (err) {
-    return toActionError(err, "Failed to purchase credit pack.");
+    return toActionError(err, "Failed to update the subscription.");
   }
 }
 
-export async function toggleBillingAddonAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function purchaseCreditPackAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    const s = await getSettingsContext();
-    const limited = checkRate(s.user.id);
-    if (limited) return limited;
+    const s = await context();
+    const packId = String(formData.get("packId") ?? "");
+    if (!isPackId(packId)) return { ok: false, error: "Unknown credit pack" };
+    const mode = billingMode();
+    if (mode === "off") return { ok: false, error: OFF };
+    if (mode === "test") {
+      const res = await testBuyPack(db, { actorId: s.user.id, organizationId: s.organizationId, packId });
+      revalidatePath("/settings/billing");
+      return { ok: true, message: `Test mode: added ${res.creditsAdded.toLocaleString()} test credits (not charged).` };
+    }
+    return toStripe(s, { kind: "pack", packId });
+  } catch (err) {
+    return toActionError(err, "Failed to start the credit pack checkout.");
+  }
+}
 
-    const rawAddon = String(formData.get("addonId") ?? "api_mcp_addon").trim();
-    const addonId: BillingAddonId =
-      rawAddon === "pitch_pro_addon" ? "pitch_pro_addon" : "api_mcp_addon";
+export async function toggleBillingAddonAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const s = await context();
+    const addonId = String(formData.get("addonId") ?? "");
+    if (!isAddonId(addonId)) return { ok: false, error: "Unknown add-on" };
     const enabled = String(formData.get("enabled") ?? "true") === "true";
-
-    const res = await toggleBillingAddon(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-      addonId,
-      enabled,
-    });
-
-    revalidatePath("/settings/billing");
-    revalidatePath("/settings/api");
-    return {
-      ok: true,
-      message: enabled
-        ? `Activated add-on "${addonId}"${
-            res.bonusCreditsGranted > 0
-              ? ` and granted +${res.bonusCreditsGranted.toLocaleString()} bonus credits.`
-              : "."
-          }`
-        : `Deactivated add-on "${addonId}".`,
-    };
+    const mode = billingMode();
+    if (mode === "off") return { ok: false, error: OFF };
+    if (mode === "test") {
+      await testToggleAddon(db, { actorId: s.user.id, organizationId: s.organizationId, addonId, enabled });
+      revalidatePath("/settings/billing");
+      return { ok: true, message: `Test mode: add-on ${enabled ? "enabled" : "disabled"} (not charged).` };
+    }
+    // cancelling an add-on happens in the Customer Portal
+    return toStripe(s, enabled ? { kind: "addon", addonId } : null);
   } catch (err) {
-    return toActionError(err, "Failed to update billing add-on.");
+    return toActionError(err, "Failed to update the add-on.");
   }
 }
 
-export async function allocateWebsiteCreditsAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function allocateWebsiteCreditsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    const s = await getSettingsContext();
-    const limited = checkRate(s.user.id);
-    if (limited) return limited;
-
-    const websiteId = String(formData.get("websiteId") ?? "").trim();
+    const s = await context();
+    const direction = String(formData.get("direction") ?? "to_website") === "to_org" ? "to_org" : "to_website";
     const amount = Number(formData.get("amount") ?? 0);
-    const rawDirection = String(formData.get("direction") ?? "to_website").trim();
-    const direction = rawDirection === "to_org" ? "to_org" : "to_website";
-    const reason = String(formData.get("reason") ?? "").trim() || undefined;
-
-    const res = await allocateWebsiteCredits(db, {
-      actorId: s.user.id,
-      organizationId: s.organizationId,
-      websiteId,
-      amount,
-      direction,
-      reason,
-    });
-
+    const res = await allocateWebsiteCredits(db, { actorId: s.user.id, organizationId: s.organizationId, websiteId: String(formData.get("websiteId") ?? ""), amount, direction, reason: String(formData.get("reason") ?? "").trim() || undefined });
     revalidatePath("/settings/billing");
-    return {
-      ok: true,
-      message:
-        direction === "to_website"
-          ? `Allocated ${amount.toLocaleString()} credits to website pool (Website balance: ${res.websiteBalance.toLocaleString()} · Org pool: ${res.orgBalance.toLocaleString()}).`
-          : `Returned ${amount.toLocaleString()} credits to organization pool (Website balance: ${res.websiteBalance.toLocaleString()} · Org pool: ${res.orgBalance.toLocaleString()}).`,
-    };
+    return { ok: true, message: direction === "to_website" ? `Allocated ${amount.toLocaleString()} credits to the website pool (website: ${res.websiteBalance.toLocaleString()} · organization: ${res.orgBalance.toLocaleString()}).` : `Returned ${amount.toLocaleString()} credits to the organization pool (website: ${res.websiteBalance.toLocaleString()} · organization: ${res.orgBalance.toLocaleString()}).` };
   } catch (err) {
     return toActionError(err, "Failed to allocate website credits.");
   }

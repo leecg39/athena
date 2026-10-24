@@ -4,6 +4,7 @@ import { BILLING_PLAN_CATALOG, getBillingOverview } from "@athena/core/billing";
 import { SettingsShell } from "@/components/settings-shell";
 import { BillingSettingsView } from "@/components/billing-settings-view";
 import { getSettingsContext } from "@/lib/settings-context";
+import { billingMode } from "@/lib/stripe-billing";
 
 export async function generateMetadata() {
   const tt = await getTranslations();
@@ -44,6 +45,7 @@ export default async function BillingSettingsPage() {
         overview={overview}
         plans={plans}
         canWriteBilling={s.can("billing:write")}
+        mode={billingMode()}
       />
     </SettingsShell>
   );
