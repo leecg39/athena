@@ -1,0 +1,142 @@
+[
+ [
+  "# Title\n\nIntro with **bold**, *em* and `code`.\n\n- one\n- two\n\n1. first\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n> quote\n\n```\nx < y\n```",
+  "<h1>Title</h1>\n<p>Intro with <strong>bold</strong>, <em>em</em> and <code>code</code>.</p>\n<ul><li>one</li><li>two</li></ul>\n<ol><li>first</li></ol>\n<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>\n<blockquote>quote</blockquote>\n<pre><code>x &lt; y</code></pre>"
+ ],
+ [
+  "Hi <script>alert(1)</script> & \"you\"",
+  "<p>Hi &lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;you&quot;</p>"
+ ],
+ [
+  "[ok](https://a.example/x) [bad](javascript:alert(1)) [rel](/pricing)",
+  "<p><a href=\"https://a.example/x\">ok</a> bad (javascript:alert(1)) <a href=\"/pricing\">rel</a></p>"
+ ],
+ [
+  "",
+  ""
+ ],
+ [
+  "   \n\n  ",
+  ""
+ ],
+ [
+  "Line one\nline two\n\nPara two",
+  "<p>Line one line two</p>\n<p>Para two</p>"
+ ],
+ [
+  "## H2 with **bold _em_ inside** and [link **b**](https://x.y/z?a=1&b=2)",
+  "<h2>H2 with <strong>bold <em>em</em> inside</strong> and <a href=\"https://x.y/z?a=1&amp;b=2\">link <strong>b</strong></a></h2>"
+ ],
+ [
+  "###### H6\n####### not a heading",
+  "<h6>H6</h6>\n<p>####### not a heading</p>"
+ ],
+ [
+  "#NoSpace heading",
+  "<p>#NoSpace heading</p>"
+ ],
+ [
+  "- a\n- b\n* c\n• d\n\nafter",
+  "<ul><li>a</li><li>b</li><li>c</li><li>d</li></ul>\n<p>after</p>"
+ ],
+ [
+  "1. one\n2) two\n10. ten\n\n- bullet\n1. num",
+  "<ol><li>one</li><li>two</li><li>ten</li></ol>\n<ul><li>bullet</li></ul>\n<ol><li>num</li></ol>"
+ ],
+ [
+  "Text before list\n- item right after\n- another",
+  "<p>Text before list</p>\n<ul><li>item right after</li><li>another</li></ul>"
+ ],
+ [
+  "> q1\n> q2 with *em*\n\n> q3",
+  "<blockquote>q1 q2 with <em>em</em></blockquote>\n<blockquote>q3</blockquote>"
+ ],
+ [
+  "```js\nconst a = 1 < 2 && \"s\";\n\n// blank line kept\n```\nafter fence",
+  "<pre><code>const a = 1 &lt; 2 &amp;&amp; &quot;s&quot;;\n\n// blank line kept</code></pre>\n<p>after fence</p>"
+ ],
+ [
+  "```\nunterminated fence\nstill code",
+  "<pre><code>unterminated fence\nstill code</code></pre>"
+ ],
+ [
+  "| H1 | H2 |\n| :-- | --: |\n| **b** | `c` |\n| x |",
+  "<table><thead><tr><th>H1</th><th>H2</th></tr></thead><tbody><tr><td><strong>b</strong></td><td><code>c</code></td></tr><tr><td>x</td></tr></tbody></table>"
+ ],
+ [
+  "| not | a table |\nplain line",
+  "<p>| not | a table | plain line</p>"
+ ],
+ [
+  "Para\n| A | B |\n|---|---|\n| 1 | 2 |",
+  "<p>Para</p>\n<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>"
+ ],
+ [
+  "**unclosed bold and *em* `code` _under_ __double__",
+  "<p>*<em>unclosed bold and </em>em* <code>code</code> <em>under</em> _<em>double</em>_</p>"
+ ],
+ [
+  "Mixed: **a** *b* _c_ `d <e>` [f](//evil.com) [g](/ok) [h](https://ok.example/path)",
+  "<p>Mixed: <strong>a</strong> <em>b</em> <em>c</em> <code>d &lt;e&gt;</code> f (//evil.com) <a href=\"/ok\">g</a> <a href=\"https://ok.example/path\">h</a></p>"
+ ],
+ [
+  "Windows\r\nline endings\r\n\r\n- x\r\n- y",
+  "<p>Windows line endings</p>\n<ul><li>x</li><li>y</li></ul>"
+ ],
+ [
+  "Text with trailing spaces   \nnext",
+  "<p>Text with trailing spaces    next</p>"
+ ],
+ [
+  "* star bullet\n*not bullet*",
+  "<ul><li>star bullet</li></ul>\n<p><em>not bullet</em></p>"
+ ],
+ [
+  "A paragraph\n# heading interrupts\nnext para",
+  "<p>A paragraph</p>\n<h1>heading interrupts</h1>\n<p>next para</p>"
+ ],
+ [
+  "Quote start\n> inside\noutside",
+  "<p>Quote start</p>\n<blockquote>inside</blockquote>\n<p>outside</p>"
+ ],
+ [
+  "1. a\n\n2. b",
+  "<ol><li>a</li></ol>\n<ol><li>b</li></ol>"
+ ],
+ [
+  "Emoji 🚀 and 한국어 텍스트 **굵게** _기울임_",
+  "<p>Emoji 🚀 and 한국어 텍스트 <strong>굵게</strong> <em>기울임</em></p>"
+ ],
+ [
+  "`code with **stars**` and **bold with `code`**",
+  "<p><code>code with **stars**</code> and <strong>bold with <code>code</code></strong></p>"
+ ],
+ [
+  "[link with (parens)](https://example.com/a_(b)) end",
+  "<p><a href=\"https://example.com/a_(b\">link with (parens)</a>) end</p>"
+ ],
+ [
+  "Escapes & < > \" ' done",
+  "<p>Escapes &amp; &lt; &gt; &quot; &#39; done</p>"
+ ],
+ [
+  "- [nested link](https://n.example) in list\n- **bold** item",
+  "<ul><li><a href=\"https://n.example\">nested link</a> in list</li><li><strong>bold</strong> item</li></ul>"
+ ],
+ [
+  "> quote with [link](https://q.example)",
+  "<blockquote>quote with <a href=\"https://q.example\">link</a></blockquote>"
+ ],
+ [
+  "| a |\n|---|\n| <b>x</b> |",
+  "<table><thead><tr><th>a</th></tr></thead><tbody><tr><td>&lt;b&gt;x&lt;/b&gt;</td></tr></tbody></table>"
+ ],
+ [
+  "***triple***",
+  "<p>*<strong>triple</strong>*</p>"
+ ],
+ [
+  "Ends with heading\n## Last",
+  "<p>Ends with heading</p>\n<h2>Last</h2>"
+ ]
+]

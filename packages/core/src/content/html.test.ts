@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { markdownToHtml } from "./html";
+import fixtures from "./markdown-html.fixtures.json";
 
 describe("markdownToHtml", () => {
   it("renders the structure CMSs expect", () => {
@@ -14,5 +15,10 @@ describe("markdownToHtml", () => {
     expect(markdownToHtml("[ok](https://a.example/x) [bad](javascript:alert(1)) [rel](/pricing)")).toBe(
       '<p><a href="https://a.example/x">ok</a> bad (javascript:alert(1)) <a href="/pricing">rel</a></p>',
     );
+  });
+
+  it("renders every recorded sample exactly as before the shared parser existed", () => {
+    expect(fixtures.length).toBeGreaterThan(30);
+    for (const [markdown, html] of fixtures as [string, string][]) expect(markdownToHtml(markdown), JSON.stringify(markdown)).toBe(html);
   });
 });
